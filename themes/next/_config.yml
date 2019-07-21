@@ -43,7 +43,7 @@ favicon:
 
 # hexo-generator-feed required for rss support. Leave rss as blank to use site's feed link.
 # Set rss to false to disable feed link. Set rss to specific value if you have burned your feed already.
-rss:
+rss: 
 
 footer:
   # Specify the date when the site was setup. If not defined, current year will be used.
@@ -209,11 +209,12 @@ social_icons:
 
 # Blog rolls
 links_icon: link
-links_title: Links
-links_layout: block
-#links_layout: inline
+links_title: 友情链接
+#links_layout: block
+links_layout: inline
 links:
-  #Title: http://example.com
+  CoderWang: https://52coder.net/
+  大彬 LIB: http://lessisbetter.site/
 
 # Sidebar Avatar
 avatar:
@@ -263,9 +264,9 @@ sidebar:
 back2top:
   enable: true
   # Back to top in sidebar.
-  sidebar: false
+  sidebar: true
   # Scroll percent label in b2t button.
-  scrollpercent: false
+  scrollpercent: true
 
 # A button to open designated chat widget in sidebar.
 # Firstly, you need enable the chat service you want to activate its sidebar button.

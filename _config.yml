@@ -196,7 +196,7 @@ theme_config:
 
   social:
     GitHub: https://github.com/liupzmin || github
-    E-Mail: mailto:support@theme-next.org || envelope
+    E-Mail: mailto:liupzmin@gmail.com || envelope
 
 
   social_icons:
@@ -214,7 +214,7 @@ theme_config:
 
   back2top:
     enable: true
-    sidebar: true
+    sidebar: false
     scrollpercent: true
 
 
