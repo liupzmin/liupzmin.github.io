@@ -1,26 +1,24 @@
-language: node_js # 设置语言
+language: node_js
 node_js: 
-    - 12.6.0 # 设置相应版本
+    - 12.6.0
 sudo: required
 cache:
     apt: true
     directories:
-        - node_modules # 缓存不经常更改的内容
+        - node_modules
 install:
-    - npm install # 安装hexo及插件
+    - npm install
     - npm install hexo-deployer-git --save 
 before_install:
-    - export TZ='Asia/Shanghai' # 更改时区
-    - npm install hexo-cli -g  # 安装hexo环境
+    - npm install -g hexo-cli
 after_script:
     - git config user.name "liupzmin"
     - git config user.email "676333678@qq.com"
-    # 替换同目录下的_config.yml文件中gh_token字符串为travis后台刚才配置的变量，注意此处sed命令用了双引号。单引号无效！
     - sed -i "s/gh_token/${access_token}/g" ./_config.yml
     - hexo deploy
 script:
-    - hexo clean # 清除
-    - hexo g # 生成
+    - hexo clean
+    - hexo g
 branches:
     only:
-        - hexo_resource # 只监测hexo分支
+        - hexo_resource
