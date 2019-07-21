@@ -5,7 +5,10 @@ node_js:
 cache:
     apt: true
     directories:
-        - node_modules
+        - node_modules     
+branches:
+    only:
+        - hexo_resource
 install:
     - npm install
     - npm install hexo-deployer-git --save 
@@ -19,6 +22,4 @@ after_script:
 script:
     - hexo clean
     - hexo g
-branches:
-    only:
-        - hexo_resource
+
