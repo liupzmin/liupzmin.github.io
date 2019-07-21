@@ -97,18 +97,18 @@
   };
 </script>
 
-  <meta name="description" content="近日，开发负责人反映某生产环境业务处理缓慢，主要业务操作就是修改会员信息，登录查询后发现大量的session正在等待enq: TM - contention，且waiting的语句几乎都是updatesession的即时信息没有保留，现在附上ash视图的一些统计信息，可以大概了解一下当时争用的场景 SQL&amp;gt; @ash_wait_chains.sql username||&apos;:&apos;||progra">
+  <meta name="description" content="linux+oracle兼容列表">
 <meta name="keywords" content="oracle">
 <meta property="og:type" content="article">
-<meta property="og:title" content="enq之TM-contention解决之道——外键无索引导致锁争用（上）">
-<meta property="og:url" content="http://liupzmin.com/2016/07/25/enq-TM-1/index.html">
+<meta property="og:title" content="linux+oracle兼容列表">
+<meta property="og:url" content="http://liupzmin.com/2014/07/22/oracle/architecture/linux+oracle-compatibility-list/index.html">
 <meta property="og:site_name" content="兔子先生">
-<meta property="og:description" content="近日，开发负责人反映某生产环境业务处理缓慢，主要业务操作就是修改会员信息，登录查询后发现大量的session正在等待enq: TM - contention，且waiting的语句几乎都是updatesession的即时信息没有保留，现在附上ash视图的一些统计信息，可以大概了解一下当时争用的场景 SQL&amp;gt; @ash_wait_chains.sql username||&apos;:&apos;||progra">
+<meta property="og:description" content="linux+oracle兼容列表">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-07-21T02:05:48.691Z">
+<meta property="og:updated_time" content="2019-07-21T05:01:58.585Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="enq之TM-contention解决之道——外键无索引导致锁争用（上）">
-<meta name="twitter:description" content="近日，开发负责人反映某生产环境业务处理缓慢，主要业务操作就是修改会员信息，登录查询后发现大量的session正在等待enq: TM - contention，且waiting的语句几乎都是updatesession的即时信息没有保留，现在附上ash视图的一些统计信息，可以大概了解一下当时争用的场景 SQL&amp;gt; @ash_wait_chains.sql username||&apos;:&apos;||progra">
+<meta name="twitter:title" content="linux+oracle兼容列表">
+<meta name="twitter:description" content="linux+oracle兼容列表">
 
 
 
@@ -116,7 +116,7 @@
 
   
   
-  <link rel="canonical" href="http://liupzmin.com/2016/07/25/enq-TM-1/">
+  <link rel="canonical" href="http://liupzmin.com/2014/07/22/oracle/architecture/linux+oracle-compatibility-list/">
 
 
 
@@ -127,7 +127,7 @@
 </script>
 
   
-  <title>enq之TM-contention解决之道——外键无索引导致锁争用（上） | 兔子先生</title>
+  <title>linux+oracle兼容列表 | 兔子先生</title>
   
 
 
@@ -215,7 +215,7 @@
         
         
           
-          <li class="menu-item menu-item-news">
+          <li class="menu-item menu-item-home">
 
     
     
@@ -226,7 +226,7 @@
       
     
 
-    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-bullhorn"></i> <br>News</a>
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
 
   </li>
         
@@ -244,7 +244,7 @@
       
     
 
-    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档<span class="badge">2</span></a>
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档<span class="badge">8</span></a>
 
   </li>
         
@@ -262,7 +262,7 @@
       
     
 
-    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签<span class="badge">2</span></a>
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签<span class="badge">4</span></a>
 
   </li>
         
@@ -280,7 +280,7 @@
       
     
 
-    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类<span class="badge">0</span></a>
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类<span class="badge">3</span></a>
 
   </li>
         
@@ -382,11 +382,11 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2016/07/25/enq-TM-1/">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2014/07/22/oracle/architecture/linux+oracle-compatibility-list/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="巴流">
-      <meta itemprop="description" content="左手人文 右手科技">
+      <meta itemprop="description" content="左手人文 | 右手科技">
       <meta itemprop="image" content="/images/heizi.jpeg">
     </span>
 
@@ -399,7 +399,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">enq之TM-contention解决之道——外键无索引导致锁争用（上）<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL3RoZW1lLW5leHQvdGhlbWUtbmV4dC5vcmcvZWRpdC9zb3VyY2Uvc291cmNlL19wb3N0cy9lbnEtVE0tMS5tZA==" title="编辑"><i class="fa fa-pencil"></i></span>
+          <h2 class="post-title" itemprop="name headline">linux+oracle兼容列表<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL3RoZW1lLW5leHQvdGhlbWUtbmV4dC5vcmcvZWRpdC9zb3VyY2Uvc291cmNlL19wb3N0cy9vcmFjbGUvYXJjaGl0ZWN0dXJlL2xpbnV4K29yYWNsZS1jb21wYXRpYmlsaXR5LWxpc3QubWQ=" title="编辑"><i class="fa fa-pencil"></i></span>
 
               
             
@@ -425,7 +425,7 @@
                 
               
 
-              <time title="创建时间：2016-07-25 16:21:00" itemprop="dateCreated datePublished" datetime="2016-07-25T16:21:00+08:00">2016-07-25</time>
+              <time title="创建时间：2014-07-22 15:10:00" itemprop="dateCreated datePublished" datetime="2014-07-22T15:10:00+08:00">2014-07-22</time>
             </span>
           
 
@@ -440,11 +440,26 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-07-21 10:05:48" itemprop="dateModified" datetime="2019-07-21T10:05:48+08:00">2019-07-21</time>
+                <time title="修改时间：2019-07-21 13:01:58" itemprop="dateModified" datetime="2019-07-21T13:01:58+08:00">2019-07-21</time>
               </span>
             
           
 
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/oracle/" itemprop="url" rel="index"><span itemprop="name">oracle</span></a></span>
+
+                
+                
+              
+            </span>
           
 
           
@@ -479,22 +494,10 @@
       
 
       
-        <p>近日，开发负责人反映某生产环境业务处理缓慢，主要业务操作就是修改会员信息，登录查询后发现大量的session正在等待enq: TM - contention，且waiting的语句几乎都是update<br>session的即时信息没有保留，现在附上ash视图的一些统计信息，可以大概了解一下当时争用的场景</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">SQL&gt; @ash_wait_chains.sql username||':'||program2||event2 session_type='FOREGROUND' sysdate-6/24 sysdate-5/24</span><br><span class="line"></span><br><span class="line"><span class="comment">-- Display ASH Wait Chain Signatures script v0.2 BETA by Tanel Poder ( http://blog.tanelpoder.com )</span></span><br><span class="line"></span><br><span class="line">%This     SECONDS        AAS</span><br><span class="line"><span class="comment">------ ---------- ----------</span></span><br><span class="line">WAIT_CHAIN</span><br><span class="line"><span class="comment">------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</span></span><br><span class="line">  72%       20073        5.6</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   8%        2293         .6</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   8%        2141         .6</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync  -&gt; SYS:(LGWR) log file parallel write</span><br><span class="line"></span><br><span class="line">   7%        1879         .5</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync  -&gt; SYS:(LGWR) LGWR-LNS wait on channel</span><br><span class="line"></span><br><span class="line">   2%         654         .2</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   1%         288         .1</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   1%         149          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync  -&gt; SYS:(LGWR) ON CPU</span><br><span class="line"></span><br><span class="line">   0%         128          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention</span><br><span class="line"></span><br><span class="line">   0%         112          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync</span><br><span class="line"></span><br><span class="line">   0%          86          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) db file scattered read</span><br><span class="line"></span><br><span class="line">   0%          43          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   0%          37          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention</span><br><span class="line"></span><br><span class="line">   0%          25          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync  -&gt; SYS:(LGWR) LGWR wait on LNS</span><br><span class="line"></span><br><span class="line">   0%          13          0</span><br><span class="line">-&gt; JSCHPROD:(plsqldev.exe) ON CPU</span><br><span class="line"></span><br><span class="line">   0%          11          0</span><br><span class="line">-&gt; SYS:(plsqldev.exe) ON CPU</span><br><span class="line"></span><br><span class="line">   0%          10          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) SQL*Net more data from client</span><br><span class="line"></span><br><span class="line">   0%           9          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) db file sequential read</span><br><span class="line"></span><br><span class="line">   0%           9          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) ON</span><br><span class="line">CPU</span><br><span class="line"></span><br><span class="line">   0%           6          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) read by other session  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   0%           4          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention  -&gt; JSCHPROD:(JDBC Thin Client) enq: TM - contention</span><br><span class="line"></span><br><span class="line">   0%           3          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) SQL*Net more data to client</span><br><span class="line"></span><br><span class="line">   0%           3          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) buffer busy waits [data block]</span><br><span class="line"></span><br><span class="line">   0%           3          0</span><br><span class="line">-&gt; SYS:(oraagent.bin) Disk file operations I/O</span><br><span class="line"></span><br><span class="line">   0%           3          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync  -&gt; SYS:(LGWR) LGWR wait for redo copy</span><br><span class="line"></span><br><span class="line">   0%           2          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TX - row lock contention</span><br><span class="line"></span><br><span class="line">   0%           2          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) log file sync  -&gt; SYS:(LGWR) LGWR wait for redo copy  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   0%           2          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TX - index contention  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line">   0%           1          0</span><br><span class="line">-&gt; JSCHPROD:(plsqldev.exe) log file sync  -&gt; SYS:(LGWR) log file parallel write</span><br><span class="line"></span><br><span class="line">   0%           1          0</span><br><span class="line">-&gt; SYS:(plsqldev.exe) Disk file operations I/O</span><br><span class="line"></span><br><span class="line">   0%           1          0</span><br><span class="line">-&gt; JSCHPROD:(JDBC Thin Client) enq: TX - row lock contention  -&gt; JSCHPROD:(JDBC Thin Client) ON CPU</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">30 rows selected.</span><br></pre></td></tr></table></figure>
-
-<p>可以看到，TM锁的争用很多，再看一份当时awr报告的top10</p>
-<p><img alt data-src="https://liupzminblog.files.wordpress.com/2016/12/qq20161218-02x.png"></p>
-<p>虽然占DBTIME不多，但本来是很快的操作，短时间内给人的感觉就是业务处理缓慢<br>查一下当时等待事件的p1,p2,p3的值</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">select</span> ash.SAMPLE_TIME,</span><br><span class="line">       ash.EVENT,</span><br><span class="line">       ash.SESSION_ID,</span><br><span class="line">       ash.BLOCKING_SESSION,</span><br><span class="line">       ash.P1TEXT,</span><br><span class="line">       ash.P1,</span><br><span class="line">       ash.P2TEXT,</span><br><span class="line">       ash.p2,</span><br><span class="line">       ash.p3text,</span><br><span class="line">       ash.p3,</span><br><span class="line">       ash.SESSION_STATE,</span><br><span class="line">       ash.SQL_OPNAME,</span><br><span class="line">       ash.SQL_ID</span><br><span class="line">       <span class="comment">--ash.*</span></span><br><span class="line">  <span class="keyword">from</span> v$active_session_history ash</span><br><span class="line"> <span class="keyword">where</span> ash.SAMPLE_TIME &gt;</span><br><span class="line">       <span class="keyword">to_date</span>(<span class="string">'20160425 10:00:00'</span>, <span class="string">'yyyymmdd HH24:MI:SS'</span>)</span><br><span class="line">   <span class="keyword">and</span> ash.SAMPLE_TIME &lt;</span><br><span class="line">       <span class="keyword">to_date</span>(<span class="string">'20160425 12:10:00'</span>, <span class="string">'yyyymmdd HH24:MI:SS'</span>)</span><br><span class="line">   <span class="keyword">and</span> ash.WAIT_CLASS &lt;&gt; <span class="string">'Idle'</span></span><br><span class="line">   <span class="keyword">and</span> ash.EVENT <span class="keyword">like</span> <span class="string">'enq: TM - contention'</span></span><br><span class="line"> <span class="keyword">order</span> <span class="keyword">by</span> sample_time <span class="keyword">desc</span>;</span><br></pre></td></tr></table></figure>
-
-<p>下面是部分结果</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">enq: TM - contention	1828	2401	name|mode	1414332421	object #	110417	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	1873	2504	name|mode	1414332419	object #	110415	table/partition	0	WAITING	INSERT	7w0tma5up32wt</span><br><span class="line">enq: TM - contention	2504	1828	name|mode	1414332421	object #	110415	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	772	4	name|mode	1414332421	object #	110417	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	1781	1828	name|mode	1414332419	object #	110415	table/partition	0	WAITING	INSERT	7w0tma5up32wt</span><br><span class="line">enq: TM - contention	1828	772	name|mode	1414332421	object #	110415	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	2401	1828	name|mode	1414332419	object #	110415	table/partition	0	WAITING	INSERT	7w0tma5up32wt</span><br><span class="line">enq: TM - contention	2504	772	name|mode	1414332421	object #	110415	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	4	772	name|mode	1414332419	object #	110415	table/partition	0	WAITING	INSERT	7w0tma5up32wt</span><br><span class="line">enq: TM - contention	148	1781	name|mode	1414332420	object #	110428	table/partition	0	WAITING	UPDATE	9gd6xhd0xyhph</span><br><span class="line">enq: TM - contention	772	148	name|mode	1414332421	object #	110415	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	1828	148	name|mode	1414332421	object #	110415	table/partition	0	WAITING	UPDATE	ak25v8q8p6fzd</span><br><span class="line">enq: TM - contention	1873	772	name|mode	1414332419	object #	110415	table/partition	0	WAITING	INSERT	7w0tma5up32wt</span><br></pre></td></tr></table></figure>
-
-<p>可以看到p2的值为产生TM争用的对象id，经过查证，这些object均是session正在更新的表的子表，而且通过v$sql查看update语句均更改了主表的主键，问题到这里已经很明朗了，由于外键没加索引，导致了主表在更新主表主键或删除主表记录时对子表的锁定，而且这张主表被大量的子表引用，此时子表上也同时进行事务处理，所以造成了更新主表的session 不时hang住。</p>
-<p>通过对所有子表的外键加索引，消除了争用，检测未加索引的外键语句：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> TABLE_NAME,</span><br><span class="line">       CONSTRAINT_NAME,</span><br><span class="line">       CNAME1 || NVL2(CNAME2, <span class="string">','</span> || CNAME2, <span class="literal">NULL</span>) ||</span><br><span class="line">       NVL2(CNAME3, <span class="string">','</span> || CNAME3, <span class="literal">NULL</span>) ||</span><br><span class="line">       NVL2(CNAME4, <span class="string">','</span> || CNAME4, <span class="literal">NULL</span>) ||</span><br><span class="line">       NVL2(CNAME5, <span class="string">','</span> || CNAME5, <span class="literal">NULL</span>) ||</span><br><span class="line">       NVL2(CNAME6, <span class="string">','</span> || CNAME6, <span class="literal">NULL</span>) ||</span><br><span class="line">       NVL2(CNAME7, <span class="string">','</span> || CNAME7, <span class="literal">NULL</span>) ||</span><br><span class="line">       NVL2(CNAME8, <span class="string">','</span> || CNAME8, <span class="literal">NULL</span>) <span class="keyword">COLUMNS</span></span><br><span class="line">  <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> B.TABLE_NAME,</span><br><span class="line">               B.CONSTRAINT_NAME,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">1</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME1,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">2</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME2,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">3</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME3,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">4</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME4,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">5</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME5,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">6</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME6,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">7</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME7,</span><br><span class="line">               <span class="keyword">MAX</span>(<span class="keyword">DECODE</span>(<span class="keyword">POSITION</span>, <span class="number">8</span>, COLUMN_NAME, <span class="literal">NULL</span>)) CNAME8,</span><br><span class="line">               <span class="keyword">COUNT</span>(*) COL_CNT</span><br><span class="line">          <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="keyword">SUBSTR</span>(TABLE_NAME, <span class="number">1</span>, <span class="number">30</span>) TABLE_NAME,</span><br><span class="line">                       <span class="keyword">SUBSTR</span>(CONSTRAINT_NAME, <span class="number">1</span>, <span class="number">30</span>) CONSTRAINT_NAME,</span><br><span class="line">                       <span class="keyword">SUBSTR</span>(COLUMN_NAME, <span class="number">1</span>, <span class="number">30</span>) COLUMN_NAME,</span><br><span class="line">                       <span class="keyword">POSITION</span></span><br><span class="line">                  <span class="keyword">FROM</span> USER_CONS_COLUMNS) A,</span><br><span class="line">               USER_CONSTRAINTS B</span><br><span class="line">         <span class="keyword">WHERE</span> A.CONSTRAINT_NAME = B.CONSTRAINT_NAME</span><br><span class="line">           <span class="keyword">AND</span> B.CONSTRAINT_TYPE = <span class="string">'R'</span></span><br><span class="line">         <span class="keyword">GROUP</span> <span class="keyword">BY</span> B.TABLE_NAME, B.CONSTRAINT_NAME) CONS</span><br><span class="line"> <span class="keyword">WHERE</span> COL_CNT &gt; <span class="keyword">ALL</span></span><br><span class="line"> (<span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(*)</span><br><span class="line">          <span class="keyword">FROM</span> USER_IND_COLUMNS I</span><br><span class="line">         <span class="keyword">WHERE</span> I.TABLE_NAME = CONS.TABLE_NAME</span><br><span class="line">           <span class="keyword">AND</span> I.COLUMN_NAME <span class="keyword">IN</span> (CNAME1, CNAME2, CNAME3, CNAME4, CNAME5,</span><br><span class="line">                CNAME6, CNAME7, CNAME8)</span><br><span class="line">           <span class="keyword">AND</span> I.COLUMN_POSITION &lt;= CONS.COL_CNT</span><br><span class="line">         <span class="keyword">GROUP</span> <span class="keyword">BY</span> I.INDEX_NAME);</span><br></pre></td></tr></table></figure>
-
-<p>这是摘自TOM大师的语句，外键不加索引也是导致死锁的常见原因之一，因此对于主表经常进行更新删除操作的情况，外键一定要加索引。<br>至于外键未加索引是如何导致锁定的，以及为何加了索引后争用就消失了? 敬请关注enq: TM - contention解决之道——外键无索引导致锁争用 （下）</p>
+        <blockquote>
+<p>linux+oracle兼容列表</p>
+</blockquote>
+<p><img alt data-src="http://oaowhilvu.bkt.clouddn.com/linux+oracle%E5%85%BC%E5%AE%B9%E5%88%97%E8%A1%A8.png"></p>
 
       
     </div>
@@ -544,8 +547,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2019/07/21/hello-world/" rel="prev" title="Hello World">
-                Hello World <i class="fa fa-chevron-right"></i>
+              <a href="/2015/09/23/oracle/backup-restore/RMAN-different-server-directory-full-restore/" rel="prev" title="RMAN异机异目录完全恢复">
+                RMAN异机异目录完全恢复 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -603,7 +606,7 @@
     <img class="site-author-image" itemprop="image" src="/images/heizi.jpeg" alt="巴流">
   
   <p class="site-author-name" itemprop="name">巴流</p>
-  <div class="site-description motion-element" itemprop="description">左手人文 右手科技</div>
+  <div class="site-description motion-element" itemprop="description">左手人文 | 右手科技</div>
 </div>
 
 
@@ -613,12 +616,33 @@
         
           <a href="/archives/">
         
-          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-count">8</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
     
 
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
     
 
     
@@ -636,7 +660,11 @@
         
           
         
-        <span class="site-state-item-count">2</span>
+          
+        
+          
+        
+        <span class="site-state-item-count">4</span>
         <span class="site-state-item-name">标签</span>
         </a>
       </div>
