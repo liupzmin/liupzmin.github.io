@@ -11,7 +11,6 @@ install:
 before_install:
     - export TZ='Asia/Shanghai' # 更改时区
     - npm install hexo-cli -g  # 安装hexo环境
-    - chmod +x ./publish-to-gh-pages.sh  # 为shell文件添加可执行权限
 after_script:
     - git config user.name "liupzmin"
     - git config user.email "676333678@qq.com"
