@@ -231,7 +231,7 @@ theme_config:
 
   post_edit:
     enable: true
-    url: https://github.com/theme-next/theme-next.org/edit/source/source/
+    url: https://github.com/liupzmin/liupzmin.github.io/edit/hexo_resource/source/
 
 
   # ============================================================= #
