@@ -534,6 +534,6 @@ SQL> select file#,BLOCK#,DIRTY,OBJD from v$bh where objd='78760';
 >终于看到了想要的结果，总结一下吧，直接路径下高水位的推进大概如下图的样子：
 
 
-![](http://oaowhilvu.bkt.clouddn.com/direct.png)
+![](http://qiniu.liupzmin.com/direct.png)
 
 >不知道大家有没有注意到，直接路径插入完后再读入buffer中居然是个脏块，这是不是跟延迟提交清除有关呢？我们以后再慢慢分析！
