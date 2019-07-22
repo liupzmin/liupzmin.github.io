@@ -143,9 +143,9 @@ Oracle对其中*sql_handle*的解释为：
     		v_sql_plan_id  pls_integer;
 	begin
     		v_sql_plan_id := dbms_spm.ALTER_SQL_PLAN_BASELINE(sql_handle => 'SQL_c1c9aa52fd90f3ae',
-    														  plan_name => 'SQL_PLAN_c3kdaabyt1wxfed3324c0',
-    														  attribute_name => 'enabled',
-    														  attribute_value => 'NO');
+    		plan_name => 'SQL_PLAN_c3kdaabyt1wxfed3324c0',
+    		attribute_name => 'enabled',
+    		attribute_value => 'NO');
 	end;
 	/
 	
@@ -223,8 +223,8 @@ Oracle对其中*sql_handle*的解释为：
     		v_sql_plan_id  pls_integer;
 	begin
     		v_sql_plan_id := dbms_spm.load_plans_from_cursor_cache(sql_id => 'fr5dd23pfbjfz',
-    														  plan_hash_value => 1107868462,
-    														  sql_handle => 'SQL_c1c9aa52fd90f3ae');
+    		plan_hash_value => 1107868462,
+    		sql_handle => 'SQL_c1c9aa52fd90f3ae');
 	end;
 	/
 	```
@@ -280,6 +280,7 @@ Oracle对其中*sql_handle*的解释为：
 	1  rows processed
 	```
 	
-	> 可见，执行计划已改变
+	**可见，执行计划已改变**
 	
-	> 注： 测试过程中发现，使用SQL Plan Baseline的sql无法再用SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,'advanced') from dual)获取其上次的执行计划。
+	
+	**注： 测试过程中发现，使用SQL Plan Baseline的sql无法再用SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,'advanced') from dual)获取其上次的执行计划。**
