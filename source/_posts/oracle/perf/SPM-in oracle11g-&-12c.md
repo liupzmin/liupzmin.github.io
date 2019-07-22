@@ -293,7 +293,7 @@ SUMMARY SECTION
 
   个人认为4、5无绝对先后顺序
 
-  具体操作，本文暂不讨论，请浏览[Manually Evolving SQL Plan Baselines in Oracle Database 12c Release 2](https://liupzmin.com/2017/04/24/manually-evolving-sql-plan-baselines-in-oracle-database-12c-release-2/)
+  具体操作，本文暂不讨论，请浏览[Manually Evolving SQL Plan Baselines in Oracle Database 12c Release 2](https://liupzmin.com/2017/04/24/oracle/perf/Manually-Evolving-SQL-Plan-Baselines-in-Oracle-Database-12c-Release-2/)
 
 ### Managing the SQL Management Base   
 
