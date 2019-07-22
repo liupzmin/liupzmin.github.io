@@ -131,10 +131,11 @@ Oracle对其中*sql_handle*的解释为：
     	( SELECT exact_matching_signature FROM v$sql WHERE sql_id='gsttbra9z0ddw'
     	);
 	
+
   	SQL_HANDLE		       		   PLAN_NAME		      		  ENA ACC
 	------------------------------ ------------------------------ --- ---
 	SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfed3324c0 YES YES
-       ```
+    ```
 
 4. 使用ALTER_SQL_PLAN_BASELINE禁用原执行计划
 
@@ -241,6 +242,7 @@ Oracle对其中*sql_handle*的解释为：
 9. 现在执行原sql查看其执行计划
 
 	```SQL
+
 	SYS@DB41 2017/04/26 15:50:44> SET AUTOTRACE TRACE
 	SYS@DB41 2017/04/26 15:50:57> SELECT description FROM  spm_test_tab WHERE  id = 1113;
 
@@ -263,8 +265,7 @@ Oracle对其中*sql_handle*的解释为：
 	Note
 	-----
    		- SQL plan baseline "SQL_PLAN_c3kdaabyt1wxfb65c37c8" used for this statement
-
-
+	
 	Statistics
 	----------------------------------------------------------
 	7  recursive calls
@@ -280,7 +281,7 @@ Oracle对其中*sql_handle*的解释为：
 	1  rows processed
 	```
 	
-	**可见，执行计划已改变**
+**可见，执行计划已改变**
 	
 	
-	**注： 测试过程中发现，使用SQL Plan Baseline的sql无法再用SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,'advanced') from dual)获取其上次的执行计划。**
+**注： 测试过程中发现，使用SQL Plan Baseline的sql无法再用SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,'advanced') from dual)获取其上次的执行计划。**
