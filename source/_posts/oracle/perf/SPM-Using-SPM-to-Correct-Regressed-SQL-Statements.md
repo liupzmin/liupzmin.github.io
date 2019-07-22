@@ -57,11 +57,11 @@ Oracle对其中*sql_handle*的解释为：
 
 2. 执行例句，查看其执行计划
 
-	```SQL
+    ```SQL
 	
-	SELECT description FROM  spm_test_tab WHERE  id = 1113;
+    SELECT description FROM  spm_test_tab WHERE  id = 1113;
 	
-	SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,'advanced') from dual);
+    SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,'advanced') from dual);
 	
     SQL_ID  gsttbra9z0ddw, child number 0
     -------------------------------------
@@ -130,13 +130,11 @@ Oracle对其中*sql_handle*的解释为：
 	WHERE signature IN
     	( SELECT exact_matching_signature FROM v$sql WHERE sql_id='gsttbra9z0ddw'
     	);
-   ```
-  ```
-
+	
   	SQL_HANDLE		       		   PLAN_NAME		      		  ENA ACC
 	------------------------------ ------------------------------ --- ---
 	SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfed3324c0 YES YES
-  ```
+       ```
 
 4. 使用ALTER_SQL_PLAN_BASELINE禁用原执行计划
 
@@ -184,7 +182,6 @@ Oracle对其中*sql_handle*的解释为：
 
 	Outline Data
 	-------------
-	```
 
  	 /*+
       	BEGIN_OUTLINE_DATA
@@ -246,8 +243,6 @@ Oracle对其中*sql_handle*的解释为：
 	```SQL
 	SYS@DB41 2017/04/26 15:50:44> SET AUTOTRACE TRACE
 	SYS@DB41 2017/04/26 15:50:57> SELECT description FROM  spm_test_tab WHERE  id = 1113;
-	```
-
 
 	Execution Plan
 	----------------------------------------------------------
