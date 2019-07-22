@@ -2,7 +2,7 @@
 date: 2017-04-26 16:19
 categories: oracle
 tags: SQL Plan Management
-title: [SPM]Using SPM to Correct Regressed SQL Statements
+title: SPM Using SPM to Correct Regressed SQL Statements
 ---
 
 在*LOAD_PLANS_FROM_CURSOR_CACHE*函数中有一种语法组合如下：
@@ -130,13 +130,14 @@ Oracle对其中*sql_handle*的解释为：
 	WHERE signature IN
     	( SELECT exact_matching_signature FROM v$sql WHERE sql_id='gsttbra9z0ddw'
     	);
+   ```
   ```
 
   	SQL_HANDLE		       		   PLAN_NAME		      		  ENA ACC
 	------------------------------ ------------------------------ --- ---
 	SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfed3324c0 YES YES
-	```
-	
+  ```
+
 4. 使用ALTER_SQL_PLAN_BASELINE禁用原执行计划
 
 	```SQL

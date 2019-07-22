@@ -2,7 +2,7 @@
 date: 2017-04-26 11:29
 categories: oracle
 tags: SQL Plan Management
-title: [SPM] Loading Plans from the Shared SQL Area
+title: SPM Loading Plans from the Shared SQL Area
 ---
 
 > 从Cursor Cache中加载执行计划到SPM中，是最常用的一种方式，下面将介绍整个加载的步骤。
@@ -92,7 +92,7 @@ title: [SPM] Loading Plans from the Shared SQL Area
 	
 5. 演化（evolve）新的plan
 
-	11g默认为已存在Baseline的SQL自动捕捉新的plan，但新的plan为unaccepted的状态，要使用新的plan，需要演化（evolve）为accepted，下面介绍11g的演化方法，12c请参阅[MANUALLY EVOLVING SQL PLAN BASELINES IN ORACLE DATABASE 12C RELEASE 2](https://liupzmin.com/2017/04/24/manually-evolving-sql-plan-baselines-in-oracle-database-12c-release-2/)
+	11g默认为已存在Baseline的SQL自动捕捉新的plan，但新的plan为unaccepted的状态，要使用新的plan，需要演化（evolve）为accepted，下面介绍11g的演化方法，12c请参阅[MANUALLY EVOLVING SQL PLAN BASELINES IN ORACLE DATABASE 12C RELEASE 2](https://liupzmin.com/2017/04/24/oracle/perf/Manually-Evolving-SQL-Plan-Baselines-in-Oracle-Database-12c-Release-2/)
 	
 	```SQL
 	DECLARE  
