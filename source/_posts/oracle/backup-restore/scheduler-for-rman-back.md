@@ -16,7 +16,7 @@ So, Same strategy will not be work in Oracle RAC node. For RMAN consistent backu
 
 >看一下rman的备份脚本，此脚本将备份放在ASM中，将日志放在节点本地
 
-```
+```shell
 ################################################################
 #    rman_backup_rac.sh FOR RAC                                #
 #    created by lp                                             #
