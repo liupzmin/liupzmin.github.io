@@ -319,7 +319,6 @@ theme_config:
     repo: liupzmin.github.io
     owner: liupzmin
     adminUser: "['liupzmin']"
-    ID: location.pathname
     labels: "['Gitalk']"
     perPage: 15
     pagerDirection: last

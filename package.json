@@ -18,6 +18,7 @@
     "hexo-renderer-marked": "^1.0.1",
     "hexo-renderer-stylus": "^0.3.3",
     "hexo-server": "^0.3.3",
-    "lozad": "^1.9.0"
+    "lozad": "^1.9.0",
+    "md5": "^2.2.1"
   }
 }

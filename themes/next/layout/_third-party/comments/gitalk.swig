@@ -11,7 +11,7 @@
           repo: '{{ theme.gitalk.repo }}',
           owner: '{{ theme.gitalk.owner }}',
           admin: {{ theme.gitalk.adminUser }},
-          id: {{ theme.gitalk.ID }},
+          id: md5(location.pathname),
           labels: {{ theme.gitalk.labels }},
           perPage: {{ theme.gitalk.perPage }},
           pagerDirection: '{{ theme.gitalk.pagerDirection }}',
