@@ -41,7 +41,7 @@ SparkSession available as 'spark'.
 >>> lines = sc.textFile('/afis/flume/auth/2018/03/16/auth.1521129675887.log')
 >>> pythonlines = lines.filter(lambda line:"python" in line)
 >>> pythonlines.count()
-[Stage 0:>                                                          (0 + 2) / 2]18/03/22 13:25:22 WARN scheduler.TaskSetManager: Lost task 0.0 in stage 0.0 (TID 0, hadoop-02, executor 2): java.io.IOException: Cannot run program "python3": error=2, 没有那个文件或目录
+[Stage 0:> (0 + 2) / 2]18/03/22 13:25:22 WARN scheduler.TaskSetManager: Lost task 0.0 in stage 0.0 (TID 0, hadoop-02, executor 2): java.io.IOException: Cannot run program "python3": error=2, 没有那个文件或目录
         at java.lang.ProcessBuilder.start(ProcessBuilder.java:1048)
         at org.apache.spark.api.python.PythonWorkerFactory.startDaemon(PythonWorkerFactory.scala:163)
         at org.apache.spark.api.python.PythonWorkerFactory.createThroughDaemon(PythonWorkerFactory.scala:89)
