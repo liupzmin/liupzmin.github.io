@@ -12,21 +12,22 @@ title: 利用logstash从kafka消费数据到elasticsearch
 
 ##  1. 几种方式
 
-	目前要把kafka中的数据传输到elasticsearch集群大概有一下几种方法：
+目前要把kafka中的数据传输到elasticsearch集群大概有一下几种方法：
 
+ 
  -  logstash
 
-- flume
+ - flume
 
-- spark streaming
+ - spark streaming
 
-- kafka connect
+ - kafka connect
 
-- 自己开发程序读取kafka写入elastic
+ - 自己开发程序读取kafka写入elastic
 
   
 
-          其中logstash看到网上说不太稳定，且我目前用过版本2.3 ，确实经常出现crash的情况，所以一开始并未考虑；首先尝试的是通过flume到es，因为目前kafka到HDFS中间用的是flume，想再加一个通道和sink到es，而且flume也有es的sink，但是我的flume是最新版1.8，elasticsearch也是最新版6.2.2，中间碰到了兼容性问题，未能成功；转而去研究kafka connect，按照《kafka权威指南》上的例子研究了一下，同样遇到兼容性问题，在我的版本组合中无法奏效，但我不想去修改已经安装好的flume或者es集群，spark streaming过于复杂，自己开发程序成本过高、且周期较长；最终去尝试logstash，结果配置非常容易，简单奏效，稳定性问题暂时无法看出，留待日后详测，现记录一下配置。
+其中logstash看到网上说不太稳定，且我目前用过版本2.3 ，确实经常出现crash的情况，所以一开始并未考虑；首先尝试的是通过flume到es，因为目前kafka到HDFS中间用的是flume，想再加一个通道和sink到es，而且flume也有es的sink，但是我的flume是最新版1.8，elasticsearch也是最新版6.2.2，中间碰到了兼容性问题，未能成功；转而去研究kafka connect，按照《kafka权威指南》上的例子研究了一下，同样遇到兼容性问题，在我的版本组合中无法奏效，但我不想去修改已经安装好的flume或者es集群，spark streaming过于复杂，自己开发程序成本过高、且周期较长；最终去尝试logstash，结果配置非常容易，简单奏效，稳定性问题暂时无法看出，留待日后详测，现记录一下配置。
 
 ## 2. logstash配置
 

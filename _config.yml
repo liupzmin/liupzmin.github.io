@@ -13,16 +13,16 @@ timezone: Asia/Shanghai
 
 
 archive_generator:
-  per_page: 8
+  per_page: 100
   yearly: true
   monthly: true
   daily: false
 
 category_generator:
-  per_page: 5
+  per_page: 100
 
 tag_generator:
-  per_page: 5
+  per_page: 100
   enable_index_page: false
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'

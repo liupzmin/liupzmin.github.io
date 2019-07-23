@@ -20,7 +20,7 @@ spark2中默认使用的是python2，可以通过以下三种方式之一使用p
 2. 修改`~/.bash_profile`，增加 `PYSPARK_PYTHON=python3`
 3. 修改`spark-env.sh`增加`PYSPARK_PYTHON=/usr/local/bin/python3`
 
-        如果使用前2种不带绝对路径的变量声明时可能会遇到`Cannot run program "python3": error=2, 没有那个文件或目录`错误，原因是我的spark环境默认的是运行在`yarn`上的，当执行RDD任务时会在其他节点报错：
+`如果使用前2种不带绝对路径的变量声明时可能会遇到`Cannot run program "python3": error=2, 没有那个文件或目录`错误，原因是我的spark环境默认的是运行在`yarn`上的，当执行RDD任务时会在其他节点报错：`
 
 ```shell
 [root@hadoop-04 ~]# PYSPARK_PYTHON=python3 pyspark2
