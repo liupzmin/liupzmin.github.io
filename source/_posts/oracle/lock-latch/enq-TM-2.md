@@ -690,8 +690,4 @@ ADDR             KADDR                SID TY        ID1        ID2      LMODE   
 - 外键有索引无cascade时，update/delete不会在语句级级联锁到子表，最终会持有父表和子表上的mode为3的SX锁（无索引时只有有cascade的delete时最终会持有子表上的SX锁）
 - 外键有索引有cascade时，与无cascade表现相同
 
-**参考文献：**
-
-1. [Know More About Oracle Row Lock](http://www.askmaclean.com/archives/know-more-about-oracle-row-lock.html)
-2. [enq: TM – contention等待事件](https://www.askmaclean.com/archives/enq-tm-contention.html)
-3. [Know Oracle Lock Mode](https://www.askmaclean.com/archives/know-oracle-lock-mode.html)
+ccc
