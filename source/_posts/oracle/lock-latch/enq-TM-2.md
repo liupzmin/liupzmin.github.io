@@ -689,5 +689,3 @@ ADDR             KADDR                SID TY        ID1        ID2      LMODE   
 - 外键无索引有cascade时，update父表仍会在语句级别级联mode为4的S锁到子表，delete时会先获取mode为5的SSX锁，在将其转换成mode为3的SX锁，而且删除多少行就会涉及到多少次转换
 - 外键有索引无cascade时，update/delete不会在语句级级联锁到子表，最终会持有父表和子表上的mode为3的SX锁（无索引时只有有cascade的delete时最终会持有子表上的SX锁）
 - 外键有索引有cascade时，与无cascade表现相同
-
-ccc
