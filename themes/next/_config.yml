@@ -46,6 +46,7 @@ favicon:
 rss: 
 
 footer:
+  counter: true
   # Specify the date when the site was setup. If not defined, current year will be used.
   #since: 2015
 
@@ -714,7 +715,7 @@ needmoreshare2:
 # ---------------------------------------------------------------
 
 # Baidu Analytics
-baidu_analytics: # <app_id>
+baidu_analytics: e4a15ee426aab22df49b301add136e8f
 
 # Growingio Analytics
 # Copyright 2015-2018 GrowingIO, Inc. More info available at https://www.growingio.com
@@ -722,8 +723,8 @@ growingio_analytics: # <project_id>
 
 # Google Analytics
 google_analytics:
-  #tracking_id:
-  #localhost_ignored: true
+  tracking_id: UA-145061011-1
+  localhost_ignored: false
 
 # CNZZ count
 cnzz_siteid:
@@ -793,7 +794,7 @@ firestore:
 # Show Views / Visitors of the website / page with busuanzi.
 # Get more information on http://ibruce.info/2015/04/04/busuanzi
 busuanzi_count:
-  enable: false
+  enable: true
   total_visitors: true
   total_visitors_icon: user
   total_views: true

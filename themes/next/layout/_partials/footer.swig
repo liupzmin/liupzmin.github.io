@@ -58,3 +58,4 @@
 {% for inject_item in theme.injects.footer %}
   {{ partial(inject_item.layout, inject_item.locals, inject_item.options) }}
 {% endfor %}
+
