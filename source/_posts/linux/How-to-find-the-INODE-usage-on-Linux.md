@@ -99,7 +99,7 @@ Unix/Linux系统中，目录（directory）也是一种文件。打开目录，�
 
 通过介绍我们知道，通常情况下每个文件对应一个inode，那么如果想查找某个目录使用的inode数量，则可以使用如下命令：
 
-**clear;echo "Detailed Inode usage: $(pwd)" ; for d in `find -maxdepth 1 -type d |cut -d\/ -f2 |grep -xv . |sort`; do c=$(find $d |wc -l) ; printf "$c\t\t- $d\n" ; done ; printf "Total: \t\t$(find $(pwd) | wc -l)\n"**
+>lear;echo "Detailed Inode usage: $(pwd)" ; for d in `find -maxdepth 1 -type d |cut -d\/ -f2 |grep -xv . |sort`; do c=$(find $d |wc -l) ; printf "$c\t\t- $d\n" ; done ; printf "Total: \t\t$(find $(pwd) | wc -l)\n"
 
 输出如下：
 
