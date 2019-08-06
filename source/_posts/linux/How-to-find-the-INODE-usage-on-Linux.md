@@ -57,9 +57,8 @@ mkfs.ext4 -i 8192 /dev/sda1
 ```
 而在`xfs`文件系统中`-i inode_options`中的`maxpct=value`描述如下：
 
-```shell
-This  specifies  the  maximum percentage of space in the filesystem that can be allocated to inodes. The default value is 25% for filesystems under 1TB, 5% for filesystems under 50TB and 1% for filesystems over 50TB.
-```
+*This  specifies  the  maximum percentage of space in the filesystem that can be allocated to inodes. The default value is 25% for filesystems under 1TB, 5% for filesystems under 50TB and 1% for filesystems over 50TB.*
+
 可见默认情况下`xfs`文件系统要比`ext`文件系统分配更多的inode
 
 可以使用`df -i`查看inode的大小和使用率
@@ -100,9 +99,7 @@ Unix/Linux系统中，目录（directory）也是一种文件。打开目录，�
 
 通过介绍我们知道，通常情况下每个文件对应一个inode，那么如果想查找某个目录使用的inode数量，则可以使用如下命令：
 
-```shell
-clear;echo "Detailed Inode usage: $(pwd)" ; for d in `find -maxdepth 1 -type d |cut -d\/ -f2 |grep -xv . |sort`; do c=$(find $d |wc -l) ; printf "$c\t\t- $d\n" ; done ; printf "Total: \t\t$(find $(pwd) | wc -l)\n"
-```
+**clear;echo "Detailed Inode usage: $(pwd)" ; for d in `find -maxdepth 1 -type d |cut -d\/ -f2 |grep -xv . |sort`; do c=$(find $d |wc -l) ; printf "$c\t\t- $d\n" ; done ; printf "Total: \t\t$(find $(pwd) | wc -l)\n"**
 
 输出如下：
 
