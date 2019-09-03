@@ -189,8 +189,8 @@ theme_config:
   # ============================================================= #
 
   avatar:
-    url: /images/heizi.jpeg
-    rounded: true
+    url: /images/gzh.jpg
+    rounded: false
     rotated: false
 
   social:
