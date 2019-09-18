@@ -13,13 +13,16 @@ Golang提供了几个包可以将文件压缩为不同的类型，这篇博客�
 
 ### usage
 ```go
-zipit("/tmp/documents", "/tmp/backup.zip")
-zipit("/tmp/report.txt", "/tmp/report-2015.zip")
+zipit("/tmp/documents", "/tmp/backup.zip", "*.log")
+zipit("/tmp/report.txt", "/tmp/report-2015.zip", "*.log")
 ```
 
 ### func Zipit
 ```go
 //压缩为zip格式
+//source为要压缩的文件或文件夹, 绝对路径和相对路径都可以
+//target是目标文件
+//filter是过滤正则(Golang 的 包 path.Match)
 func Zipit(source, target, filter string) error {
 	var err error
 	if isAbs := filepath.IsAbs(source); !isAbs {
