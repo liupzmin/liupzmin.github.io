@@ -31,10 +31,6 @@ categories: concurrence
 #include <pthread.h>
 #include <unistd.h>
 
-void foo(void);  /* Functions that use the TLS data */
-void bar(void);
-
-
 __thread int TLS_data1;
 __thread int TLS_data2;
 
