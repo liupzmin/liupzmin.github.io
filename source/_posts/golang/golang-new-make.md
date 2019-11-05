@@ -582,9 +582,10 @@ fmt.Println(myFun == nil) // Output: true
 			}
 		}
 	}
-	```	
+	```
+
 	这个函数不断的从通道a和b读取数据，然后写入out通道，如果a和b其中有通道关闭，根据关闭通道的特性，我们知道会从	读取到对应类型的零值，那么如何才能跳过已经close的分支呢？	
-	对一个nil的channel发送和接收操作会永远阻塞，在select语句中操作nil的channel永远都不会被select到。	
+	对一个nil的channel发送和接收操作会永远阻塞，在select语句中操作nil的channel永远都不会被select到。
 	```go
 	case v, ok := <-a:
 		if !ok {
