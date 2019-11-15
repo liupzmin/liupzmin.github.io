@@ -1,0 +1,34 @@
+name: CI
+
+on:
+ push:
+    branches:
+    - hexo-resource
+
+jobs:
+ build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js 10.x
+      uses: actions/setup-node@v1
+      with:
+            node-version: '10.x'
+    - name: Setup Hexo env
+      env:
+         ACTION_DEPLOY_KEY: ${{secrets.ACTION_DEPLOY_KEY}}
+      run: |
+        mkdir -p ~/.ssh/
+        echo "$ACTION_DEPLOY_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        git config user.name "liupzmin"
+        git config user.email "676333678@qq.com"
+        npm install hexo-cli -g
+        npm install
+        
+    - name: deploy to github
+      run: |
+         hexo clean && hexo generate && hexo deploy
