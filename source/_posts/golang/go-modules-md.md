@@ -13,7 +13,7 @@ categories: golang
 
 ## Go Moudles
 
-`modules`是go1.11推出的特性，官方称是`GOPATH`的替代品，是一个完整的支持包分发和版本控制的工具，使用modules，工作区不再局限于`GOPATH`之内，从而使构建更加可靠和可重复，但modules在go1.11版本中仅仅是一个实验性的功能，紧接着在go1.12中得到了增强，而刚刚发布的go1.13中得到了转正，`GOPATH`的作用进一步被弱化，Go Moudles开始大规模使用。
+`modules` 是 go1.11 推出的特性，官方称是 `GOPATH` 的替代品，是一个完整的支持包分发和版本控制的工具，使用modules，工作区不再局限于`GOPATH`之内，从而使构建更加可靠和可重复，但modules在go1.11版本中仅仅是一个实验性的功能，紧接着在go1.12中得到了增强，而刚刚发布的go1.13中得到了转正，`GOPATH`的作用进一步被弱化，Go Moudles开始大规模使用。
 
 ### 两个模式
 对于modules这种模式官网有一个称呼是`Module-aware`，我不知道如何去翻译这个组合词，与之相对的，就是在`Module-aware mode`之前我们使用的包管理方式称为`GOPATH mode`，他们的区别如下：
