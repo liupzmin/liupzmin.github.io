@@ -165,7 +165,7 @@ root     17002     1  0 17:19 ?        00:00:00 /usr/bin/python3 /home/liupeng/u
 
 对于 Unix shell 来说，它既是一个命令行解释器也是一个编程语言。shell 作为命令行解释器为丰富的 GNU 工具集提供了用户接口，而作为编程语言它成功的将这些工具集结合在一起，之后就可以将命令编写进文件，去完成各种各样的任务。
 
-很多人可能傻傻分不清 `terminal`、`tty`、`terminal` 和 `shell`，这里第一个高票回答对这些概念做了详细的解释：[What is the exact difference between a 'terminal', a 'shell', a 'tty' and a 'console'?](https://unix.stackexchange.com/a/4132)。如果英文阅读不畅，知乎上有人将其翻译了一下：[终端、Shell、tty 和控制台（console）有什么区别？](https://www.zhihu.com/question/21711307/answer/56056972)，我不再做额外的阐述了，接下来只需要记住 shell 是一个命令行解释器就好，它可以运行在交互模式和非交互模式。
+很多人可能傻傻分不清 `terminal`、`tty`、`console` 和 `shell`，这里第一个高票回答对这些概念做了详细的解释：[What is the exact difference between a 'terminal', a 'shell', a 'tty' and a 'console'?](https://unix.stackexchange.com/a/4132)。如果英文阅读不畅，知乎上有人将其翻译了一下：[终端、Shell、tty 和控制台（console）有什么区别？](https://www.zhihu.com/question/21711307/answer/56056972)，我不再做额外的阐述了，接下来只需要记住 shell 是一个命令行解释器就好，它可以运行在交互模式和非交互模式。
 
 ### shell 是如何查找命令的
 
@@ -445,7 +445,7 @@ return -1;
 
 ## 总结
 
-本片文章细节太过零散，去验证以及收资料花了不少时间，其实写作的最初兴奋点是想从 `fork & exec` 的角度去理解 Linux 上各种执行程序的方式，但是回头一看，关于 fork 和 exec 的介绍只有寥寥几笔，剩下的都是关于细节的追求与验证，但是 `Done is better than perfect`～
+本片文章细节太过零散，去验证以及查阅资料花了不少时间，其实写作的最初兴奋点是想从 `fork & exec` 的角度去理解 Linux 上各种执行程序的方式，但是回头一看，关于 fork 和 exec 的介绍只有寥寥几笔，剩下的都是关于细节的追求与验证，但是 `Done is better than perfect`～
 
 因能力有限，行文或有疏漏与错误之处，望阅读本文的朋友给予斧正，也希望了解其它启动方式的朋友不吝赐教。
 
