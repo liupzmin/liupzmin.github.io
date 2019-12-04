@@ -240,7 +240,7 @@ int main (int argc, const char * argv[]) {
     ```
 
     可以看到输出为 `464C457F`，我们查看ASCII 表，得出如下的对应关系：
-    ![ELF Header](http://qiniu.liupzmin.com/elf-header.bmp)
+    ![ELF Header](http://qiniu.liupzmin.com/elf-header-small.png)
 
     我的操作系统字节序是小端法排序，因此，`ELF的可执行文件格式的头 4 个字节为 0x7F、E、L、F`。
 
@@ -252,7 +252,7 @@ int main (int argc, const char * argv[]) {
     ```
 
     前 4 个字节为 `622F2123`，我们再查一下 ASCII 表的对应关系：
-    ![shell script header](http://qiniu.liupzmin.com/bash-header.bmp)
+    ![shell script header](http://qiniu.liupzmin.com/bash-header-small.png)
 
     翻转一下就是 `#!/b`,可以猜测如果我们多读 7 个字节，结果肯定是`#!/bin/bash`.
 
