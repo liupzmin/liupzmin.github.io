@@ -1,5 +1,5 @@
 ---
-title: 我们是如何在 Linux 系统上运行程序的？
+title: 在 Linux 上有哪些运行程序的方式？
 date: 2019-11-26 10:47:48
 tags: 
     - linux
@@ -85,7 +85,7 @@ Linux 操作系统的启动首先从 BIOS 开始，然后由 Boot Loader 载入�
 
 `Systemd` 是 Linux 系统中最新的初始化系统（init），它主要的设计目标是克服 sysvinit 固有的缺点，提高系统的启动速度。systemd 和 ubuntu 的 upstart 是竞争对手，而 ubuntu 在15.04及后续版本中已将 systemd 设置为默认 init 程序，redhat 和 centos 也从 7.0 之后开始使用 systemd，截止目前 systemd 已经运行在大部分的 Linux发行版中。
 
-在系统启动上 system 拥有绝对的优势，有张三方对比图可见分晓：
+在系统启动上 systemd 拥有绝对的优势，有张三方对比图可见分晓：
 
 ![](http://qiniu.liupzmin.com/boot.png)
 
@@ -325,11 +325,11 @@ return -1;
 
 所谓的 `login & interactive` 模式我举两个例子，一个是我们登录 Linux 字符界面的时候，输入用户名密码进入的那个 shell 就是登录交互式的，另一个就是我们使用 `sshd` 服务远程登录，在输入用户名密码后获得的 shell 也是登录交互式的。
 
-对于非交互式的 shell 典型的情况就是执行脚本啦，而在执行脚本的时候可以通过添加 `--login` 或者 `-l` 的选项来使这个 shell 去读取 `Startup Files`，因为它没有输入口令的登录动作，只有读取和执行Startup Files 。
+对于非交互式的 shell 典型的情况就是执行脚本啦，而在执行脚本的时候可以通过添加 `--login` 或者 `-l` 的选项来使这个 shell 去读取 `Startup Files`，因为它没有输入口令的登录动作，只有读取和执行 Startup Files 。
 
 另外，你在 X Windows 下运行 `terminal` 软件打开的 shell 是 `non-login & interactive` 模式的。如果你曾有**在视窗下打开 shell 却无法获取 `～/bash_profile` 中定义的变量**的疑惑的话，现在你可以释然了。
 
-来做个实验吧：
+来做个实验吧，我事先在 `/etc/profile`、`/etc/bashrc`、`~/.bash_profile`、`~/.bashrc` 中增加了 `echo “Hello from xxxx”` 的语句，让我们来看看各种情况下我们的得到的 shell 到底执行了哪些文件：
 
 1. sshd
 
@@ -372,6 +372,13 @@ return -1;
     `su` 的功能是切换用户，其中 `-` 选项表示登录，一个登录的 shell 在 ps 中显示为`-bash`，非登录的显示为 `bash`。
 
     ```shell
+    [root@afis-db ~]# su - oracle
+    Hello from /etc/profile
+    Hello from /etc/bashrc
+    Hello from ~/.bashrc
+    Hello from ~/.bash_profile
+    [oracle@afis-db ~]$ echo $$
+    11935
     [oracle@afis-db ~]$ ps -ef|grep 11935
     oracle   11935 11934  0 13:22 pts/1    00:00:00 -bash
     oracle   11960 11935  0 13:22 pts/1    00:00:00 ps -ef
