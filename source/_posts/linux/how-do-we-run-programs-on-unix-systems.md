@@ -41,8 +41,6 @@ cmd := exec.Command(executableFile, cmdSlice[1:]...)
 
 本文会涉及到一点 `Sysvinit` 和 `Systemd` 的内容， 但我不会过多的去介绍他们，只是简单说明，这是一种能让你的程序运行起来的方式，我最后的重点会放在 `shell` 上面。
 
-需要说明的一点的是，本文不会涉及编译、链接、装载、运行的详细内容，如果标题误导了你，我只能抱歉了。
-
 ## 让程序跑起来有多少种可能的方法？
 
 当我产生这个疑问之后，我努力的思考，并去寻找答案，最后总结了如下几种：
@@ -329,7 +327,7 @@ return -1;
 
 另外，你在 X Windows 下运行 `terminal` 软件打开的 shell 是 `non-login & interactive` 模式的。如果你曾有**在视窗下打开 shell 却无法获取 `～/bash_profile` 中定义的变量**的疑惑的话，现在你可以释然了。
 
-来做个实验吧，我事先在 `/etc/profile`、`/etc/bashrc`、`~/.bash_profile`、`~/.bashrc` 中增加了 `echo “Hello from xxxx”` 的语句，让我们来看看各种情况下我们的得到的 shell 到底执行了哪些文件：
+来做个实验吧，我事先在 `/etc/profile`、`/etc/bashrc`、`~/.bash_profile`、`~/.bashrc` 中增加了 `echo “Hello from xxxx”` 的语句，让我们来看看各种情况下我们得到的 shell 到底执行了哪些文件：
 
 1. sshd
 
