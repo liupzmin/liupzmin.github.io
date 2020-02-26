@@ -49,10 +49,17 @@
 {% endif %}
 
 {% if theme.footer.theme.enable %}
-  <div class="theme-info">{#
+  <div class="powered-by">{#
   #}{{ __('footer.theme') }} – {{ next_url('https://theme-next.org', 'NexT.' + theme.scheme, {class: 'theme-link'}) }}{#
   #}{% if theme.footer.theme.version %} v{{ version }}{% endif %}{#
 #}</div>
+
+<span class="post-meta-divider">|</span>
+<div class="theme-info">
+  <a class="theme-link" target="_blank" href="http://www.miitbeian.gov.cn/">
+    苏ICP备18051624号-1
+  </a>
+</div>
 {% endif %}
 
 {% for inject_item in theme.injects.footer %}
