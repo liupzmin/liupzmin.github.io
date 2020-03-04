@@ -8,7 +8,9 @@ categories:
     - TCP/IP
 ---
 
-**看了左耳朵耗子推荐的这篇 [TIME_WAIT and its design implications for protocols and scalable client server systems](http://www.serverframework.com/asynchronousevents/2011/01/time-wait-and-its-design-implications-for-protocols-and-scalable-servers.html)　讲 TIME_WAIT 的文章，感觉比较清晰，就翻译出来，在这里记录了一下，其实其中内容在《TCP/IP详解》和《UNIX网络编程》中有更详细的讲解。但是文章仍然值得一读，它从程序设计角度描述了应该如何避免 TIME_WAIT 的困扰，但对 TCP 本身着墨不是很多，比如要理解 TIME_WAIT 绕不开　ISN 和　MSL，以及在消除了 TIME_WAIT 之后如何解决延迟报文的问题也未予以详述，我会在我的下一篇文章中就 TIME_WAIT 问题再展开论述，增加自己对 TCP 掌握的熟练度，并结合　ISN、MSL、TIMESTAMP等概念进行说明。**
+**看了左耳朵耗子推荐的这篇 [TIME_WAIT and its design implications for protocols and scalable client server systems](http://www.serverframework.com/asynchronousevents/2011/01/time-wait-and-its-design-implications-for-protocols-and-scalable-servers.html)　讲 TIME_WAIT 的文章，感觉比较清晰，就翻译出来，在这里记录了一下，其实其中内容在《TCP/IP详解》和《UNIX网络编程》中有更详细的讲解。但是文章仍然值得一读，它从程序设计角度描述了应该如何避免 TIME_WAIT 的困扰，但对 TCP 本身着墨不是很多，比如要理解 TIME_WAIT 绕不开 ISN 和 MSL，以及在消除了 TIME_WAIT 之后如何解决延迟报文的问题也未予以详述，我会在我的下一篇文章中就 TIME_WAIT 问题再展开论述，增加自己对 TCP 掌握的熟练度，并结合 ISN、MSL、TIMESTAMP 等概念进行说明。**
+
+***注：才疏学浅，翻译如有错漏之处，还望斧正。***
 
 > When building TCP client server systems it's easy to make simple mistakes which can severely limit scalability. One of these mistakes is failing to take into account the TIME_WAIT state. In this blog post I'll explain why TIME_WAIT exists, the problems that it can cause, how you can work around it, and when you shouldn't.
 
