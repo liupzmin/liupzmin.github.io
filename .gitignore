@@ -3,3 +3,5 @@ db.json
 *.log
 node_modules/
 public/
+source/_posts/.vscode
+.deploy_git
