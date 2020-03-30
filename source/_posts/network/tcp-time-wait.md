@@ -47,7 +47,7 @@ mathjax: true
 通过上面的步骤我们可以得出以下几点：
 
 1. 只有主动关闭的一方才会进入 `TIME_WAIT`，这既可以发生在客户端，也可以发生在服务端。
-2.  `TIME_WAIT` 会持续 `2*MSL` 的时间，之后进入`CLOSED` 状态。
+2. `TIME_WAIT` 会持续 `2*MSL` 的时间，之后进入`CLOSED` 状态。
 3. 在连接没有进入 `CLOSED` 之前是无法被重用的。
 
 ## 几个概念
@@ -88,7 +88,7 @@ mathjax: true
 
 ![Figure 4. Due to a shortened TIME-WAIT state, a delayed TCP segment has been accepted in an unrelated connection.](http://qiniu.liupzmin.com/duplicate-segment.png)
 
-图中该连接的前一个化身序列号为 3 的报文段超时重传了，之后连接关闭。假设没有经过 `TIME_WAIT`，或者 `TIME_WAIT` 的时间很短，在新的连接化身刚刚发送完序列号为 3 的报文段之后，前一个化身迷途的 `seq=3` 的报文段又抵达了。TCP 必须防止这种情况。
+图中该连接的前一个化身序列号为 3 的报文段超时重传了，之后连接关闭。假设没有经过 `TIME_WAIT`，或者 `TIME_WAIT` 的时间很短，在新的连接化身刚刚发送完序列号为 2 的报文段之后，前一个化身迷途的 `seq=3` 的报文段又抵达了。TCP 必须防止这种情况。
 
 为了做到这一点，TCP 设计了 `TIME_WAIT` 。它会锁定这个四元组 `2*MSL` 的时间 ，这期间不允许以相同的四元组打开新连接，我们知道 MSL 是 TCP 报文段最大的网络生存时间，那么 `2*MSL` 足以让这个连接上的所有延迟的报文被丢弃，通过 `TIME_WAIT` 这个规则，我们就能保证每成功建立一个 TCP 连接时，来自该连接先前化身的老的重复的报文都已在网络中消逝了。
 
@@ -96,7 +96,7 @@ mathjax: true
 
 为了应对老的重复报文，Tomlinson 提出了基于时间驱动的 ISN 方案，但这个方案只对短连接和传输速率慢的连接有效，如下图所示：
 
-```
+```text
         |- 2**32       ISN             ISN
         |              *               *
         |             *               *
@@ -123,7 +123,7 @@ mathjax: true
 
 横轴为时间，纵轴为序列号或初始序列号（它们本质上是同一个东西，ISN 只是以某种方式选择的序列号初始值），`*` 代表 ISN，`o` 代表同一个短时连接的不同化身的轨迹，其序列号在 `x` 处终止。因为`慢`，所以每个化身序列号的增长曲线是低于 ISN 的增长曲线的。也就是说，此时没有 `TIME_WAIT` 也一样能排除老的重复报文段，因为每个化身的 ISN 均会保证大于前一个化身最后使用的序列号。只要一个报文段的序列号小于当前连接的初始序列号，TCP 自动就可以识别出来从而将其丢弃。但是，对于长连接或者一个快速的网络环境中，仅仅是 ISN 就不能保证这一点了：
 
-```
+```text
         |- 2**32       ISN               ISN
         |              *                 *
         |             *                 *
@@ -134,7 +134,7 @@ mathjax: true
     |   |        *                 *
         |       *                 *
     S   |      *                 *
-    e   |     *                x* 
+    e   |     *                x*
     q   |    *           o     *
         |   *      o          *
     #   |  *o                *
@@ -150,7 +150,7 @@ mathjax: true
 
 在一个高性能的快速的网络环境中，问题更显复杂。因为这时有两种情况使得老的报文段可能造成问题，先看第一种：
 
-```
+```text
         |- 2**32       ISN               ISN
         |              *                 *
         |       x   o *                 *
@@ -175,7 +175,7 @@ mathjax: true
 
 如图 `Figure 7` 所示是连接传输的字节小于 `4GB` 的情况，并在序列号 `x` 处连接关闭或者崩溃，紧接着一个新的化身被建立，而此时的 ISN 尚远远小于 `x` 的值。这样前一个化身的老的重复的报文段很轻易的就侵入到当前的连接。
 
-```
+```text
         |- 2**32       ISN               ISN
         |      o       *                 *
         |           x *                 *
@@ -248,7 +248,7 @@ TIME_WAIT 很多，既占内存又消耗 CPU，这也是为什么很多人，看
 
 ### PAWS
 
-` PAWS（PROTECT AGAINST WRAPPED SEQUENCE NUMBERS）`是防序列号回绕的意思。
+`PAWS（PROTECT AGAINST WRAPPED SEQUENCE NUMBERS）`是防序列号回绕的意思。
 
 经过前面的介绍，我们对序列号回绕（wrap around）已经有了清晰的认识。但之前我们都是在讨论新旧连接之间怎么防止延迟的报文段，随着网络性能的提升，同一个连接内也面临着延迟报文的问题。
 
@@ -268,7 +268,7 @@ TIME_WAIT 很多，既占内存又消耗 CPU，这也是为什么很多人，看
 
 我们先看看这个参数的定义：
 
-```
+```text
 tcp_tw_reuse - INTEGER
 	Enable reuse of TIME-WAIT sockets for new connections when it is
 	safe from protocol viewpoint.
@@ -296,7 +296,7 @@ tcp_tw_reuse - INTEGER
 
 [RFC1323](https://tools.ietf.org/html/rfc1323#page-29) 中有下面一段话：
 
-```
+```text
 An additional mechanism could be added to the TCP, a per-host
 cache of the last timestamp received from any connection.
 This value could then be used in the PAWS mechanism to reject
@@ -352,7 +352,7 @@ Linux 有个内核参数 `tcp_max_tw_buckets`控制并发的 TIME_WAIT 的数量
 3. [RFC-1323](https://tools.ietf.org/html/rfc1323)
 4. [RFC-7323](https://tools.ietf.org/html/rfc7323)
 5. [TCP/IP详解 卷1：协议](https://book.douban.com/subject/1088054/)
-6.  [UNIX网络编程](https://book.douban.com/subject/1500149/)
+6. [UNIX网络编程](https://book.douban.com/subject/1500149/)
 7. [计算机网络自顶向下方法](https://book.douban.com/subject/30280001/)
 8. [Coping with the TCP TIME-WAIT state on busy Linux servers](https://vincent.bernat.ch/en/blog/2014-tcp-time-wait-state-linux)
 9. [TIME_WAIT and its design implications for protocols and scalable client server systems](http://www.serverframework.com/asynchronousevents/2011/01/time-wait-and-its-design-implications-for-protocols-and-scalable-servers.html)
