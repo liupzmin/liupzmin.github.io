@@ -16,6 +16,10 @@ mathjax: true
 
 **今天这篇文章我准备说一说 `TIME_WAIT` ，我相信很多人在工作中都或多或少遇到 TIME_WAIT 的情况，而且在面试中也经常被问到 `遇到大量的 TIME_WAIT 时应该怎么办？`这样的问题。 因为对 TIME_WAIT 这个状态印象并不是很深，所以被问到类似问题的时候也经常说不出所以然，因此，我花了很长的时间深入研究了一下 TCP 的相关问题，然后在此记录一下。**
 
+先放一个 TCP Header 在这里。
+
+![TCP 头格式](http://qiniu.liupzmin.com/tcp-header.jpg)
+
 ## 什么是 TIME_WAIT
 
 `TIME_WAIT` 是 TCP 状态机中的一个，它出现在连接正常断开的时候。
