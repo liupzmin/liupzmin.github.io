@@ -336,7 +336,7 @@ for a closed connection may limit the throughput of connections
 through a NAT with limited resources.
 ```
 
-***[RFC7857](https://tools.ietf.org/html/rfc7857#section-2.2) 中又对 `RST` 的情况做了修正，建议在删除连接信息之前保存　`4` 分钟的时间：***
+***[RFC7857](https://tools.ietf.org/html/rfc7857#section-2.2) 中又对 `RST` 的情况做了修正，建议在删除连接信息之前保存 `4` 分钟的时间：***
 
 ```text
 Concretely, when the NAT receives a TCP RST matching
