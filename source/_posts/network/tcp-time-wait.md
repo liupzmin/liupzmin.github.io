@@ -72,7 +72,7 @@ mathjax: true
 1. 可靠的实现 TCP 全双工连接的终止。
 2. 允许老的重复的报文段在网络中消失。
 
-第一个理由可以通过查看 `Figure 2` 四次挥手过程，并假设最终的 ACK 丢失来解释。这时服务端将重新发送它的最后的那个 FIN，因此客户端必须维护状态信息，以允许它重新发送最终的 ACK。要是客户端不维护状态信息，其所在的服务器将响应一个 RST，服务端将收到这个 RST 并将其解释为一个错误，这对于一个可靠的协议来说是不完美的终止方式。为了防止这种情况出现，客户端必须等待足够长的时间确保确保对端收到 ACK，如果对端没有收到 ACK，那么就会触发 TCP 重传机制，服务端会重新发送一个 FIN，这样一去一来刚好两个 MSL 的时间。但是你可能会说重新发送的 ACK 还是有可能丢失啊，没错，但 TCP 已经等待了那么长的时间了，已经算仁至义尽了。
+第一个理由可以通过查看 `Figure 2` 四次挥手过程，并假设最终的 ACK 丢失来解释。这时服务端将重新发送它的最后的那个 FIN，因此客户端必须维护状态信息，以允许它重新发送最终的 ACK。要是客户端不维护状态信息，其所在的服务器将响应一个 RST，服务端将收到这个 RST 并将其解释为一个错误，这对于一个可靠的协议来说是不完美的终止方式。为了防止这种情况出现，客户端必须等待足够长的时间确保对端收到 ACK，如果对端没有收到 ACK，那么就会触发 TCP 重传机制，服务端会重新发送一个 FIN，这样一去一来刚好两个 MSL 的时间。但是你可能会说重新发送的 ACK 还是有可能丢失啊，没错，但 TCP 已经等待了那么长的时间了，已经算仁至义尽了。
 
 为了理解第二个理由必须要很好的理解 `Squence Number` 和 `ISN`，也就是`序列号`和`初始序列号`，我们再次强调：**TCP 是面向字节流的协议。** 为了解决可靠传输和乱序问题，**TCP 为每一个传输的字节都编上了号**，TCP 头部的 squence number 表示的是该报文中携带数据的第一个字节的编号，下图可以形象的说明这一点：
 
@@ -321,6 +321,34 @@ Such an extension is not part of the proposal of this RFC.
 但是，如果对端是一个 NAT 网络的话（如：一个公司只用一个 IP 出公网）或是对端的 IP 被另一台重用了，这个事就复杂了。建连接的 SYN 可能就被直接丢掉了（你可能会看到 connection time out 的错误）。所以 NAT 就是 `net.ipv4.tcp_tw_recycle` 的死穴。
 
 ***其实我认为理论上在正常的 NAT 网络中也会出现此问题。假设 NAT 网络中一个客户端主动关闭了连接，在收到服务端的 FIN 报文后向对端发送了最后的 ACK，之后进入了 TIME_WAIT 状态。这个报文在 RTT/2 时间到达了服务端，服务端进入了 CLOSED 状态，此时 NAT 网络中的另一个客户机发起了连接，注意原客户机此时仍在 TIME_WAIT 状态，那么服务端的四元组已经可以重用了，但是如果此时发起新连接的客户机携带的时间戳没有保证递增，那么还是会出现 SYN 被丢弃的情况。（之所以有此疑问，是因为我不清楚中间路由是否会记录连接信息，如果中间路由能阻止连接的发起那么就不会出现这种情况，希望懂的朋友给以指正。）***
+
+
+
+***更新：[RFC5382](https://tools.ietf.org/html/rfc5382#page-11">https://tools.ietf.org/html/rfc5382#page-11) 中针对 `RST` 和 `TIME_WAIT` 情况下的 NAT 行为并未给予明确规定，仅仅阐述了一下利弊。所以由实现者自行处理：***
+
+```text
+NAT behavior for handling RST packets, or connections in TIME_WAIT
+state is left unspecified.  A NAT MAY hold state for a connection in
+TIME_WAIT state to accommodate retransmissions of the last ACK.
+However, since the TIME_WAIT state is commonly encountered by
+internal endpoints properly closing the TCP connection, holding state
+for a closed connection may limit the throughput of connections
+through a NAT with limited resources.
+```
+
+***[RFC7857](https://tools.ietf.org/html/rfc7857#section-2.2) 中又对 `RST` 的情况做了修正，建议在删除连接信息之前保存　`4` 分钟的时间：***
+
+```text
+Concretely, when the NAT receives a TCP RST matching
+an existing mapping, it MUST translate the packet according to the
+NAT mapping entry.  Moreover, the NAT SHOULD wait for 4 minutes
+before deleting the session and removing any state associated with
+it if no packets are received during that 4-minute timeout.
+```
+
+***我并不清楚主流的路由器是如何处理这两种情况的，而且要研究其究竟超越了我目前的能力范围。因此，鉴于 RFC 中的相关描述，我暂时先从协议角度理解为上述担心的情况不会发生。***
+
+
 
 但有一点我不是很明白，为什么 Linux 可以实现 tcp_tw_recycle，却不去实现**记录前一个化身的最终使用序列号**？这样完全可以避免 NAT 网络不同客户端时间戳无法保证单调递增的问题。不管这个连接是从 NAT 网络中哪台客户机发起的，始终为新连接选择一个大于前一个化身最终序列号的 ISN 就不会有任何问题。
 
