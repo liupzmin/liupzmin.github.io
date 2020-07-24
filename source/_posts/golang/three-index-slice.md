@@ -51,7 +51,7 @@ fmt.Println(c) // [3 4 5 200]
 fmt.Println(a) // [1 2 3 4 5 100 7 8 9 10]
 ```
 
-可见，切片a的内容并没有变，因为c的容量有限，append操作引起了扩容，从而使得切片c的底层数组与切片a的底层数组分道扬镳。[码农桃花源](https://qcrao.com/)的[深度解密Go语言之Slice](https://www.cnblogs.com/qcrao-2018/p/10631989.html)中对于数组扩容有更精彩的图文论述，其中也有`data[low:high:max]`的论述，只是当时阅读数未曾运引起重视。
+可见，切片a的内容并没有变，因为c的容量有限，append操作引起了扩容，从而使得切片c的底层数组与切片a的底层数组分道扬镳。[码农桃花源](https://qcrao.com/)的[深度解密Go语言之Slice](https://www.cnblogs.com/qcrao-2018/p/10631989.html)中对于数组扩容有更精彩的图文论述，其中也有`data[low:high:max]`的论述，只是当时阅读数未曾引起重视。
 
 官网用于说明的例子是：
 
