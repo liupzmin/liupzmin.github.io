@@ -73,7 +73,7 @@ type File interface {
 
 除了增加代码的可测试性之外，`io/fs`还可以帮助我们编写更加易读的测试用例，并且在我们测试文件系统交互代码时拥有不寻常的性能表现。
 
-为了更深入地了解`io/fs`包，我们来实现一段代码，它的功能是遍历一个给定的根目录，并从中搜索以`.go`结尾的文件。在循环遍历过程中，程序需要跳过一些符合我们预先设定前缀的目录，比如`.git` , `node_modules` , `testdata`等等。我们没必要取搜寻`.git` , `node_modules`文件夹，因为我们清楚它们肯定不会包含`.go`文件。一旦我们找到了符合要求的文件，我们就把文件的路径加入到一个列表中然后继续搜索。
+为了更深入地了解`io/fs`包，我们来实现一段代码，它的功能是遍历一个给定的根目录，并从中搜索以`.go`结尾的文件。在循环遍历过程中，程序需要跳过一些符合我们预先设定前缀的目录，比如`.git` , `node_modules` , `testdata`等等。我们没必要去搜寻`.git` , `node_modules`文件夹，因为我们清楚它们肯定不会包含`.go`文件。一旦我们找到了符合要求的文件，我们就把文件的路径加入到一个列表中然后继续搜索。
 
 ```go
 func GoFiles(root string) ([]string, error) {
@@ -191,7 +191,7 @@ goos: darwin
 goarch: amd64
 pkg: fsdemo
 cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz
-BenchmarkGoFilesJIT-16										1470			819064 ns/op
+BenchmarkGoFilesJIT-16							1470			819064 ns/op
 ```
 
 ## Pre-Existing File Fixtures
@@ -253,13 +253,13 @@ goos: darwin
 goarch: amd64
 pkg: fsdemo
 cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz
-BenchmarkGoFilesExistingFiles-16							9795			120648 ns/op
-BenchmarkGoFilesJIT-16										1470			819064 ns/op
+BenchmarkGoFilesExistingFiles-16                        9795            120648 ns/op
+BenchmarkGoFilesJIT-16                                  1470            819064 ns/op
 ```
 
 这种方法的缺点是为GoFiles函数创建可靠测试所需的文件/文件夹的数量和组合（意指数量和组合可能都很巨大）。到目前为止，我们仅仅测试了“成功”的情况，我们还没有为错误场景或其它潜在的情况编写测试。
 
-使用这种方式，一个很常见的问题就是，开发者会逐渐的为多个测试重复使用这些场景（指testdata中的测试场景）。随时间推移，开发者并非为新的测试创建新的结构，而是去更改现有的场景以满足新的测试。这将测试全部耦合在了一起，是测试代码变得异常脆弱。
+使用这种方式，一个很常见的问题就是，开发者会逐渐的为多个测试重复使用这些场景（指testdata中的测试场景）。随时间推移，开发者并非为新的测试创建新的结构，而是去更改现有的场景以满足新的测试。这将测试全部耦合在了一起，使测试代码变得异常脆弱。
 
 使用`io/fs`重写`GoFiles`函数，我们将会解决所有的问题！
 
@@ -583,7 +583,7 @@ BenchmarkGoFilesFS-16										432418				2605 ns/op
 
 ​使用`BenchmarkGoFilesJIT`方式，我们有很多直接操作`filesystem`的文件`setup`和`teardown `代码（译者注：指文件结构的创建和销毁），这会让测试代码本身引入很多潜在的`error`和`bug`。`setup`和`teardown `代码会让测试的重心偏移，其复杂性使得很难对测试方案进行更改。而且，这种方式的基准测试性能最差。
 
-​不同的是，`BenchmarkGoFilesExistingFiles`方式使用预先在`testdata`中准备好的文件结构场景。这是的测试过程不再需要`setup`代码，仅仅需要为测试代码指明场景在磁盘中的位置。这种方式还有其它便利之处，例如其使用的是可以用标准工具轻松编辑和操纵的真实文件。与`JIT`方式相比，因其使用了已存在的场景数据，这极大地增加了测试的性能。其成本是需要在`repo`中创建和提交很多的场景数据，而且这些场景数据很容易被其他的测试代码滥用，最终导致测试用例变得脆弱不堪。
+​不同的是，`BenchmarkGoFilesExistingFiles`方式使用预先在`testdata`中准备好的文件结构场景。这使得测试过程不再需要`setup`代码，仅仅需要为测试代码指明场景在磁盘中的位置。这种方式还有其它便利之处，例如其使用的是可以用标准工具轻松编辑和操纵的真实文件。与`JIT`方式相比，因其使用了已存在的场景数据，这极大地增加了测试的性能。其成本是需要在`repo`中创建和提交很多的场景数据，而且这些场景数据很容易被其他的测试代码滥用，最终导致测试用例变得脆弱不堪。
 
 ​这两种方式都有其它的一些缺陷，比如难以模拟大文件、文件的权限、错误等等，而`io/fs`，可以帮我们解决这些问题！
 
@@ -594,9 +594,9 @@ goos: darwin
 goarch: amd64
 pkg: fsdemo
 cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz
-BenchmarkGoFilesFS-16										432418				2605 ns/op
-BenchmarkGoFilesExistingFiles-16							  9795			  120648 ns/op
-BenchmarkGoFilesJIT-16										  1470			  819064 ns/op
+BenchmarkGoFilesFS-16                               432418                          2605 ns/op
+BenchmarkGoFilesExistingFiles-16                      9795                        120648 ns/op
+BenchmarkGoFilesJIT-16                                1470                        819064 ns/op
 ```
 
 ​虽然本文介绍了如何使用新的`io/fs`包来增强我们的测试，但这只是该包的冰山一角。比如，考虑一个文件转换管道，该管道根据文件的类型在文件上运行转换程序。再比如，将.md文件从Markdown转换为HTML，等等。使用`io/fs`包，您可以轻松创建带有接口的管道，并且测试该管道也相对简单。 Go 1.16有很多令人兴奋的地方，但是，对我来说，`io/fs`包是最让我兴奋的一个。
