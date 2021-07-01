@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next gemini" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+
+
+
+
+  
+  
+  <link rel="stylesheet" href="/lib/fancybox/source/jquery.fancybox.css">
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.2.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"onmobile":true},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":true},
+    copycode: {"enable":true,"show_result":true,"style":"default"},
+    fancybox: true,
+    fastclick: false,
+    lazyload: true,
+    tabs: true,
+    motion: {"enable":false,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="原文出处：Exploring &amp;quot;io/fs&amp;quot; to Improve Test Performance and Testability io/fs概述及其存在的必要性​要理解为什么 Go在1.16 版本引入io/fs，就必须先要理解 embedding（内嵌）的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。 ​对于每个">
+<meta name="keywords" content="Go1.16,io&#x2F;fs">
+<meta property="og:type" content="article">
+<meta property="og:title" content="译:探索 Go1.16 io&#x2F;fs 包以提高测试性能和可测试性">
+<meta property="og:url" content="http://liupzmin.com/2021/02/28/golang/explore-io-fs/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="原文出处：Exploring &amp;quot;io/fs&amp;quot; to Improve Test Performance and Testability io/fs概述及其存在的必要性​要理解为什么 Go在1.16 版本引入io/fs，就必须先要理解 embedding（内嵌）的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。 ​对于每个">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-07-01T03:43:54.022Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="译:探索 Go1.16 io&#x2F;fs 包以提高测试性能和可测试性">
+<meta name="twitter:description" content="原文出处：Exploring &amp;quot;io/fs&amp;quot; to Improve Test Performance and Testability io/fs概述及其存在的必要性​要理解为什么 Go在1.16 版本引入io/fs，就必须先要理解 embedding（内嵌）的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。 ​对于每个">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://liupzmin.com/2021/02/28/golang/explore-io-fs/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  
+  <title>译:探索 Go1.16 io/fs 包以提高测试性能和可测试性 | 兔子先生</title>
+  
+
+
+
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-145061011-1"></script>
+  <script>
+    var host = window.location.hostname;
+    if (host !== "localhost" || !false) {
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-145061011-1');
+    }
+  </script>
+
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?e4a15ee426aab22df49b301add136e8f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">兔子先生</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <h1 class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</h1>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档<span class="badge">44</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签<span class="badge">42</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类<span class="badge">26</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+
+      
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>搜索</a>
+        </li>
+      
+    </ul>
+  
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+</div>
+    </header>
+
+    
+  
+  
+
+  
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewbox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></span>
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2021/02/28/golang/explore-io-fs/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="巴流">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+      <meta itemprop="image" content="/images/gzh.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">译:探索 Go1.16 io/fs 包以提高测试性能和可测试性<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9nb2xhbmcvZXhwbG9yZS1pby1mcy5tZA==" title="编辑"><i class="fa fa-pencil"></i></span>
+
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+
+          
+          
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-02-28 10:08:30" itemprop="dateCreated datePublished" datetime="2021-02-28T10:08:30+08:00">2021-02-28</time>
+            </span>
+          
+
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2021-07-01 11:43:54" itemprop="dateModified" datetime="2021-07-01T11:43:54+08:00">2021-07-01</time>
+              </span>
+            
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/golang/" itemprop="url" rel="index"><span itemprop="name">golang</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+                 阅读次数： 
+                <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+              </span>
+            </span>
+          
+
+          
+
+          <br>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>原文出处：<span class="exturl" data-url="aHR0cHM6Ly93d3cuZ29waGVyZ3VpZGVzLmNvbS9hcnRpY2xlcy9nb2xhbmctMS4xNi1pby1mcy1pbXByb3ZlLXRlc3QtcGVyZm9ybWFuY2U=" title="https://www.gopherguides.com/articles/golang-1.16-io-fs-improve-test-performance">Exploring &quot;io/fs&quot; to Improve Test Performance and Testability<i class="fa fa-external-link"></i></span></p>
+<h2 id="io-fs概述及其存在的必要性"><a href="#io-fs概述及其存在的必要性" class="headerlink" title="io/fs概述及其存在的必要性"></a><code>io/fs</code>概述及其存在的必要性</h2><p>​要理解为什么 <code>Go</code>在<code>1.16</code> 版本引入<code>io/fs</code>，就必须先要理解 <strong>embedding（内嵌）</strong>的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。</p>
+<p>​对于每个要嵌入静态文件的工具来说，其工作本质都大同小异。当它们运行的时候，每个静态文件都会被转换为字节，放入一个<code>.go</code>文件之中，最后被编译成二进制文件。一旦进行编译，工具本身就必须负责将<strong>针对文件系统的调用转换为对一个虚拟文件系统的调用</strong>。</p>
+<p>​当运行嵌入了<code>assets</code>静态文件的程序后，代码访问这些文件的方式依然是针对文件系统的调用，我们必须把这种调用转换为一种虚拟调用（因为实际访问的文件内容已被转换为字节，并编译进程序本身）。此时，我们面临一个问题：如何在代码中确定一个调用是针对虚拟的<code>assets</code>还是真实的文件系统？</p>
+<p>​想象一下这样一个工具：它会遍历一个目录，并返回所能找到的所有以<code>.go</code>结尾的文件名称。如果此工具不能和文件系统交互，那么它将毫无用处。现在，假设有一个 web 应用，它内嵌了一些静态文件，比如<code>images, templates, and style sheets</code>等等。那这个 Web 应用程序在访问这些相关<code>assets</code>时应使用虚拟文件系统，而不是真实文件系统。</p>
+<p>​要分辨出这两种不同的调用，就需要引入一个供开发人员使用的API，该API可以指导该工具何时访问虚拟化，何时访问文件系统。这类API都各有特色，像早期的嵌入工具  <span class="exturl" data-url="aHR0cHM6Ly9wa2cuZ28uZGV2L2dpdGh1Yi5jb20vZ29idWZmYWxvL3BhY2tyL3Yy" title="https://pkg.go.dev/github.com/gobuffalo/packr/v2">Packr<i class="fa fa-external-link"></i></span>，它使用的就是自定义的 API。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Box</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="title">Folder</span><span class="params">(path <span class="keyword">string</span>)</span> *<span class="title">Box</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="title">New</span><span class="params">(name <span class="keyword">string</span>, path <span class="keyword">string</span>)</span> *<span class="title">Box</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="title">NewBox</span><span class="params">(path <span class="keyword">string</span>)</span> *<span class="title">Box</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">AddBytes</span><span class="params">(path <span class="keyword">string</span>, t []<span class="keyword">byte</span>)</span> <span class="title">error</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">AddString</span><span class="params">(path <span class="keyword">string</span>, t <span class="keyword">string</span>)</span> <span class="title">error</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">Bytes</span><span class="params">(name <span class="keyword">string</span>)</span> []<span class="title">byte</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">Find</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="params">([]<span class="keyword">byte</span>, error)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">FindString</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="params">(<span class="keyword">string</span>, error)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">Has</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="title">bool</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">HasDir</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="title">bool</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">List</span><span class="params">()</span> []<span class="title">string</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">MustBytes</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="params">([]<span class="keyword">byte</span>, error)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">MustString</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="params">(<span class="keyword">string</span>, error)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">Open</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="params">(http.File, error)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">Resolve</span><span class="params">(key <span class="keyword">string</span>)</span> <span class="params">(file.File, error)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">SetResolver</span><span class="params">(file <span class="keyword">string</span>, res resolver.Resolver)</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">String</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="title">string</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">Walk</span><span class="params">(wf WalkFunc)</span> <span class="title">error</span></span></span><br><span class="line"><span class="function">	<span class="title">func</span> <span class="params">(b *Box)</span> <span class="title">WalkPrefix</span><span class="params">(prefix <span class="keyword">string</span>, wf WalkFunc)</span> <span class="title">error</span></span></span><br></pre></td></tr></table></figure>
+<p>​使用自定义 API 的好处就是工具开发者可以完全掌控用户体验。这包括使开发人员更轻松地管理需要在幕后维护的复杂关系。缺点也很明显，那就是使用者需要去学习这种新的 API。其代码也就严重依赖于这种自定义的 API，这使得它们难以随时间升级。</p>
+<p>​另一种方式就是提供一种模拟标准库的 API ， <span class="exturl" data-url="aHR0cHM6Ly9wa2cuZ28uZGV2L2dpdGh1Yi5jb20vbWFya2JhdGVzL3BrZ2VyQHYwLjE3LjEvcGtnaW5nI0ZpbGU=" title="https://pkg.go.dev/github.com/markbates/pkger@v0.17.1/pkging#File">Pkger<i class="fa fa-external-link"></i></span> 就是此例之一：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> File <span class="keyword">interface</span> &#123;</span><br><span class="line">	Close() error</span><br><span class="line">	Name() <span class="keyword">string</span></span><br><span class="line">	Open(name <span class="keyword">string</span>) (http.File, error)</span><br><span class="line">	Read(p []<span class="keyword">byte</span>) (<span class="keyword">int</span>, error)</span><br><span class="line">	Readdir(count <span class="keyword">int</span>) ([]os.FileInfo, error)</span><br><span class="line">	Seek(offset <span class="keyword">int64</span>, whence <span class="keyword">int</span>) (<span class="keyword">int64</span>, error)</span><br><span class="line">	Stat() (os.FileInfo, error)</span><br><span class="line">	Write(b []<span class="keyword">byte</span>) (<span class="keyword">int</span>, error)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>​这种方式使用已知的、大家都熟悉的 API，会更容易吸引用户，而且也避免了再去学习新的 API 。</p>
+<p><code>​Go 1.16</code>标准库引入的<code>io/fs</code>包就采用了此种方式，其优点就是使用了用户熟知的 API 接口，因此也就降低了学习成本，使得用户更加容易接受。</p>
+<p>​但有其利必有其弊，虽然使用现有 API 迎合了用户使用习惯、增加了程序的兼容性，但同时也导致了大而复杂的接口。这亦是<code>io/fs</code>所面临的问题，不幸的是，要正确模拟对文件系统的调用，需要很大的接口占用空间，我们很快就会看到。</p>
+<h2 id="测试基于文件系统的代码"><a href="#测试基于文件系统的代码" class="headerlink" title="测试基于文件系统的代码"></a>测试基于文件系统的代码</h2><p><code>io/fs</code>包不仅仅只是支撑<code>1.16</code> 版本<strong>嵌入</strong>功能这么简单，它带来的最大便利之一就是丰富了单元测试，它可以让我们编写更加易于测试的文件系统交互方面的代码。</p>
+<p>除了增加代码的可测试性之外，<code>io/fs</code>还可以帮助我们编写更加易读的测试用例，并且在我们测试文件系统交互代码时拥有不寻常的性能表现。</p>
+<p>为了更深入地了解<code>io/fs</code>包，我们来实现一段代码，它的功能是遍历一个给定的根目录，并从中搜索以<code>.go</code>结尾的文件。在循环遍历过程中，程序需要跳过一些符合我们预先设定前缀的目录，比如<code>.git</code> , <code>node_modules</code> , <code>testdata</code>等等。我们没必要去搜寻<code>.git</code> , <code>node_modules</code>文件夹，因为我们清楚它们肯定不会包含<code>.go</code>文件。一旦我们找到了符合要求的文件，我们就把文件的路径加入到一个列表中然后继续搜索。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GoFiles</span><span class="params">(root <span class="keyword">string</span>)</span> <span class="params">([]<span class="keyword">string</span>, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> data []<span class="keyword">string</span></span><br><span class="line"></span><br><span class="line">	err := filepath.Walk(root, <span class="function"><span class="keyword">func</span><span class="params">(path <span class="keyword">string</span>, info os.FileInfo, err error)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">		base := filepath.Base(path)</span><br><span class="line">		<span class="keyword">for</span> _, sp := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// if the name of the folder has a prefix listed in SkipPaths</span></span><br><span class="line">			<span class="comment">// then we should skip the directory.</span></span><br><span class="line">			<span class="comment">// e.g. node_modules, testdata, _foo, .git</span></span><br><span class="line">			<span class="keyword">if</span> strings.HasPrefix(base, sp) &#123;</span><br><span class="line">				<span class="keyword">return</span> filepath.SkipDir</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// skip non-go files</span></span><br><span class="line">		<span class="keyword">if</span> filepath.Ext(path) != <span class="string">".go"</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		data = <span class="built_in">append</span>(data, path)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> data, err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个函数的执行结果将产生一个类似于下面这样的<code>slice</code>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[</span><br><span class="line">	<span class="string">"benchmarks_test.go"</span>,</span><br><span class="line">	<span class="string">"cmd/fsdemo/main.go"</span>,</span><br><span class="line">	<span class="string">"cmd/fsdemo/main_test.go"</span>,</span><br><span class="line">	<span class="string">"fsdemo.go"</span>,</span><br><span class="line">	<span class="string">"fsdemo_test.go"</span>,</span><br><span class="line">	<span class="string">"mock_file.go"</span>,</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<p>我现在提出的问题是：<strong>我们该如何测试这段代码？</strong>因为这段代码直接和文件系统交互，我们该如何保证在文件系统上呈现一个准确无误的测试场景呢？</p>
+<p>鉴于测试方法会有很多种，在深入<code>io/fs</code>之前，我们先看一下最常见的两种方法，从而对比一下<code>io/fs</code>能带给我们怎样的便利。</p>
+<h2 id="JIT-Test-File-Creation"><a href="#JIT-Test-File-Creation" class="headerlink" title="JIT Test File Creation"></a>JIT Test File Creation</h2><p>第一个测试文件系统代码的方法就是在运行时刻创建必须的文件夹结构。</p>
+<blockquote>
+<p>本文将以<code>benchmark</code>的方式呈现单元测试，如此我们就可以对比各种测试方法的性能。这也是为何<code>setup</code>（创建测试用的文件结构）的代码会被包含在基准代码当中，我们基准测试的目标就是<code>setup</code>的过程。在此情况下，各种测试方法都不会改变<code>setup</code>的底层函数。</p>
+</blockquote>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGoFilesJIT</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line"></span><br><span class="line">		dir, err := ioutil.TempDir(<span class="string">""</span>, <span class="string">"fsdemo"</span>)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		names := []<span class="keyword">string</span>&#123;<span class="string">"foo.go"</span>, <span class="string">"web/routes.go"</span>&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> _, s := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// ex: ./.git/git.go</span></span><br><span class="line">			<span class="comment">// ex: ./node_modules/node_modules.go</span></span><br><span class="line">			names = <span class="built_in">append</span>(names, filepath.Join(s, s+<span class="string">".go"</span>))</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> _, f := <span class="keyword">range</span> names &#123;</span><br><span class="line">			<span class="keyword">if</span> err := os.MkdirAll(filepath.Join(dir, filepath.Dir(f)), <span class="number">0755</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">				b.Fatal(err)</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">if</span> err := ioutil.WriteFile(filepath.Join(dir, f), <span class="literal">nil</span>, <span class="number">0666</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">				b.Fatal(err)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		list, err := GoFiles(dir)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lexp := <span class="number">2</span></span><br><span class="line">		lact := <span class="built_in">len</span>(list)</span><br><span class="line">		<span class="keyword">if</span> lact != lexp &#123;</span><br><span class="line">			b.Fatalf(<span class="string">"expected list to have %d files, but got %d"</span>, lexp, lact)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		sort.Strings(list)</span><br><span class="line"></span><br><span class="line">		exp := []<span class="keyword">string</span>&#123;<span class="string">"foo.go"</span>, <span class="string">"web/routes.go"</span>&#125;</span><br><span class="line">		<span class="keyword">for</span> i, a := <span class="keyword">range</span> list &#123;</span><br><span class="line">			e := exp[i]</span><br><span class="line">			<span class="keyword">if</span> !strings.HasSuffix(a, e) &#123;</span><br><span class="line">				b.Fatalf(<span class="string">"expected %q to match expected %q"</span>, list, exp)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>​在<code>BenchmarkGoFilesJIT</code>测试用例中，我们使用<code>io/ioutil</code>包来为测试创建满足需求场景的临时文件夹和文件。此刻，意味着要创建包含<code>.go</code>文件的<code>node_modules</code>和<code>.git</code>目录，以便于确认这些<code>.go</code>文件不会出现在处理结果中。如果<code>GoFiles</code>函数正常工作的话，我们在结果集中将看到两个条目，<code>foo.go</code> 以及 <code>web/routes.go</code>。</p>
+<p>​这种<code>JIT</code>方式有两大缺点：其一，随着时间的推移，编写和维护<code>setup</code>部分的代码将会变得非常麻烦，为测试用例做大量的<code>setup</code>本身也会引入更多的 bug。其二，也是最大的弊端，<code>JIT</code>测试会创建大量的文件和文件夹，这势必会在文件系统上产生大量的<code>i/o</code>竞争和<code>i/o</code>操作，从而让我们的任务性能非常低效。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: fsdemo</span><br><span class="line">cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz</span><br><span class="line">BenchmarkGoFilesJIT-16							1470			819064 ns/op</span><br></pre></td></tr></table></figure>
+<h2 id="Pre-Existing-File-Fixtures"><a href="#Pre-Existing-File-Fixtures" class="headerlink" title="Pre-Existing File Fixtures"></a>Pre-Existing File Fixtures</h2><p>另一种测试<code>GoFiles</code>的方法是创建一个名为<code>testdata</code>的目录，并且在里面创建好测试场景所需的全部文件。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">testdata</span><br><span class="line">└── scenario1</span><br><span class="line">		├── _ignore</span><br><span class="line">		│   └── ignore.go</span><br><span class="line">		├── foo.go</span><br><span class="line">		├── node_modules</span><br><span class="line">		│   └── node_modules.go</span><br><span class="line">		├── testdata</span><br><span class="line">		│   └── testdata.go</span><br><span class="line">		└── web</span><br><span class="line">				└── routes.go</span><br><span class="line"></span><br><span class="line">5 directories, 5 files</span><br></pre></td></tr></table></figure>
+<p>使用这种方法，我们就可以清理掉很多我们的测试代码，让<code>GoFiles</code>函数指向事先准备好的已包含相应测试场景的文件夹。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGoFilesExistingFiles</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line"></span><br><span class="line">		list, err := GoFiles(<span class="string">"./testdata/scenario1"</span>)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lexp := <span class="number">2</span></span><br><span class="line">		lact := <span class="built_in">len</span>(list)</span><br><span class="line">		<span class="keyword">if</span> lact != lexp &#123;</span><br><span class="line">			b.Fatalf(<span class="string">"expected list to have %d files, but got %d"</span>, lexp, lact)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		sort.Strings(list)</span><br><span class="line"></span><br><span class="line">		exp := []<span class="keyword">string</span>&#123;<span class="string">"foo.go"</span>, <span class="string">"web/routes.go"</span>&#125;</span><br><span class="line">		<span class="keyword">for</span> i, a := <span class="keyword">range</span> list &#123;</span><br><span class="line">			e := exp[i]</span><br><span class="line">			<span class="keyword">if</span> !strings.HasSuffix(a, e) &#123;</span><br><span class="line">				b.Fatalf(<span class="string">"expected %q to match expected %q"</span>, list, exp)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这种方法大大减少了测试的消耗，从而提高了测试的可靠性和可读性。与JIT方法相比，此方法呈现的测试速度也快得多。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: fsdemo</span><br><span class="line">cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz</span><br><span class="line">BenchmarkGoFilesExistingFiles-16                        9795            120648 ns/op</span><br><span class="line">BenchmarkGoFilesJIT-16                                  1470            819064 ns/op</span><br></pre></td></tr></table></figure>
+<p>这种方法的缺点是为GoFiles函数创建可靠测试所需的文件/文件夹的数量和组合（意指数量和组合可能都很巨大）。到目前为止，我们仅仅测试了“成功”的情况，我们还没有为错误场景或其它潜在的情况编写测试。</p>
+<p>使用这种方式，一个很常见的问题就是，开发者会逐渐的为多个测试重复使用这些场景（指testdata中的测试场景）。随时间推移，开发者并非为新的测试创建新的结构，而是去更改现有的场景以满足新的测试。这将测试全部耦合在了一起，使测试代码变得异常脆弱。</p>
+<p>使用<code>io/fs</code>重写<code>GoFiles</code>函数，我们将会解决所有的问题！</p>
+<h2 id="使用-FS"><a href="#使用-FS" class="headerlink" title="使用  FS"></a>使用  FS</h2><p>​通过上面的了解，我们知道<code>io/fs</code>包支持针对<code>virtual file system</code>的实现（译者注：意指<code>io/fs</code>包提供了很多针对<code>fs.FS</code>的功能）。为了利用<code>io/fs</code>提供的功能，我们可以通过重写<code>GoFiles</code>函数让它接受一个<code>fs.FS</code>作为参数。在正式的代码中，我们可以调用<span class="exturl" data-url="aHR0cHM6Ly9wa2cuZ28uZGV2L29zLyNEaXJGUw==" title="https://pkg.go.dev/os/#DirFS"><code>os.DirFS</code><i class="fa fa-external-link"></i></span>来获得一个由底层文件系统支持的<code>fs.FS</code>接口的实现。</p>
+<p>​为了遍历一个<code>fs.FS</code>的实现，我们需要使用<code>fs.WalkDir</code>函数，<code>fs.WalkDir</code>函数的功能近乎等同于<code>filepath.Walk</code>函数。尽管这些差异很值得推敲一番，但这超出了本文的范围，因此我们将在以后的文章中另行阐述。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GoFilesFS</span><span class="params">(root <span class="keyword">string</span>, sys fs.FS)</span> <span class="params">([]<span class="keyword">string</span>, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> data []<span class="keyword">string</span></span><br><span class="line"></span><br><span class="line">	err := fs.WalkDir(sys, <span class="string">"."</span>, <span class="function"><span class="keyword">func</span><span class="params">(path <span class="keyword">string</span>, de fs.DirEntry, err error)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		base := filepath.Base(path)</span><br><span class="line">		<span class="keyword">for</span> _, sp := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// if the name of the folder has a prefix listed in SkipPaths</span></span><br><span class="line">			<span class="comment">// then we should skip the directory.</span></span><br><span class="line">			<span class="comment">// e.g. node_modules, testdata, _foo, .git</span></span><br><span class="line">			<span class="keyword">if</span> strings.HasPrefix(base, sp) &#123;</span><br><span class="line">				<span class="keyword">return</span> filepath.SkipDir</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// skip non-go files</span></span><br><span class="line">		<span class="keyword">if</span> filepath.Ext(path) != <span class="string">".go"</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		data = <span class="built_in">append</span>(data, path)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> data, err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>得益于<code>io/fs</code>包兼容性API带来的便利，<code>GoFilesFS</code>函数避免了昂贵的重写，仅需要很小的修改就可完工。</p>
+<h2 id="实现-FS"><a href="#实现-FS" class="headerlink" title="实现 FS"></a>实现 FS</h2><p>现在，该函数已更新为使用<code>fs.FS</code>，让我们看看如何为它编写测试。在此之前，我们先来实现<code>fs.FS</code>。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> FS <span class="keyword">interface</span> &#123;</span><br><span class="line">	<span class="comment">// Open opens the named file.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// When Open returns an error, it should be of type *PathError</span></span><br><span class="line">	<span class="comment">// with the Op field set to "open", the Path field set to name,</span></span><br><span class="line">	<span class="comment">// and the Err field describing the problem.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// Open should reject attempts to open names that do not satisfy</span></span><br><span class="line">	<span class="comment">// ValidPath(name), returning a *PathError with Err set to</span></span><br><span class="line">	<span class="comment">// ErrInvalid or ErrNotExist.</span></span><br><span class="line">	Open(name <span class="keyword">string</span>) (File, error)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>Open</code>函数接收一个文件的路径，然后返回一个<code>fs.File</code>和一个<code>error</code>。如文档所述，需要满足某些关于错误的需求。</p>
+<p>对于我们的测试来说，我们将会使用一个模拟文件类型的切片，并稍后将其实现为<code>fs.FS</code>，该切片还将实现所有本次测试所需的功能。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MockFS []*MockFile</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mfs MockFS)</span> <span class="title">Open</span><span class="params">(name <span class="keyword">string</span>)</span> <span class="params">(fs.File, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> _, f := <span class="keyword">range</span> mfs &#123;</span><br><span class="line">		<span class="keyword">if</span> f.Name() == name &#123;</span><br><span class="line">			<span class="keyword">return</span> f, <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(mfs) &gt; <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> mfs[<span class="number">0</span>].FS.Open(name)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span>, &amp;fs.PathError&#123;</span><br><span class="line">		Op:   <span class="string">"read"</span>,</span><br><span class="line">		Path: name,</span><br><span class="line">		Err:  os.ErrNotExist,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<code>MockFS.Open</code>中，我们在已知文件列表中循环匹配请求的名称，如果匹配成功则返回该文件；如果没有找到，则尝试在第一个文件中递归打开。最后，如果没有找到，则按文档要求返回适当的<code>error</code>。</p>
+<p>我们的<code>MockFS</code>目前还未实现完整，我们还需要实现<code>fs.ReadDirFS</code>接口来模拟文件。尽管<code>fs.ReadDirFS</code>文档未提及以下约束，但<code>fs.ReadDirFile</code>和<code>File.ReadDir</code>则需要它们。因此，它们也值得留意和实现。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ReadDir reads the contents of the directory and returns</span></span><br><span class="line"><span class="comment">// a slice of up to n DirEntry values in directory order.</span></span><br><span class="line"><span class="comment">// Subsequent calls on the same file will yield further DirEntry values.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// If n &gt; 0, ReadDir returns at most n DirEntry structures.</span></span><br><span class="line"><span class="comment">// In this case, if ReadDir returns an empty slice, it will return</span></span><br><span class="line"><span class="comment">// a non-nil error explaining why.</span></span><br><span class="line"><span class="comment">// At the end of a directory, the error is io.EOF.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// If n &lt;= 0, ReadDir returns all the DirEntry values from the directory</span></span><br><span class="line"><span class="comment">// in a single slice. In this case, if ReadDir succeeds (reads all the way</span></span><br><span class="line"><span class="comment">// to the end of the directory), it returns the slice and a nil error.</span></span><br><span class="line"><span class="comment">// If it encounters an error before the end of the directory,</span></span><br><span class="line"><span class="comment">// ReadDir returns the DirEntry list read until that point and a non-nil error.</span></span><br></pre></td></tr></table></figure>
+<p>尽管这些规则听起来令人困惑，但实际上，这种逻辑非常简单。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mfs MockFS)</span> <span class="title">ReadDir</span><span class="params">(n <span class="keyword">int</span>)</span> <span class="params">([]fs.DirEntry, error)</span></span> &#123;</span><br><span class="line">	list := <span class="built_in">make</span>([]fs.DirEntry, <span class="number">0</span>, <span class="built_in">len</span>(mfs))</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> _, v := <span class="keyword">range</span> mfs &#123;</span><br><span class="line">		list = <span class="built_in">append</span>(list, v)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	sort.Slice(list, <span class="function"><span class="keyword">func</span><span class="params">(a, b <span class="keyword">int</span>)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">		<span class="keyword">return</span> list[a].Name() &gt; list[b].Name()</span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> n &lt; <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> list, <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> n &gt; <span class="built_in">len</span>(list) &#123;</span><br><span class="line">		<span class="keyword">return</span> list, io.EOF</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> list[:n], io.EOF</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="实现-File-接口"><a href="#实现-File-接口" class="headerlink" title="实现 File 接口"></a>实现 File 接口</h2><p>我们已经完成了<code>fs.FS</code>的实现，但仍需要实现一组接口来满足<code>fs</code>包的需要。幸运的是，我们可以将所有接口实现到一个类型当中，从而使我们的测试更加简便。</p>
+<blockquote>
+<p>继续之前，我要申明一点：我故意没有完全实现接口的文件读取部分，因为这将增加不必要的复杂度，而这些复杂度不是本文所需要的。所以我们将在后续的文章中探讨相关主题。</p>
+</blockquote>
+<p>为了测试我们的代码，我们将要实现四个接口： <code>fs.File</code> , <code>fs.FileInfo</code> , <code>fs.ReadDirFile</code> , and <code>fs.DirEntry</code> 。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> File <span class="keyword">interface</span> &#123;</span><br><span class="line">	Stat() (FileInfo, error)</span><br><span class="line">	Read([]<span class="keyword">byte</span>) (<span class="keyword">int</span>, error)</span><br><span class="line">	Close() error</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> FileInfo <span class="keyword">interface</span> &#123;</span><br><span class="line">	Name() <span class="keyword">string</span></span><br><span class="line">	Size() <span class="keyword">int64</span></span><br><span class="line">	Mode() FileMode</span><br><span class="line">	ModTime() time.Time</span><br><span class="line">	IsDir() <span class="keyword">bool</span></span><br><span class="line">	Sys() <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> ReadDirFile <span class="keyword">interface</span> &#123;</span><br><span class="line">	File</span><br><span class="line">	ReadDir(n <span class="keyword">int</span>) ([]DirEntry, error)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> DirEntry <span class="keyword">interface</span> &#123;</span><br><span class="line">	Name() <span class="keyword">string</span></span><br><span class="line">	IsDir() <span class="keyword">bool</span></span><br><span class="line">	Type() FileMode</span><br><span class="line">	Info() (FileInfo, error)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>乍看之下，这些接口的体量之大似乎压人心魄。但是不用多虑，因为它们很多重叠的功能，所以我们可以把他们凝聚到一个类型当中。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MockFile <span class="keyword">struct</span> &#123;</span><br><span class="line">	FS      MockFS</span><br><span class="line">	isDir   <span class="keyword">bool</span></span><br><span class="line">	modTime time.Time</span><br><span class="line">	mode    fs.FileMode</span><br><span class="line">	name    <span class="keyword">string</span></span><br><span class="line">	size    <span class="keyword">int64</span></span><br><span class="line">	sys     <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>MockFile</code>类型包含一个<code>fs.FS</code>的实现<code>MockFS</code>，它将持有我们测试用到的所有文件。<code>MockFile</code> 类型中的其余字段供我们设置为其相应功能的返回值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">Name</span><span class="params">()</span> <span class="title">string</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.name</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">IsDir</span><span class="params">()</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.isDir</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span> <span class="title">Info</span><span class="params">()</span> <span class="params">(fs.FileInfo, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> mf.Stat()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span> <span class="title">Stat</span><span class="params">()</span> <span class="params">(fs.FileInfo, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> mf, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">Size</span><span class="params">()</span> <span class="title">int64</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.size</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">Mode</span><span class="params">()</span> <span class="title">os</span>.<span class="title">FileMode</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.mode</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">ModTime</span><span class="params">()</span> <span class="title">time</span>.<span class="title">Time</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.modTime</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">Sys</span><span class="params">()</span> <span class="title">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">	<span class="keyword">return</span> m.sys</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">Type</span><span class="params">()</span> <span class="title">fs</span>.<span class="title">FileMode</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.Mode().Type()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span> <span class="title">Read</span><span class="params">(p []<span class="keyword">byte</span>)</span> <span class="params">(<span class="keyword">int</span>, error)</span></span> &#123;</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">"not implemented"</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span> <span class="title">Close</span><span class="params">()</span> <span class="title">error</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span> <span class="title">ReadDir</span><span class="params">(n <span class="keyword">int</span>)</span> <span class="params">([]fs.DirEntry, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> !m.IsDir() &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, os.ErrNotExist</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> m.FS == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> m.FS.ReadDir(n)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>像<code>Stat() (fs.FileInfo, error)</code>方法可以返回<code>MockFile</code>本身，因为它已经实现了<code>fs.FileInfo</code>接口，此为我们如何用一个<code>MockFile</code>类型实现众多所需的接口的一个例证！</p>
+<h2 id="使用-FS-进行测试"><a href="#使用-FS-进行测试" class="headerlink" title="使用 FS 进行测试"></a>使用 FS 进行测试</h2><p>鉴于我们已经拥有了<code>MockFS</code> 和 <code>MockFile</code>，那么是时候为<code>GoFilesFS</code>函数编写测试了。依例，我们首先要为测试设置文件夹和文件结构。通过两个辅助函数<code>NewFile</code>和<code>NewDir</code>、以及使用切片直接构建一个<code>fs.FS</code>（指 <code>MockFS</code>）的便捷性，我们可以在内存中快速的构建出复杂的文件夹和文件结构。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewFile</span><span class="params">(name <span class="keyword">string</span>)</span> *<span class="title">MockFile</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;MockFile&#123;</span><br><span class="line">		name: name,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewDir</span><span class="params">(name <span class="keyword">string</span>, files ...*MockFile)</span> *<span class="title">MockFile</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;MockFile&#123;</span><br><span class="line">		FS:    files,</span><br><span class="line">		isDir: <span class="literal">true</span>,</span><br><span class="line">		name:  name,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGoFilesFS</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		files := MockFS&#123;</span><br><span class="line">			<span class="comment">// ./foo.go</span></span><br><span class="line">			NewFile(<span class="string">"foo.go"</span>),</span><br><span class="line">			<span class="comment">// ./web/routes.go</span></span><br><span class="line">			NewDir(<span class="string">"web"</span>, NewFile(<span class="string">"routes.go"</span>)),</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> _, s := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// ex: ./.git/git.go</span></span><br><span class="line">			<span class="comment">// ex: ./node_modules/node_modules.go</span></span><br><span class="line">			files = <span class="built_in">append</span>(files, NewDir(s, NewFile(s+<span class="string">".go"</span>)))</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		mfs := MockFS&#123;</span><br><span class="line">			<span class="comment">// ./</span></span><br><span class="line">			NewDir(<span class="string">"."</span>, files...),</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		list, err := GoFilesFS(<span class="string">"/"</span>, mfs)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lexp := <span class="number">2</span></span><br><span class="line">		lact := <span class="built_in">len</span>(list)</span><br><span class="line">		<span class="keyword">if</span> lact != lexp &#123;</span><br><span class="line">			b.Fatalf(<span class="string">"expected list to have %d files, but got %d"</span>, lexp, lact)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		sort.Strings(list)</span><br><span class="line"></span><br><span class="line">		exp := []<span class="keyword">string</span>&#123;<span class="string">"foo.go"</span>, <span class="string">"web/routes.go"</span>&#125;</span><br><span class="line">		<span class="keyword">for</span> i, a := <span class="keyword">range</span> list &#123;</span><br><span class="line">			e := exp[i]</span><br><span class="line">			<span class="keyword">if</span> e != a &#123;</span><br><span class="line">				b.Fatalf(<span class="string">"expected %q to match expected %q"</span>, list, exp)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>本次<code>setup</code>的代码非常简单高效地完成了我们所需的工作，如果我们需要在测试中增加文件或文件夹，可以通过插入一行或两行来迅速完成。更重要的是，在尝试编写测试时，我们不会因复杂的<code>setup</code>代码而分心。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">BenchmarkGoFilesFS-16										432418				2605 ns/op</span><br></pre></td></tr></table></figure>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​使用<code>BenchmarkGoFilesJIT</code>方式，我们有很多直接操作<code>filesystem</code>的文件<code>setup</code>和<code>teardown</code>代码（译者注：指文件结构的创建和销毁），这会让测试代码本身引入很多潜在的<code>error</code>和<code>bug</code>。<code>setup</code>和<code>teardown</code>代码会让测试的重心偏移，其复杂性使得很难对测试方案进行更改。而且，这种方式的基准测试性能最差。</p>
+<p>​不同的是，<code>BenchmarkGoFilesExistingFiles</code>方式使用预先在<code>testdata</code>中准备好的文件结构场景。这使得测试过程不再需要<code>setup</code>代码，仅仅需要为测试代码指明场景在磁盘中的位置。这种方式还有其它便利之处，例如其使用的是可以用标准工具轻松编辑和操纵的真实文件。与<code>JIT</code>方式相比，因其使用了已存在的场景数据，这极大地增加了测试的性能。其成本是需要在<code>repo</code>中创建和提交很多的场景数据，而且这些场景数据很容易被其他的测试代码滥用，最终导致测试用例变得脆弱不堪。</p>
+<p>​这两种方式都有其它的一些缺陷，比如难以模拟大文件、文件的权限、错误等等，而<code>io/fs</code>，可以帮我们解决这些问题！</p>
+<p>​我们已经看到了如何通微小的代码改动来使用<code>io/fs</code>包，得益于此，我们的测试代码变得更易于编写。这种方式不需要<code>teardown</code>代码，设置场景数据就像为切片追加数据一样简单，测试中的修改也变得游刃有余。我们的<code>MockFile</code>类型可以让我们像<code>MockFS</code>类型一样模拟出文件的大小、文件的权限、错误甚至更多。最重要的是，我们看到，通过使用io / fs并实现其接口，与JIT测试相比，我们可以将文件系统测试的速度提高300％以上。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: fsdemo</span><br><span class="line">cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz</span><br><span class="line">BenchmarkGoFilesFS-16                               432418                          2605 ns/op</span><br><span class="line">BenchmarkGoFilesExistingFiles-16                      9795                        120648 ns/op</span><br><span class="line">BenchmarkGoFilesJIT-16                                1470                        819064 ns/op</span><br></pre></td></tr></table></figure>
+<p>​虽然本文介绍了如何使用新的<code>io/fs</code>包来增强我们的测试，但这只是该包的冰山一角。比如，考虑一个文件转换管道，该管道根据文件的类型在文件上运行转换程序。再比如，将.md文件从Markdown转换为HTML，等等。使用<code>io/fs</code>包，您可以轻松创建带有接口的管道，并且测试该管道也相对简单。 Go 1.16有很多令人兴奋的地方，但是，对我来说，<code>io/fs</code>包是最让我兴奋的一个。</p>
+
+      
+    </div>
+
+    
+
+    
+      
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        
+          
+        
+        <div class="post-tags">
+          
+            <a href="/tags/Go1-16/" rel="tag"># Go1.16</a>
+          
+            <a href="/tags/io-fs/" rel="tag"># io/fs</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/02/27/essay/sudongpo-lin/" rel="next" title="此间有什么歇不得处">
+                <i class="fa fa-chevron-left"></i> 此间有什么歇不得处
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/06/27/theory/stack-insight-01-md/" rel="prev" title="一个学渣对于stack的顿悟（1）：从CPU的视角说起">
+                一个学渣对于stack的顿悟（1）：从CPU的视角说起 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="gitalk-container">
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  
+    <img class="site-author-image" itemprop="image" src="/images/gzh.jpg" alt="巴流">
+  
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description motion-element" itemprop="description">左手人文 | 右手科技</div>
+</div>
+
+
+  <nav class="site-state motion-element">
+    
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">44</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">42</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+
+
+
+
+
+
+
+  <div class="links-of-author motion-element">
+    
+      <span class="links-of-author-item">
+      
+      
+      
+        
+      
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub &rarr; https://github.com/liupzmin"><i class="fa fa-fw fa-github"></i></span>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+      
+        
+      
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail &rarr; mailto:liupzmin@gmail.com"><i class="fa fa-fw fa-envelope"></i></span>
+      </span>
+    
+  </div>
+
+
+
+
+
+
+  <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+    <div class="links-of-blogroll-title">
+      <i class="fa  fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cHM6Ly81MmNvZGVyLm5ldC8=" title="https://52coder.net/">CoderWang</span>
+        </li>
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cDovL2xlc3Npc2JldHRlci5zaXRlLw==" title="http://lessisbetter.site/">大彬 LIB</span>
+        </li>
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cHM6Ly9xY3Jhby5jb20v" title="https://qcrao.com/">码农桃花源</span>
+        </li>
+      
+    </ul>
+  </div>
+
+
+          
+          
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#io-fs概述及其存在的必要性"><span class="nav-number">1.</span> <span class="nav-text">io/fs概述及其存在的必要性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#测试基于文件系统的代码"><span class="nav-number">2.</span> <span class="nav-text">测试基于文件系统的代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JIT-Test-File-Creation"><span class="nav-number">3.</span> <span class="nav-text">JIT Test File Creation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Pre-Existing-File-Fixtures"><span class="nav-number">4.</span> <span class="nav-text">Pre-Existing File Fixtures</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用-FS"><span class="nav-number">5.</span> <span class="nav-text">使用  FS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现-FS"><span class="nav-number">6.</span> <span class="nav-text">实现 FS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现-File-接口"><span class="nav-number">7.</span> <span class="nav-text">实现 File 接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用-FS-进行测试"><span class="nav-number">8.</span> <span class="nav-text">使用 FS 进行测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">9.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2014 – <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动 v3.9.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="powered-by">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span> v7.2.0</div>
+
+<span class="post-meta-divider">|</span>
+<div class="theme-info">
+  <a class="theme-link" target="_blank" href="http://www.miitbeian.gov.cn/">
+    苏ICP备18051624号-1
+  </a>
+</div>
+
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+
+  
+  <script src="/lib/lazyload/lozad.min.js?v=1.10.0"></script>
+
+  
+  <script src="/lib/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.2.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+  <script src="/js/exturl.js?v=7.2.0"></script>
+
+
+  
+
+  
+
+  
+
+
+  
+    
+
+  <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+
+  <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+  <script src="/js/md5.min.js"></script>
+
+   <script type="text/javascript">
+        var gitalk = new Gitalk({
+          clientID: 'ae0756501dfc5de89d35',
+          clientSecret: '26befb359f7a466031bb96b4b7e0715c41c63fb8',
+          repo: 'liupzmin.github.io',
+          owner: 'liupzmin',
+          admin: ['liupzmin'],
+          id: md5(window.location.pathname),
+          labels: ['Gitalk'],
+          perPage: 15,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false
+        })
+        gitalk.render('gitalk-container')           
+       </script>
+
+
+  
+
+
+
+
+  <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+
+  <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+  <script src="/js/md5.min.js"></script>
+
+   <script type="text/javascript">
+        var gitalk = new Gitalk({
+          clientID: 'ae0756501dfc5de89d35',
+          clientSecret: '26befb359f7a466031bb96b4b7e0715c41c63fb8',
+          repo: 'liupzmin.github.io',
+          owner: 'liupzmin',
+          admin: ['liupzmin'],
+          id: md5(window.location.pathname),
+          labels: ['Gitalk'],
+          perPage: 15,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false
+        })
+        gitalk.render('gitalk-container')           
+       </script>
+
+
+
+  
+  <script>
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url).replace(/\/{2,}/g, '/');
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x"></i></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x"></i></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+
+
+
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+  
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+</body>
+</html>

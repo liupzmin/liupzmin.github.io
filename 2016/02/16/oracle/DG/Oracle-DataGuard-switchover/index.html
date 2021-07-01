@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next gemini" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+
+
+
+
+  
+  
+  <link rel="stylesheet" href="/lib/fancybox/source/jquery.fancybox.css">
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.2.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"onmobile":true},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":true},
+    copycode: {"enable":true,"show_result":true,"style":"default"},
+    fancybox: true,
+    fastclick: false,
+    lazyload: true,
+    tabs: true,
+    motion: {"enable":false,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="做DG的切换测试，发现了一些有趣的小问题，寥作记录v$archived_log中的fal字段意思如下：Indicates whether the archive log was generated as the result of a FAL request (YES) or not (NO)  主库当时归档日志状态  1234567891011121314151617181920SQL&amp;gt;">
+<meta name="keywords" content="DataGuard">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Oracle DataGuard switchover切换一例">
+<meta property="og:url" content="http://liupzmin.com/2016/02/16/oracle/DG/Oracle-DataGuard-switchover/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="做DG的切换测试，发现了一些有趣的小问题，寥作记录v$archived_log中的fal字段意思如下：Indicates whether the archive log was generated as the result of a FAL request (YES) or not (NO)  主库当时归档日志状态  1234567891011121314151617181920SQL&amp;gt;">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-07-01T03:43:54.026Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Oracle DataGuard switchover切换一例">
+<meta name="twitter:description" content="做DG的切换测试，发现了一些有趣的小问题，寥作记录v$archived_log中的fal字段意思如下：Indicates whether the archive log was generated as the result of a FAL request (YES) or not (NO)  主库当时归档日志状态  1234567891011121314151617181920SQL&amp;gt;">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://liupzmin.com/2016/02/16/oracle/DG/Oracle-DataGuard-switchover/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  
+  <title>Oracle DataGuard switchover切换一例 | 兔子先生</title>
+  
+
+
+
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-145061011-1"></script>
+  <script>
+    var host = window.location.hostname;
+    if (host !== "localhost" || !false) {
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-145061011-1');
+    }
+  </script>
+
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?e4a15ee426aab22df49b301add136e8f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">兔子先生</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <h1 class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</h1>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档<span class="badge">44</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签<span class="badge">42</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类<span class="badge">26</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+
+      
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>搜索</a>
+        </li>
+      
+    </ul>
+  
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+</div>
+    </header>
+
+    
+  
+  
+
+  
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewbox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></span>
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2016/02/16/oracle/DG/Oracle-DataGuard-switchover/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="巴流">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+      <meta itemprop="image" content="/images/gzh.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">Oracle DataGuard switchover切换一例<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9vcmFjbGUvREcvT3JhY2xlLURhdGFHdWFyZC1zd2l0Y2hvdmVyLm1k" title="编辑"><i class="fa fa-pencil"></i></span>
+
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+
+          
+          
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2016-02-16 16:54:00" itemprop="dateCreated datePublished" datetime="2016-02-16T16:54:00+08:00">2016-02-16</time>
+            </span>
+          
+
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2021-07-01 11:43:54" itemprop="dateModified" datetime="2021-07-01T11:43:54+08:00">2021-07-01</time>
+              </span>
+            
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/oracle/" itemprop="url" rel="index"><span itemprop="name">oracle</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+                 阅读次数： 
+                <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+              </span>
+            </span>
+          
+
+          
+
+          <br>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><em>做DG的切换测试，发现了一些有趣的小问题，寥作记录</em><br><em>v$archived_log中的fal字段意思如下：</em><br><em>Indicates whether the archive log was generated as the result of a FAL request (YES) or not (NO)</em></p>
+<ol>
+<li>主库当时归档日志状态</li>
+</ol>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select DEST_ID,NAME ,SEQUENCE#,STANDBY_DEST,ARCHIVED,APPLIED,DELETED,STATUS,FAL,REGISTRAR,CREATOR from v$archived_log  order by 3;</span><br><span class="line"></span><br><span class="line">   DEST_ID NAME                                                                              SEQUENCE<span class="comment"># STA ARC APPLIED   DEL S FAL REGISTR CREATOR</span></span><br><span class="line"><span class="comment">---------- -------------------------------------------------------------------------------- ---------- --- --- --------- --- - --- ------- -------</span></span><br><span class="line">         2 /u01/app/archive/1_74_903912515.arc                                                      74 NO  YES YES       NO  A YES RFS     ARCH</span><br><span class="line">         2 /u01/app/archive/1_75_903912515.arc                                                      75 NO  YES YES       NO  A YES RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_76_903912515.arc                                                      76 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_77_903912515.arc                                                      77 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_78_903912515.arc                                                      78 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_79_903912515.arc                                                      79 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_80_903912515.arc                                                      80 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                                      80 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_81_903912515.arc                                                      81 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                                      81 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_82_903912515.arc                                                      82 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                                      82 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_83_903912515.arc                                                      83 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                                      83 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_84_903912515.arc                                                      84 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                                      84 YES YES NO        NO  A NO  LGWR    LGWR</span><br></pre></td></tr></table></figure>
+<ol>
+<li>备库当时归档日志状态</li>
+</ol>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select DEST_ID,NAME ,SEQUENCE#,STANDBY_DEST,ARCHIVED,APPLIED,DELETED,STATUS,FAL,REGISTRAR,CREATOR from v$archived_log  order by 3;</span><br><span class="line"></span><br><span class="line">   DEST_ID NAME                                                                                                  SEQUENCE<span class="comment"># STA ARC APPLIED   DEL S FAL REGISTR CREATOR</span></span><br><span class="line"><span class="comment">---------- ---------------------------------------------------------------------------------------------------- ---------- --- --- --------- --- - --- ------- -------</span></span><br><span class="line">         1 /u01/app/archive/1_72_903912515.arc                                                                          72 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_73_903912515.arc                                                                          73 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_74_903912515.arc                                                                          74 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       74 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_75_903912515.arc                                                                          75 NO  YES YES       NO  A NO  FGRD    FGRD</span><br><span class="line">         2 minstd                                                                                                       75 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_76_903912515.arc                                                                          76 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       76 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_77_903912515.arc                                                                          77 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       77 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         2 minstd                                                                                                       78 YES YES NO        NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_78_903912515.arc                                                                          78 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_79_903912515.arc                                                                          79 NO  YES YES       NO  A NO  RFS     FGRD</span><br><span class="line">         2 minstd                                                                                                       79 YES YES NO        NO  A NO  FGRD    FGRD</span><br><span class="line">         1 /u01/app/archive/1_80_903912515.arc                                                                          80 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_81_903912515.arc                                                                          81 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_82_903912515.arc                                                                          82 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_83_903912515.arc                                                                          83 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_84_903912515.arc                                                                          84 NO  YES IN-MEMORY NO  A NO  RFS     ARCH</span><br></pre></td></tr></table></figure>
+<ol>
+<li>此时进行切换</li>
+</ol>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; SELECT SWITCHOVER_STATUS FROM V$DATABASE;</span><br><span class="line"></span><br><span class="line">SWITCHOVER_STATUS</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line">TO STANDBY</span><br><span class="line"></span><br><span class="line">SQL&gt; ALTER DATABASE COMMIT TO SWITCHOVER TO PHYSICAL STANDBY;</span><br><span class="line"></span><br><span class="line">Database altered.</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>主库的alert日志</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Tue Feb 16 14:55:15 2016</span><br><span class="line">ALTER DATABASE COMMIT TO SWITCHOVER TO PHYSICAL STANDBY</span><br><span class="line">ALTER DATABASE COMMIT TO SWITCHOVER TO PHYSICAL STANDBY [Process Id: 5441] (minstd)</span><br><span class="line">Waiting for all non-current ORLs to be archived...</span><br><span class="line">All non-current ORLs have been archived.</span><br><span class="line">Waiting for all FAL entries to be archived...</span><br><span class="line">All FAL entries have been archived.</span><br><span class="line">Waiting for potential Physical Standby switchover target to become synchronized...</span><br><span class="line">Active, synchronized Physical Standby switchover target has been identified</span><br><span class="line">Switchover End-Of-Redo Log thread 1 sequence 85 has been fixed</span><br><span class="line">Switchover: Primary highest seen SCN set to 0x0.0x101743</span><br><span class="line">ARCH: Noswitch archival of thread 1, sequence 85</span><br><span class="line">ARCH: End-Of-Redo Branch archival of thread 1 sequence 85</span><br><span class="line">ARCH: LGWR is actively archiving destination LOG_ARCHIVE_DEST_2</span><br><span class="line">ARCH: Standby redo logfile selected for thread 1 sequence 85 for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">Archived Log entry 17 added for thread 1 sequence 85 ID 0x97bd9e7c dest 1:</span><br><span class="line">ARCH: Archiving is disabled due to current logfile archival</span><br><span class="line">Primary will check for some target standby to have received alls redo</span><br><span class="line">Final check for a synchronized target standby. Check will be made once.</span><br><span class="line">LOG_ARCHIVE_DEST_2 is a potential Physical Standby switchover target</span><br><span class="line">Active, synchronized target has been identified</span><br><span class="line">Target has also received all redo</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>这时主库做了一次日志切换，加入EOR标记，并传输日志到所有备库，然后检查确认所有备库全部接受到所有的redo<br>这时查询备库</p>
+</blockquote>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select DEST_ID,NAME ,SEQUENCE#,STANDBY_DEST,ARCHIVED,APPLIED,DELETED,STATUS,FAL,REGISTRAR,CREATOR from v$archived_log  order by 3;</span><br><span class="line"></span><br><span class="line">   DEST_ID NAME                                                                                                  SEQUENCE<span class="comment"># STA ARC APPLIED   DEL S FAL REGISTR CREATOR</span></span><br><span class="line"><span class="comment">---------- ---------------------------------------------------------------------------------------------------- ---------- --- --- --------- --- - --- ------- -------</span></span><br><span class="line">         1 /u01/app/archive/1_72_903912515.arc                                                                          72 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_73_903912515.arc                                                                          73 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_74_903912515.arc                                                                          74 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       74 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_75_903912515.arc                                                                          75 NO  YES YES       NO  A NO  FGRD    FGRD</span><br><span class="line">         2 minstd                                                                                                       75 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_76_903912515.arc                                                                          76 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       76 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_77_903912515.arc                                                                          77 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       77 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         2 minstd                                                                                                       78 YES YES NO        NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_78_903912515.arc                                                                          78 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_79_903912515.arc                                                                          79 NO  YES YES       NO  A NO  RFS     FGRD</span><br><span class="line">         2 minstd                                                                                                       79 YES YES NO        NO  A NO  FGRD    FGRD</span><br><span class="line">         1 /u01/app/archive/1_80_903912515.arc                                                                          80 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_81_903912515.arc                                                                          81 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_82_903912515.arc                                                                          82 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_83_903912515.arc                                                                          83 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_84_903912515.arc                                                                          84 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_85_903912515.arc                                                                          85 NO  YES YES       NO  A NO  RFS     ARCH</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>85号日志确实已经收到并且应用，备库alert如下</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">Tue Feb 16 14:52:22 2016</span><br><span class="line">Archived Log entry 19 added for thread 1 sequence 84 ID 0x97bd9e7c dest 1:</span><br><span class="line">Media Recovery Waiting for thread 1 sequence 85 (in transit)</span><br><span class="line">Recovery of Online Redo Log: Thread 1 Group 4 Seq 85 Reading mem 0</span><br><span class="line">Mem# 0: /u01/app/oradata/min/stdb_redo01.log</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">RFS[5]: Assigned to RFS process 7837</span><br><span class="line">RFS[5]: Selected log 4 for thread 1 sequence 85 dbid -1749202365 branch 903912515</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">Archived Log entry 20 added for thread 1 sequence 85 ID 0x97bd9e7c dest 1:</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">RFS[2]: Possible network disconnect with primary database</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">RFS[6]: Assigned to RFS process 7782</span><br><span class="line">RFS[6]: Possible network disconnect with primary database</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">RFS[1]: Possible network disconnect with primary database</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">RFS[7]: Assigned to RFS process 7835</span><br><span class="line">RFS[7]: Possible network disconnect with primary database</span><br><span class="line">Tue Feb 16 14:55:17 2016</span><br><span class="line">Resetting standby activation ID 2545786492 (0x97bd9e7c)</span><br><span class="line">Media Recovery End-Of-Redo indicator encountered</span><br><span class="line">Media Recovery Continuing</span><br><span class="line">Media Recovery Waiting for thread 1 sequence 86</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>收到85号日志之后，与主库失去联系，在应用85号日志的时候遇到EOR标记<br>备库切换为主库</p>
+</blockquote>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; SELECT SWITCHOVER_STATUS FROM V$DATABASE;</span><br><span class="line"></span><br><span class="line">SWITCHOVER_STATUS</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line">TO PRIMARY</span><br><span class="line"></span><br><span class="line">SQL&gt; alter database recover managed standby database cancel;</span><br><span class="line"></span><br><span class="line">Database altered.</span><br><span class="line"></span><br><span class="line">SQL&gt; ALTER DATABASE COMMIT TO SWITCHOVER TO PRIMARY WITH SESSION SHUTDOWN;</span><br><span class="line"></span><br><span class="line">Database altered.</span><br><span class="line"></span><br><span class="line">SQL&gt; alter database open;</span><br><span class="line"></span><br><span class="line">Database altered.</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>新主库alert</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line">ALTER DATABASE COMMIT TO SWITCHOVER TO PRIMARY WITH SESSION SHUTDOWN</span><br><span class="line">ALTER DATABASE SWITCHOVER TO PRIMARY (min)</span><br><span class="line">Maximum wait for role transition is 15 minutes.</span><br><span class="line">All dispatchers and shared servers shutdown</span><br><span class="line">CLOSE: killing server sessions.</span><br><span class="line">CLOSE: all sessions shutdown successfully.</span><br><span class="line">Tue Feb 16 15:00:29 2016</span><br><span class="line">SMON: disabling cache recovery</span><br><span class="line">Backup controlfile written to trace file /home/oracle/app/oracle/diag/rdbms/min/min/trace/min_ora_7726.trc</span><br><span class="line">SwitchOver after complete recovery through change 1054531</span><br><span class="line">Online log /u01/app/oradata/min/redo01.log: Thread 1 Group 1 was previously cleared</span><br><span class="line">Online log /u01/app/oradata/min/redo02.log: Thread 1 Group 2 was previously cleared</span><br><span class="line">Online log /u01/app/oradata/min/redo03.log: Thread 1 Group 3 was previously cleared</span><br><span class="line">Standby became primary SCN: 1054529</span><br><span class="line">AUDIT_TRAIL initialization parameter is changed back to its original value as specified in the parameter file.</span><br><span class="line">Switchover: Complete - Database mounted as primary</span><br><span class="line">Completed: ALTER DATABASE COMMIT TO SWITCHOVER TO PRIMARY WITH SESSION SHUTDOWN</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">alter database open</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">Assigning activation ID 2545831887 (0x97be4fcf)</span><br><span class="line">Thread 1 advanced to log sequence 87 (thread open)</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">ARC8: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">Thread 1 opened at log sequence 87</span><br><span class="line">Current log# 2 seq# 87 mem# 0: /u01/app/oradata/min/redo02.log</span><br><span class="line">Successful open of redo thread 1</span><br><span class="line">MTTR advisory is disabled because FAST_START_MTTR_TARGET is not set</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">ARC9: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">ARCa: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">SMON: enabling cache recovery</span><br><span class="line">Archived Log entry 21 added for thread 1 sequence 86 ID 0x97be4fcf dest 1:</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">ARCt: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">NSA2 started with pid=18, OS id=7850</span><br><span class="line">[7726] Successfully onlined Undo Tablespace 2.</span><br><span class="line">Undo initialization finished serial:0 start:86759444 end:86759474 diff:30 (0 seconds)</span><br><span class="line">Dictionary check beginning</span><br><span class="line">Dictionary check complete</span><br><span class="line">Verifying file header compatibility for 11g tablespace encryption..</span><br><span class="line">Verifying 11g file header compatibility for tablespace encryption completed</span><br><span class="line">SMON: enabling tx recovery</span><br><span class="line">Database Characterset is ZHS16GBK</span><br><span class="line">Starting background process SMCO</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">idle dispatcher &apos;D000&apos; terminated, pid = (17, 1)</span><br><span class="line">ARCt: Standby redo logfile selected for thread 1 sequence 86 for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">SMCO started with pid=50, OS id=7852</span><br><span class="line">No Resource Manager plan active</span><br><span class="line">Starting background process QMNC</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">QMNC started with pid=52, OS id=7856</span><br><span class="line">LOGSTDBY: Validating controlfile with logical metadata</span><br><span class="line">LOGSTDBY: Validation complete</span><br><span class="line">Completed: alter database open</span><br><span class="line">Tue Feb 16 15:00:43 2016</span><br><span class="line">ARC0: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">Tue Feb 16 15:00:43 2016</span><br><span class="line">ARC1: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">ARC0: Archive log rejected (thread 1 sequence 86) at host &apos;minstd&apos;</span><br><span class="line">FAL[server, ARC0]: FAL archive failed, see trace file.</span><br><span class="line">ARCH: FAL archive failed. Archiver continuing</span><br><span class="line">ORACLE Instance min - Archival Error. Archiver continuing.</span><br><span class="line">Thread 1 advanced to log sequence 88 (LGWR switch)</span><br><span class="line">Current log# 3 seq# 88 mem# 0: /u01/app/oradata/min/redo03.log</span><br><span class="line">Tue Feb 16 15:00:45 2016</span><br><span class="line">ARC2: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">Archived Log entry 23 added for thread 1 sequence 87 ID 0x97be4fcf dest 1:</span><br><span class="line">Tue Feb 16 15:00:45 2016</span><br><span class="line">ARC3: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">ARC3: Standby redo logfile selected for thread 1 sequence 87 for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">******************************************************************</span><br><span class="line">LGWR: Setting &apos;active&apos; archival for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">******************************************************************</span><br><span class="line">LNS: Standby redo logfile selected for thread 1 sequence 88 for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">Tue Feb 16 15:01:05 2016</span><br><span class="line">ARCr: Becoming the &apos;no SRL&apos; ARCH</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>新主库打开的时候向备库传输86号日志被拒绝，这里我猜测是一个gap检测的问题，至于为何报错，暂时没搞清楚，我觉得出现了FAL应该是备库检测到gap来请求日志的，但为何拒绝不甚清楚，而在新备库的日志却发现是接受成功的</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">Using STANDBY_ARCHIVE_DEST parameter default value as /u01/app/archive</span><br><span class="line">RFS[1]: Assigned to RFS process 5901</span><br><span class="line">RFS[1]: Selected log 4 for thread 1 sequence 86 dbid -1749202365 branch 903912515</span><br><span class="line">Tue Feb 16 15:00:42 2016</span><br><span class="line">Archived Log entry 19 added for thread 1 sequence 86 ID 0x97be4fcf dest 1:</span><br><span class="line">Tue Feb 16 15:00:45 2016</span><br><span class="line">RFS[2]: Assigned to RFS process 5905</span><br><span class="line">RFS[2]: Selected log 4 for thread 1 sequence 87 dbid -1749202365 branch 903912515</span><br><span class="line">Tue Feb 16 15:00:45 2016</span><br><span class="line">Archived Log entry 20 added for thread 1 sequence 87 ID 0x97be4fcf dest 1:</span><br><span class="line">Tue Feb 16 15:00:45 2016</span><br><span class="line">Primary database is in MAXIMUM PERFORMANCE mode</span><br><span class="line">RFS[3]: Assigned to RFS process 5907</span><br><span class="line">RFS[3]: Selected log 4 for thread 1 sequence 88 dbid -1749202365 branch 903912515</span><br><span class="line">Tue Feb 16 15:01:36 2016</span><br><span class="line">ALTER DATABASE RECOVER MANAGED STANDBY DATABASE USING CURRENT LOGFILE disconnect</span><br><span class="line">Attempt to start background Managed Standby Recovery process (minstd)</span><br><span class="line">Tue Feb 16 15:01:36 2016</span><br><span class="line">MRP0 started with pid=55, OS id=5923</span><br><span class="line">MRP0: Background Managed Standby Recovery process started (minstd)</span><br><span class="line">started logmerger process</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>可见86，87已经接收到了<br>下一刻便开始正常传输了，主库日志信息如下：</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Tue Feb 16 15:00:45 2016</span><br><span class="line">ARC3: Becoming the &apos;no SRL&apos; ARCH</span><br><span class="line">ARC3: Standby redo logfile selected for thread 1 sequence 87 for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">******************************************************************</span><br><span class="line">LGWR: Setting &apos;active&apos; archival for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">******************************************************************</span><br><span class="line">LNS: Standby redo logfile selected for thread 1 sequence 88 for destination LOG_ARCHIVE_DEST_2</span><br><span class="line">Tue Feb 16 15:01:05 2016</span><br><span class="line">ARCr: Becoming the &apos;no SRL&apos; ARCH</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>有一个归档目的地2激活的提示，难道是一开始未激活？<br>此时再来看一下归档日志信息</p>
+</blockquote>
+<p><strong>新主库：</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select DEST_ID,NAME ,SEQUENCE#,STANDBY_DEST,ARCHIVED,APPLIED,DELETED,STATUS,FAL,REGISTRAR,CREATOR from v$archived_log  order by 3;</span><br><span class="line"></span><br><span class="line">   DEST_ID NAME                                                                                                  SEQUENCE<span class="comment"># STA ARC APPLIED   DEL S FAL REGISTR CREATOR</span></span><br><span class="line"><span class="comment">---------- ---------------------------------------------------------------------------------------------------- ---------- --- --- --------- --- - --- ------- -------</span></span><br><span class="line">         1 /u01/app/archive/1_72_903912515.arc                                                                          72 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_73_903912515.arc                                                                          73 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       74 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_74_903912515.arc                                                                          74 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_75_903912515.arc                                                                          75 NO  YES YES       NO  A NO  FGRD    FGRD</span><br><span class="line">         2 minstd                                                                                                       75 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_76_903912515.arc                                                                          76 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       76 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_77_903912515.arc                                                                          77 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       77 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         2 minstd                                                                                                       78 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_78_903912515.arc                                                                          78 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_79_903912515.arc                                                                          79 NO  YES YES       NO  A NO  RFS     FGRD</span><br><span class="line">         2 minstd                                                                                                       79 YES YES YES       NO  A NO  FGRD    FGRD</span><br><span class="line">         1 /u01/app/archive/1_80_903912515.arc                                                                          80 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_81_903912515.arc                                                                          81 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_82_903912515.arc                                                                          82 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_83_903912515.arc                                                                          83 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_84_903912515.arc                                                                          84 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_85_903912515.arc                                                                          85 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_86_903912515.arc                                                                          86 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       86 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_87_903912515.arc                                                                          87 NO  YES NO        NO  A NO  ARCH    ARCH</span><br><span class="line">         2 minstd                                                                                                       87 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line"></span><br><span class="line">24 rows selected.</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>备库归档目的地86，97两个日志的FAL都是yes，而且在新主库查看切换期间产生的84，85两个日志的applied状态为yes，而在新备库（原主库）查询84，85在新主库（原备库）的applied状态却为NO，很有意思的一个现象</p>
+</blockquote>
+<p><strong>新备库:</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select DEST_ID,NAME ,SEQUENCE#,STANDBY_DEST,ARCHIVED,APPLIED,DELETED,STATUS,FAL,REGISTRAR,CREATOR from v$archived_log  order by 3;</span><br><span class="line"></span><br><span class="line">   DEST_ID NAME                                                          SEQUENCE<span class="comment"># STA ARC APPLIED   DEL S FAL REGISTR CREATOR</span></span><br><span class="line"><span class="comment">---------- ------------------------------------------------------------ ---------- --- --- --------- --- - --- ------- -------</span></span><br><span class="line">         2 /u01/app/archive/1_74_903912515.arc                                  74 NO  YES YES       NO  A YES RFS     ARCH</span><br><span class="line">         2 /u01/app/archive/1_75_903912515.arc                                  75 NO  YES YES       NO  A YES RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_76_903912515.arc                                  76 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_77_903912515.arc                                  77 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_78_903912515.arc                                  78 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_79_903912515.arc                                  79 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_80_903912515.arc                                  80 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                  80 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_81_903912515.arc                                  81 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                  81 YES YES YES       NO  A YES ARCH    ARCH</span><br><span class="line">         1 /u01/app/archive/1_82_903912515.arc                                  82 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                  82 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_83_903912515.arc                                  83 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                  83 YES YES YES       NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_84_903912515.arc                                  84 NO  YES YES       NO  A NO  ARCH    ARCH</span><br><span class="line">         2 min                                                                  84 YES YES NO        NO  A NO  LGWR    LGWR</span><br><span class="line">         1 /u01/app/archive/1_85_903912515.arc                                  85 NO  YES YES       NO  A NO  RFS     FGRD</span><br><span class="line">         2 min                                                                  85 YES YES NO        NO  A NO  FGRD    FGRD</span><br><span class="line">         1 /u01/app/archive/1_86_903912515.arc                                  86 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line">         1 /u01/app/archive/1_87_903912515.arc                                  87 NO  YES YES       NO  A NO  RFS     ARCH</span><br><span class="line"></span><br><span class="line">20 rows selected.</span><br></pre></td></tr></table></figure>
+<p><strong>总结：</strong></p>
+<ol>
+<li>switchover前后每个主库角色都会切换1次日志（本次实验为准，并不绝对）</li>
+<li>新主库产生的前2个日志是以FAL方式传输到备库</li>
+<li>在原主库查询switcover之前产生的两个日志的applied状态时为NO，而在新的主库（原备库）查询日志的应用状态是为YES的</li>
+</ol>
+<blockquote>
+<p>关于本文中提到的FAL报错的问题，希望广大DBA朋友帮助解惑，如文中还有其他错误之处，还望批评指正</p>
+</blockquote>
+<hr>
+<blockquote>
+<p>后记：在一套新的DG环境下测试切换，并未出现FAL报错的情况，怀疑是和当时备库的状态有关</p>
+</blockquote>
+
+      
+    </div>
+
+    
+
+    
+      
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        
+          
+        
+        <div class="post-tags">
+          
+            <a href="/tags/DataGuard/" rel="tag"># DataGuard</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/01/05/oracle/perf/strace-login-slow/" rel="next" title="strace解决sqlplus登陆缓慢的问题一例">
+                <i class="fa fa-chevron-left"></i> strace解决sqlplus登陆缓慢的问题一例
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/10/oracle/ORA-31617-unable-to-open-dump-file-for-write/" rel="prev" title="ORA-31617 unable to open dump file">
+                ORA-31617 unable to open dump file <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="gitalk-container">
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <div class="site-overview-wrap sidebar-panel sidebar-panel-active">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  
+    <img class="site-author-image" itemprop="image" src="/images/gzh.jpg" alt="巴流">
+  
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description motion-element" itemprop="description">左手人文 | 右手科技</div>
+</div>
+
+
+  <nav class="site-state motion-element">
+    
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">44</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">42</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+
+
+
+
+
+
+
+  <div class="links-of-author motion-element">
+    
+      <span class="links-of-author-item">
+      
+      
+      
+        
+      
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub &rarr; https://github.com/liupzmin"><i class="fa fa-fw fa-github"></i></span>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+      
+        
+      
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail &rarr; mailto:liupzmin@gmail.com"><i class="fa fa-fw fa-envelope"></i></span>
+      </span>
+    
+  </div>
+
+
+
+
+
+
+  <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+    <div class="links-of-blogroll-title">
+      <i class="fa  fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cHM6Ly81MmNvZGVyLm5ldC8=" title="https://52coder.net/">CoderWang</span>
+        </li>
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cDovL2xlc3Npc2JldHRlci5zaXRlLw==" title="http://lessisbetter.site/">大彬 LIB</span>
+        </li>
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cHM6Ly9xY3Jhby5jb20v" title="https://qcrao.com/">码农桃花源</span>
+        </li>
+      
+    </ul>
+  </div>
+
+
+          
+          
+        </div>
+      </div>
+
+      
+
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2014 – <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动 v3.9.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="powered-by">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span> v7.2.0</div>
+
+<span class="post-meta-divider">|</span>
+<div class="theme-info">
+  <a class="theme-link" target="_blank" href="http://www.miitbeian.gov.cn/">
+    苏ICP备18051624号-1
+  </a>
+</div>
+
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+
+  
+  <script src="/lib/lazyload/lozad.min.js?v=1.10.0"></script>
+
+  
+  <script src="/lib/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.2.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+  <script src="/js/exturl.js?v=7.2.0"></script>
+
+
+  
+
+  
+
+  
+
+
+  
+    
+
+  <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+
+  <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+  <script src="/js/md5.min.js"></script>
+
+   <script type="text/javascript">
+        var gitalk = new Gitalk({
+          clientID: 'ae0756501dfc5de89d35',
+          clientSecret: '26befb359f7a466031bb96b4b7e0715c41c63fb8',
+          repo: 'liupzmin.github.io',
+          owner: 'liupzmin',
+          admin: ['liupzmin'],
+          id: md5(window.location.pathname),
+          labels: ['Gitalk'],
+          perPage: 15,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false
+        })
+        gitalk.render('gitalk-container')           
+       </script>
+
+
+  
+
+
+
+
+  <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+
+  <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+  <script src="/js/md5.min.js"></script>
+
+   <script type="text/javascript">
+        var gitalk = new Gitalk({
+          clientID: 'ae0756501dfc5de89d35',
+          clientSecret: '26befb359f7a466031bb96b4b7e0715c41c63fb8',
+          repo: 'liupzmin.github.io',
+          owner: 'liupzmin',
+          admin: ['liupzmin'],
+          id: md5(window.location.pathname),
+          labels: ['Gitalk'],
+          perPage: 15,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false
+        })
+        gitalk.render('gitalk-container')           
+       </script>
+
+
+
+  
+  <script>
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url).replace(/\/{2,}/g, '/');
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x"></i></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x"></i></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+
+
+
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+  
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+</body>
+</html>

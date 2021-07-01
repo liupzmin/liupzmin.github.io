@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="theme-next gemini" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+
+
+
+
+  
+  
+  <link rel="stylesheet" href="/lib/fancybox/source/jquery.fancybox.css">
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.7.0">
+
+<link rel="stylesheet" href="/css/main.css?v=7.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.2.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.2.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.2.0" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '7.2.0',
+    sidebar: {"onmobile":true},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":true},
+    copycode: {"enable":true,"show_result":true,"style":"default"},
+    fancybox: true,
+    fastclick: false,
+    lazyload: true,
+    tabs: true,
+    motion: {"enable":false,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    translation: {
+      copy_button: '复制',
+      copy_success: '复制成功',
+      copy_failure: '复制失败'
+    }
+  };
+</script>
+
+  <meta name="description" content="在LOAD_PLANS_FROM_CURSOR_CACHE函数中有一种语法组合如下： 1234567DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE (   sql_id            IN  VARCHAR2,   plan_hash_value   IN  NUMBER   := NULL,   sql_handle        IN  VARCHAR2,">
+<meta name="keywords" content="SQL Plan Management">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SPM Using SPM to Correct Regressed SQL Statements">
+<meta property="og:url" content="http://liupzmin.com/2017/04/26/oracle/perf/SPM-Using-SPM-to-Correct-Regressed-SQL-Statements/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="在LOAD_PLANS_FROM_CURSOR_CACHE函数中有一种语法组合如下： 1234567DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE (   sql_id            IN  VARCHAR2,   plan_hash_value   IN  NUMBER   := NULL,   sql_handle        IN  VARCHAR2,">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-07-01T03:43:54.026Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SPM Using SPM to Correct Regressed SQL Statements">
+<meta name="twitter:description" content="在LOAD_PLANS_FROM_CURSOR_CACHE函数中有一种语法组合如下： 1234567DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE (   sql_id            IN  VARCHAR2,   plan_hash_value   IN  NUMBER   := NULL,   sql_handle        IN  VARCHAR2,">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://liupzmin.com/2017/04/26/oracle/perf/SPM-Using-SPM-to-Correct-Regressed-SQL-Statements/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  
+  <title>SPM Using SPM to Correct Regressed SQL Statements | 兔子先生</title>
+  
+
+
+
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-145061011-1"></script>
+  <script>
+    var host = window.location.hostname;
+    if (host !== "localhost" || !false) {
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-145061011-1');
+    }
+  </script>
+
+
+
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?e4a15ee426aab22df49b301add136e8f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">兔子先生</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <h1 class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</h1>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档<span class="badge">44</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签<span class="badge">42</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类<span class="badge">26</span></a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+      
+    
+
+    
+      
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+
+      
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>搜索</a>
+        </li>
+      
+    </ul>
+  
+
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+</div>
+    </header>
+
+    
+  
+  
+
+  
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="Follow me on GitHub" aria-label="Follow me on GitHub"><svg width="80" height="80" viewbox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></span>
+
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2017/04/26/oracle/perf/SPM-Using-SPM-to-Correct-Regressed-SQL-Statements/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="巴流">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+      <meta itemprop="image" content="/images/gzh.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">SPM Using SPM to Correct Regressed SQL Statements<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9vcmFjbGUvcGVyZi9TUE0tVXNpbmctU1BNLXRvLUNvcnJlY3QtUmVncmVzc2VkLVNRTC1TdGF0ZW1lbnRzLm1k" title="编辑"><i class="fa fa-pencil"></i></span>
+
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+
+          
+          
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2017-04-26 16:19:00" itemprop="dateCreated datePublished" datetime="2017-04-26T16:19:00+08:00">2017-04-26</time>
+            </span>
+          
+
+          
+            
+
+            
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2021-07-01 11:43:54" itemprop="dateModified" datetime="2021-07-01T11:43:54+08:00">2021-07-01</time>
+              </span>
+            
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/oracle/" itemprop="url" rel="index"><span itemprop="name">oracle</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+                 阅读次数： 
+                <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+              </span>
+            </span>
+          
+
+          
+
+          <br>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在<em>LOAD_PLANS_FROM_CURSOR_CACHE</em>函数中有一种语法组合如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE (</span><br><span class="line">   sql_id            IN  VARCHAR2,</span><br><span class="line">   plan_hash_value   IN  NUMBER   := NULL,</span><br><span class="line">   sql_handle        IN  VARCHAR2,  <span class="comment">--注意这里</span></span><br><span class="line">   fixed             IN  VARCHAR2 := 'NO',</span><br><span class="line">   enabled           IN  VARCHAR2 := 'YES')</span><br><span class="line"> RETURN PLS_INTEGER;</span><br></pre></td></tr></table></figure>
+<p>Oracle对其中<em>sql_handle</em>的解释为：</p>
+<p><em>SQL handle to use in identifying the SQL plan baseline into which the plans are loaded. The sql_handle must denote an existing SQL plan baseline. The use of handle is crucial when the user tunes a SQL statement by adding hints to its text and then wants to load the resulting plan(s) into the SQL plan baseline of the original SQL statement.</em></p>
+<p>意思是说，使用sql_handle可以将cursor cache中的执行计划load进一个已存在的SQL Plan Baseline，这就意味着你可以不需要更改应用的代码，就可以让SQL跑出你期望的执行计划，前提是你有一个已经tuning好的plan在cacahe里，你就可以将这个plan load进原SQL的Baseline，下面将针对此调优方法展开详细论述：</p>
+<blockquote>
+<p>我要进行的实验是要一个原本走索引的sql，在不改变原sql的基础上，让它走全表扫描</p>
+</blockquote>
+<ol>
+<li><p>创建测试环境</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> spm_test_tab (</span><br><span class="line">   		<span class="keyword">id</span>           <span class="built_in">NUMBER</span>,</span><br><span class="line">   		description  VARCHAR2(<span class="number">50</span>)</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="comment">/*+ APPEND */</span> <span class="keyword">INTO</span> spm_test_tab</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">level</span>,</span><br><span class="line">      <span class="string">'Description for '</span> || <span class="keyword">level</span></span><br><span class="line"><span class="keyword">FROM</span>   dual</span><br><span class="line"><span class="keyword">CONNECT</span> <span class="keyword">BY</span> <span class="keyword">level</span> &lt;= <span class="number">10000</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="comment">--创建索引</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> spm_test_tab_idx <span class="keyword">ON</span> spm_test_tab(<span class="keyword">id</span>);</span><br><span class="line"><span class="comment">--收集统计信息</span></span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line"> 		dbms_stats.gather_table_stats(ownname =&gt; <span class="string">'SYS'</span>,</span><br><span class="line"> 		tabname =&gt;<span class="string">'SPM_TEST_TAB'</span>,</span><br><span class="line"> 		estimate_percent =&gt;DBMS_STATS.AUTO_SAMPLE_SIZE,</span><br><span class="line"> 		method_opt =&gt; <span class="string">'FOR ALL COLUMNS SIZE AUTO'</span>,</span><br><span class="line"> 		granularity=&gt;<span class="string">'ALL'</span>,</span><br><span class="line"> 		<span class="keyword">cascade</span> =&gt; <span class="literal">TRUE</span>,</span><br><span class="line"> 		no_invalidate =&gt; <span class="literal">false</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>执行例句，查看其执行计划</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">	</span><br><span class="line"><span class="keyword">SELECT</span> description <span class="keyword">FROM</span>  spm_test_tab <span class="keyword">WHERE</span>  <span class="keyword">id</span> = <span class="number">1113</span>;</span><br><span class="line">	</span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">TABLE</span> (<span class="keyword">SELECT</span> DBMS_XPLAN.DISPLAY_CURSOR(<span class="literal">null</span>,<span class="literal">null</span>,<span class="string">'advanced'</span>) <span class="keyword">from</span> dual);</span><br><span class="line">	</span><br><span class="line">SQL_ID  gsttbra9z0ddw, child number 0</span><br><span class="line"><span class="comment">-------------------------------------</span></span><br><span class="line"><span class="keyword">SELECT</span> description <span class="keyword">FROM</span>  spm_test_tab <span class="keyword">WHERE</span>  <span class="keyword">id</span> = <span class="number">1113</span></span><br><span class="line"></span><br><span class="line">Plan <span class="keyword">hash</span> <span class="keyword">value</span>: <span class="number">3121206333</span></span><br><span class="line"></span><br><span class="line"><span class="comment">------------------------------------------------------------------------------------------------</span></span><br><span class="line">| <span class="keyword">Id</span>  | Operation                   | <span class="keyword">Name</span>             | <span class="keyword">Rows</span>  | <span class="keyword">Bytes</span> | <span class="keyword">Cost</span> (%CPU)| <span class="built_in">Time</span>     |</span><br><span class="line"><span class="comment">------------------------------------------------------------------------------------------------</span></span><br><span class="line">|   <span class="number">0</span> | <span class="keyword">SELECT</span> <span class="keyword">STATEMENT</span>            |                  |       |       |     <span class="number">2</span> (<span class="number">100</span>)|          |</span><br><span class="line">|   <span class="number">1</span> |  <span class="keyword">TABLE</span> <span class="keyword">ACCESS</span> <span class="keyword">BY</span> <span class="keyword">INDEX</span> <span class="keyword">ROWID</span>| SPM_TEST_TAB     |     <span class="number">1</span> |    <span class="number">25</span> |     <span class="number">2</span>   (<span class="number">0</span>)| <span class="number">00</span>:<span class="number">00</span>:<span class="number">01</span> |</span><br><span class="line">|*  <span class="number">2</span> |   <span class="keyword">INDEX</span> <span class="keyword">RANGE</span> <span class="keyword">SCAN</span>          | SPM_TEST_TAB_IDX |     <span class="number">1</span> |       |     <span class="number">1</span>   (<span class="number">0</span>)| <span class="number">00</span>:<span class="number">00</span>:<span class="number">01</span> |</span><br><span class="line"><span class="comment">------------------------------------------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">Query</span> <span class="keyword">Block</span> <span class="keyword">Name</span> / <span class="keyword">Object</span> <span class="keyword">Alias</span> (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line"><span class="comment">-------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">  <span class="number">1</span> - SEL$<span class="number">1</span> / SPM_TEST_TAB@SEL$<span class="number">1</span></span><br><span class="line">  <span class="number">2</span> - SEL$<span class="number">1</span> / SPM_TEST_TAB@SEL$<span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">Outline</span> <span class="keyword">Data</span></span><br><span class="line"><span class="comment">-------------</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*+</span></span><br><span class="line"><span class="comment">    BEGIN_OUTLINE_DATA</span></span><br><span class="line"><span class="comment">    IGNORE_OPTIM_EMBEDDED_HINTS</span></span><br><span class="line"><span class="comment">    OPTIMIZER_FEATURES_ENABLE('11.2.0.4')</span></span><br><span class="line"><span class="comment">    DB_VERSION('11.2.0.4')</span></span><br><span class="line"><span class="comment">    ALL_ROWS</span></span><br><span class="line"><span class="comment">    OUTLINE_LEAF(@"SEL$1")</span></span><br><span class="line"><span class="comment">    INDEX_RS_ASC(@"SEL$1" "SPM_TEST_TAB"@"SEL$1" ("SPM_TEST_TAB"."ID"))</span></span><br><span class="line"><span class="comment">    END_OUTLINE_DATA</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line"></span><br><span class="line">    Predicate Information (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line">    <span class="comment">---------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="number">2</span> - <span class="keyword">access</span>(<span class="string">"ID"</span>=<span class="number">1113</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">Column</span> Projection Information (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line">    <span class="comment">-----------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">      <span class="number">1</span> - <span class="string">"DESCRIPTION"</span>[VARCHAR2,<span class="number">50</span>]</span><br><span class="line">      <span class="number">2</span> - <span class="string">"SPM_TEST_TAB"</span>.ROWID[<span class="keyword">ROWID</span>,<span class="number">10</span>]</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>从v$sql中查找语句的sql_id，并使用DBMS_SPM.LOAD_PLAN_FROM_CURSOR_CACHE创建SQL Plan Baseline</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SYS@DB41 2017/04/26 14:57:55&gt; SELECT SQL_ID,SQL_FULLTEXT FROM V$SQL WHERE SQL_FULLTEXT LIKE  '%1113%';</span><br><span class="line"></span><br><span class="line">SQL_ID	      SQL_FULLTEXT</span><br><span class="line"><span class="comment">------------- --------------------------------------------------------------------------------</span></span><br><span class="line">gsttbra9z0ddw <span class="keyword">SELECT</span> description <span class="keyword">FROM</span>  spm_test_tab <span class="keyword">WHERE</span>  <span class="keyword">id</span> = <span class="number">1113</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">declare</span></span><br><span class="line">   		v_sql_plan_id  pls_integer;</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">   		v_sql_plan_id := dbms_spm.load_plans_from_cursor_cache(sql_id =&gt; <span class="string">'gsttbra9z0ddw'</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line">/</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> SQL_HANDLE,PLAN_NAME,ENABLED,ACCEPTED</span><br><span class="line"><span class="keyword">FROM</span> dba_sql_plan_baselines</span><br><span class="line"><span class="keyword">WHERE</span> signature <span class="keyword">IN</span></span><br><span class="line">   	( <span class="keyword">SELECT</span> exact_matching_signature <span class="keyword">FROM</span> v$<span class="keyword">sql</span> <span class="keyword">WHERE</span> sql_id=<span class="string">'gsttbra9z0ddw'</span></span><br><span class="line">   	);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> 	SQL_HANDLE		       		   PLAN_NAME		      		  ENA ACC</span><br><span class="line"><span class="comment">------------------------------ ------------------------------ --- ---</span></span><br><span class="line">SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfed3324c0 YES YES</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>使用ALTER_SQL_PLAN_BASELINE禁用原执行计划</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">declare</span></span><br><span class="line">   		v_sql_plan_id  pls_integer;</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">   		v_sql_plan_id := dbms_spm.ALTER_SQL_PLAN_BASELINE(sql_handle =&gt; <span class="string">'SQL_c1c9aa52fd90f3ae'</span>,</span><br><span class="line">   		plan_name =&gt; <span class="string">'SQL_PLAN_c3kdaabyt1wxfed3324c0'</span>,</span><br><span class="line">   		attribute_name =&gt; <span class="string">'enabled'</span>,</span><br><span class="line">   		attribute_value =&gt; <span class="string">'NO'</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line">/</span><br><span class="line"></span><br><span class="line">SQL_HANDLE		       		   PLAN_NAME		      		  ENA ACC</span><br><span class="line"><span class="comment">------------------------------ ------------------------------ --- ---</span></span><br><span class="line">SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfed3324c0  NO YES</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>加入hint使sql走全表扫描</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="comment">/*+ FULL(SPM_TEST_TAB) */</span>description <span class="keyword">FROM</span>  spm_test_tab <span class="keyword">WHERE</span>  <span class="keyword">id</span> = <span class="number">1113</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="keyword">TABLE</span> (<span class="keyword">SELECT</span> DBMS_XPLAN.DISPLAY_CURSOR(<span class="literal">null</span>,<span class="literal">null</span>,<span class="string">'advanced'</span>) <span class="keyword">from</span> dual);</span><br><span class="line"></span><br><span class="line">SQL_ID	fr5dd23pfbjfz, child number 0</span><br><span class="line"><span class="comment">-------------------------------------</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="comment">/*+ FULL(SPM_TEST_TAB) */</span>description <span class="keyword">FROM</span>  spm_test_tab <span class="keyword">WHERE</span></span><br><span class="line"><span class="keyword">id</span> = <span class="number">1113</span></span><br><span class="line"></span><br><span class="line">Plan <span class="keyword">hash</span> <span class="keyword">value</span>: <span class="number">1107868462</span></span><br><span class="line"></span><br><span class="line"><span class="comment">----------------------------------------------------------------------------------</span></span><br><span class="line">| <span class="keyword">Id</span>  | Operation	  		| <span class="keyword">Name</span>	 	   | <span class="keyword">Rows</span>  | <span class="keyword">Bytes</span> | <span class="keyword">Cost</span> (%CPU)| <span class="built_in">Time</span>	  |</span><br><span class="line"><span class="comment">----------------------------------------------------------------------------------</span></span><br><span class="line">|   <span class="number">0</span> | <span class="keyword">SELECT</span> <span class="keyword">STATEMENT</span>  	|		 	   |	   |	   |    <span class="number">13</span> (<span class="number">100</span>)| 	      |</span><br><span class="line">|*  <span class="number">1</span> |  <span class="keyword">TABLE</span> <span class="keyword">ACCESS</span> <span class="keyword">FULL</span>	| SPM_TEST_TAB |     <span class="number">1</span> |    <span class="number">25</span> |    <span class="number">13</span>   (<span class="number">0</span>)| <span class="number">00</span>:<span class="number">00</span>:<span class="number">01</span>|</span><br><span class="line"><span class="comment">----------------------------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">Query</span> <span class="keyword">Block</span> <span class="keyword">Name</span> / <span class="keyword">Object</span> <span class="keyword">Alias</span> (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line"><span class="comment">-------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">  	<span class="number">1</span> - SEL$<span class="number">1</span> / SPM_TEST_TAB@SEL$<span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">Outline</span> <span class="keyword">Data</span></span><br><span class="line"><span class="comment">-------------</span></span><br><span class="line"></span><br><span class="line">	 <span class="comment">/*+</span></span><br><span class="line"><span class="comment">     	BEGIN_OUTLINE_DATA</span></span><br><span class="line"><span class="comment">     	IGNORE_OPTIM_EMBEDDED_HINTS</span></span><br><span class="line"><span class="comment">     	OPTIMIZER_FEATURES_ENABLE('11.2.0.4')</span></span><br><span class="line"><span class="comment">     	DB_VERSION('11.2.0.4')</span></span><br><span class="line"><span class="comment">     	ALL_ROWS</span></span><br><span class="line"><span class="comment">     	OUTLINE_LEAF(@"SEL$1")</span></span><br><span class="line"><span class="comment">     	FULL(@"SEL$1" "SPM_TEST_TAB"@"SEL$1")</span></span><br><span class="line"><span class="comment">     	END_OUTLINE_DATA</span></span><br><span class="line"><span class="comment"> 	*/</span></span><br><span class="line"></span><br><span class="line">Predicate Information (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line"><span class="comment">---------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">  		<span class="number">1</span> - filter(<span class="string">"ID"</span>=<span class="number">1113</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">Column</span> Projection Information (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line"><span class="comment">-----------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">  		<span class="number">1</span> - <span class="string">"DESCRIPTION"</span>[VARCHAR2,<span class="number">50</span>]</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>在V$SQL中找到加入hint的语句的sql_id和plan_hash_value</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> SQL_ID,PLAN_HASH_VALUE,SQL_FULLTEXT <span class="keyword">FROM</span> V$<span class="keyword">SQL</span> <span class="keyword">WHERE</span> SQL_FULLTEXT <span class="keyword">LIKE</span>  <span class="string">'%1113%'</span>;</span><br><span class="line"></span><br><span class="line">SQL_ID	      PLAN_HASH_VALUE SQL_FULLTEXT</span><br><span class="line"><span class="comment">------------- --------------- --------------------------------------------------------------------------------</span></span><br><span class="line">fr5dd23pfbjfz	   1107868462 <span class="keyword">SELECT</span> <span class="comment">/*+ FULL(SPM_TEST_TAB) */</span>description <span class="keyword">FROM</span>	spm_test_tab <span class="keyword">WHERE</span>  <span class="keyword">id</span> = <span class="number">1113</span></span><br><span class="line"><span class="number">08</span>vxbgd0qrm8s	    <span class="number">903671040</span> <span class="keyword">SELECT</span> SQL_ID,SQL_FULLTEXT <span class="keyword">FROM</span> V$<span class="keyword">SQL</span> <span class="keyword">WHERE</span> SQL_FULLTEXT <span class="keyword">LIKE</span>  <span class="string">'%1113%'</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>利用SQL_ID和PLAN_HASH_VALUE创建一个新的accepted的plan，并通过SQL_HANDLE将修改过的plan与原SQL联系起来</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">declare</span></span><br><span class="line">   		v_sql_plan_id  pls_integer;</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">   		v_sql_plan_id := dbms_spm.load_plans_from_cursor_cache(sql_id =&gt; <span class="string">'fr5dd23pfbjfz'</span>,</span><br><span class="line">   		plan_hash_value =&gt; <span class="number">1107868462</span>,</span><br><span class="line">   		sql_handle =&gt; <span class="string">'SQL_c1c9aa52fd90f3ae'</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>查询DBA_SQL_PLAN_BASELINES会看到2个plan</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL_HANDLE		       		   PLAN_NAME		              ENA ACC</span><br><span class="line"><span class="comment">------------------------------ ------------------------------ --- ---</span></span><br><span class="line">SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfb65c37c8 YES YES</span><br><span class="line">SQL_c1c9aa52fd90f3ae	       SQL_PLAN_c3kdaabyt1wxfed3324c0 NO  YES</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>现在执行原sql查看其执行计划</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">SYS@DB41 2017/04/26 15:50:44&gt; SET AUTOTRACE TRACE</span><br><span class="line">SYS@DB41 2017/04/26 15:50:57&gt; SELECT description FROM  spm_test_tab WHERE  id = 1113;</span><br><span class="line"></span><br><span class="line">Execution Plan</span><br><span class="line"><span class="comment">----------------------------------------------------------</span></span><br><span class="line">Plan hash value: 1107868462</span><br><span class="line"></span><br><span class="line"><span class="comment">----------------------------------------------------------------------------------</span></span><br><span class="line">| Id  | Operation	  	  | Name	 	 | Rows  | Bytes | Cost (%CPU)| Time	 |</span><br><span class="line"><span class="comment">----------------------------------------------------------------------------------</span></span><br><span class="line">|   0 | <span class="keyword">SELECT</span> <span class="keyword">STATEMENT</span>  |		 	 	 |     <span class="number">1</span> |    <span class="number">25</span> |    <span class="number">13</span>   (<span class="number">0</span>)| <span class="number">00</span>:<span class="number">00</span>:<span class="number">01</span> |</span><br><span class="line">|*  <span class="number">1</span> |  <span class="keyword">TABLE</span> <span class="keyword">ACCESS</span> <span class="keyword">FULL</span>| SPM_TEST_TAB |     <span class="number">1</span> |    <span class="number">25</span> |    <span class="number">13</span>   (<span class="number">0</span>)| <span class="number">00</span>:<span class="number">00</span>:<span class="number">01</span> |</span><br><span class="line"><span class="comment">----------------------------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">Predicate Information (<span class="keyword">identified</span> <span class="keyword">by</span> operation <span class="keyword">id</span>):</span><br><span class="line"><span class="comment">---------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">  		<span class="number">1</span> - filter(<span class="string">"ID"</span>=<span class="number">1113</span>)</span><br><span class="line"></span><br><span class="line">Note</span><br><span class="line"><span class="comment">-----</span></span><br><span class="line">  		- <span class="keyword">SQL</span> plan baseline <span class="string">"SQL_PLAN_c3kdaabyt1wxfb65c37c8"</span> used <span class="keyword">for</span> this <span class="keyword">statement</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">Statistics</span></span><br><span class="line"><span class="comment">----------------------------------------------------------</span></span><br><span class="line"><span class="number">7</span>  <span class="keyword">recursive</span> calls</span><br><span class="line"><span class="number">0</span>  db <span class="keyword">block</span> gets</span><br><span class="line"><span class="number">45</span>  <span class="keyword">consistent</span> gets</span><br><span class="line"><span class="number">0</span>  <span class="keyword">physical</span> <span class="keyword">reads</span></span><br><span class="line"><span class="number">0</span>  <span class="keyword">redo</span> <span class="keyword">size</span></span><br><span class="line"><span class="number">367</span>  <span class="keyword">bytes</span> sent via <span class="keyword">SQL</span>*Net <span class="keyword">to</span> <span class="keyword">client</span></span><br><span class="line"><span class="number">476</span>  <span class="keyword">bytes</span> received via <span class="keyword">SQL</span>*Net <span class="keyword">from</span> <span class="keyword">client</span></span><br><span class="line"><span class="number">2</span>  <span class="keyword">SQL</span>*Net roundtrips <span class="keyword">to</span>/<span class="keyword">from</span> <span class="keyword">client</span></span><br><span class="line"><span class="number">0</span>  sorts (<span class="keyword">memory</span>)</span><br><span class="line"><span class="number">0</span>  sorts (disk)</span><br><span class="line"><span class="number">1</span>  <span class="keyword">rows</span> processed</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p><strong>可见，执行计划已改变</strong></p>
+<p><strong>注： 测试过程中发现，使用SQL Plan Baseline的sql无法再用SELECT * FROM TABLE (SELECT DBMS_XPLAN.DISPLAY_CURSOR(null,null,&#39;advanced&#39;) from dual)获取其上次的执行计划。</strong></p>
+
+      
+    </div>
+
+    
+
+    
+      
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        
+          
+        
+        <div class="post-tags">
+          
+            <a href="/tags/SQL-Plan-Management/" rel="tag"># SQL Plan Management</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/04/26/oracle/perf/SPM-Loading-Plans-from-the-Shared-SQL-Area/" rel="next" title="SPM Loading Plans from the Shared SQL Area">
+                <i class="fa fa-chevron-left"></i> SPM Loading Plans from the Shared SQL Area
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/05/04/oracle/perf/SPM-in oracle11g-&-12c/" rel="prev" title="SQL Plan Management（SPM）in oracle 11g & 12c">
+                SQL Plan Management（SPM）in oracle 11g & 12c <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="gitalk-container">
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <div class="site-overview-wrap sidebar-panel sidebar-panel-active">
+        <div class="site-overview">
+
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  
+    <img class="site-author-image" itemprop="image" src="/images/gzh.jpg" alt="巴流">
+  
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description motion-element" itemprop="description">左手人文 | 右手科技</div>
+</div>
+
+
+  <nav class="site-state motion-element">
+    
+      <div class="site-state-item site-state-posts">
+        
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">44</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+    
+
+    
+      
+      
+      <div class="site-state-item site-state-categories">
+        
+          
+            <a href="/categories/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">分类</span>
+        </a>
+      </div>
+    
+
+    
+      
+      
+      <div class="site-state-item site-state-tags">
+        
+          
+            <a href="/tags/">
+          
+        
+        
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+        <span class="site-state-item-count">42</span>
+        <span class="site-state-item-name">标签</span>
+        </a>
+      </div>
+    
+  </nav>
+
+
+
+
+
+
+
+  <div class="links-of-author motion-element">
+    
+      <span class="links-of-author-item">
+      
+      
+      
+        
+      
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub &rarr; https://github.com/liupzmin"><i class="fa fa-fw fa-github"></i></span>
+      </span>
+    
+      <span class="links-of-author-item">
+      
+      
+      
+        
+      
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail &rarr; mailto:liupzmin@gmail.com"><i class="fa fa-fw fa-envelope"></i></span>
+      </span>
+    
+  </div>
+
+
+
+
+
+
+  <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+    <div class="links-of-blogroll-title">
+      <i class="fa  fa-fw fa-link"></i>
+      友情链接
+    </div>
+    <ul class="links-of-blogroll-list">
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cHM6Ly81MmNvZGVyLm5ldC8=" title="https://52coder.net/">CoderWang</span>
+        </li>
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cDovL2xlc3Npc2JldHRlci5zaXRlLw==" title="http://lessisbetter.site/">大彬 LIB</span>
+        </li>
+      
+        <li class="links-of-blogroll-item">
+          <span class="exturl" data-url="aHR0cHM6Ly9xY3Jhby5jb20v" title="https://qcrao.com/">码农桃花源</span>
+        </li>
+      
+    </ul>
+  </div>
+
+
+          
+          
+        </div>
+      </div>
+
+      
+
+      
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; 2014 – <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <span class="exturl theme-link" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> 强力驱动 v3.9.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="powered-by">主题 – <span class="exturl theme-link" data-url="aHR0cHM6Ly90aGVtZS1uZXh0Lm9yZw==">NexT.Gemini</span> v7.2.0</div>
+
+<span class="post-meta-divider">|</span>
+<div class="theme-info">
+  <a class="theme-link" target="_blank" href="http://www.miitbeian.gov.cn/">
+    苏ICP备18051624号-1
+  </a>
+</div>
+
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+          <span id="scrollpercent"><span>0</span>%</span>
+        
+      </div>
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=3.4.1"></script>
+
+  
+  <script src="/lib/lazyload/lozad.min.js?v=1.10.0"></script>
+
+  
+  <script src="/lib/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+
+
+  <script src="/js/utils.js?v=7.2.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/affix.js?v=7.2.0"></script>
+
+  <script src="/js/schemes/pisces.js?v=7.2.0"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.2.0"></script>
+<script src="/js/post-details.js?v=7.2.0"></script>
+
+
+
+  <script src="/js/next-boot.js?v=7.2.0"></script>
+
+  
+
+  
+  <script src="/js/exturl.js?v=7.2.0"></script>
+
+
+  
+
+  
+
+  
+
+
+  
+    
+
+  <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+
+  <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+  <script src="/js/md5.min.js"></script>
+
+   <script type="text/javascript">
+        var gitalk = new Gitalk({
+          clientID: 'ae0756501dfc5de89d35',
+          clientSecret: '26befb359f7a466031bb96b4b7e0715c41c63fb8',
+          repo: 'liupzmin.github.io',
+          owner: 'liupzmin',
+          admin: ['liupzmin'],
+          id: md5(window.location.pathname),
+          labels: ['Gitalk'],
+          perPage: 15,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false
+        })
+        gitalk.render('gitalk-container')           
+       </script>
+
+
+  
+
+
+
+
+  <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+
+  <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+  <script src="/js/md5.min.js"></script>
+
+   <script type="text/javascript">
+        var gitalk = new Gitalk({
+          clientID: 'ae0756501dfc5de89d35',
+          clientSecret: '26befb359f7a466031bb96b4b7e0715c41c63fb8',
+          repo: 'liupzmin.github.io',
+          owner: 'liupzmin',
+          admin: ['liupzmin'],
+          id: md5(window.location.pathname),
+          labels: ['Gitalk'],
+          perPage: 15,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false
+        })
+        gitalk.render('gitalk-container')           
+       </script>
+
+
+
+  
+  <script>
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url).replace(/\/{2,}/g, '/');
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x"></i></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x"></i></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'auto') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+
+
+
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+  
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+</body>
+</html>
