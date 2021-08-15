@@ -145,7 +145,7 @@ AMD 是第一个吃螃蟹的，首次从架构上将 CPU 的虚拟寻址空间�
 
 ![Canonical form addresses](https://qiniu.liupzmin.com/canonical.png)
 
-`Canonical form addresses` 将空间分为上下两部分，可见 48 bit 寻址空间下中间有很大的的空洞。Linux 仅仅使用了下部，即可以寻址 128 TB 的内存空间。无论如何地址已经是 64 bit 的了，不再需要借助段寄存器。
+`Canonical form addresses` 将空间分为上下两部分，可见 48 bit 寻址空间下中间有很大的的空洞。Linux 将上部 128TB 用于内核空间，下部 128TB 用于用户空间，即可以寻址 256 TB 的内存空间。无论如何地址已经是 64 bit 的了，不再需要借助段寄存器。
 
 如果上面这些内容难以理解，那么你只需要明晰一点：**在汇编语言中，修改指令寄存器和栈顶寄存器的时候，只需设置一个寄存器即可，已不再需要段的参与！**
 
