@@ -66,6 +66,47 @@ typedef struct {
 Part part1, part2;
 ```
 
+有两种使用 `typedef` 定义结构体类型的方法.
+
+第一种：
+
+```c
+#include<stdio.h>
+
+struct Point{
+  int x;
+  int y;
+};
+typedef struct Point Point;
+int main() {
+    Point p1;
+    p1.x = 1;
+    p1.y = 3;
+    printf("%d \n", p1.x);
+    printf("%d \n", p1.y);
+    return 0;
+}
+```
+
+第二种：
+
+```c
+#include<stdio.h>
+
+typedef struct Point{
+  int x;
+  int y;
+} Point;
+int main() {
+    Point p1;
+    p1.x = 1;
+    p1.y = 3;
+    printf("%d \n", p1.x);
+    printf("%d \n", p1.y);
+    return 0;
+}
+```
+
 ## 一些问题
 
 为什么 C 语言会提供两种方式的类型命名呢？其实 C 语言早期并没有 `typedef` ，所以标记是结构类型命名唯一的方法。当加入 typedef 时已经太晚了，标记已经无法删除了。
