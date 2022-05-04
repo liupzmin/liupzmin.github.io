@@ -411,8 +411,8 @@ void* start_thread(){
 }
 
 int main(int argc, char **argv) {
-	printf("Hello World\n");
-	pthread_t thing1, pattr;
+  printf("Hello World\n");
+  pthread_t thing1, pattr;
   pthread_attr_t tattr;
   void *stackbase;
   void *ptr;
@@ -434,7 +434,7 @@ int main(int argc, char **argv) {
   // 自定义 stack 线程
   pthread_create(&pattr, &tattr, start_thread, NULL);
   // 默认线程
-	pthread_create(&thing1, NULL, start_thread, NULL);
+  pthread_create(&thing1, NULL, start_thread, NULL);
   
   pthread_join(pattr,NULL);
   pthread_join(thing1, NULL);
