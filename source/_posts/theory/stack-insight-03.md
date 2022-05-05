@@ -18,9 +18,9 @@ categories:
 
 ## 1· 进线程堆栈
 
-![图 1-1 位于不同区域的线程 stack](https://s3.ap-northeast-1.amazonaws.com/qiniu.liupzmin.com/stack-region.png)
+![图 3-1 位于不同区域的线程 stack](https://s3.ap-northeast-1.amazonaws.com/qiniu.liupzmin.com/stack-region.png)
 
-图 1.1 为 64 位虚拟地址空间布局图，粉色标识说明了线程堆栈可能存在的位置，总结下来，不外乎以下三种情况：
+图 3.1 为 64 位虚拟地址空间布局图，粉色标识说明了线程堆栈可能存在的位置，总结下来，不外乎以下三种情况：
 
 1. 主线程堆栈位于用户空间顶部，但 clone 时，子进程的主线程实际使用的堆栈未必如此。
 2. 有可能分配在 mmap 区域。
@@ -30,7 +30,7 @@ categories:
 
 或许你已经知道 goroutine 的堆栈是从 heap 上分配的，但如果你足够好奇，你就会为 heap 在虚拟地址空间中的位置而发狂。
 
-go 重写了运行时，如果不使用 cgo 的话，编译完成的 go 程序是静态链接的，不依赖任何C库，这使它拥有不错的可移植性，在较新内核上编译好的程序，拉倒旧版本内核的操作系统上依然能够运行。在这一点上，rust 并没有多少优势，反而新生语言 [hare](https://harelang.org/) 表现足够强劲。
+go 重写了运行时，如果不使用 cgo 的话，编译完成的 go 程序是静态链接的，不依赖任何C库，这使它拥有不错的可移植性，在较新内核上编译好的程序，拉到旧版本内核的操作系统上依然能够运行。在这一点上，rust 并没有多少优势，反而新生语言 [hare](https://harelang.org/) 表现足够强劲。
 
 不依赖 C 库，意味着 go 对 heap 的管理有自己的方式。 那么， go 管理的 heap 是否与之前内存空间布局图中的 heap 位置相同就要打一个大大的问号了。要搞清楚这个问题，我们需要到 runtime 的源码中一探究竟，且要挖到 go 与内核的接口处，找出其申请内存的方式方可。
 
@@ -389,7 +389,7 @@ func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
 
 `mmap` 文档中也对 `_MAP_FIXED` 使用提出了警示，而 go 在这里使用是完全没有问题的，因为事先已经向内核申请了该块内存了，在里面隔上一刀根本不需要睁眼。
 
-我们拿到了一块连续的内存，是时候从 `allocSpan` 返回了，如此 `stackalloc` 就为新 G 申请到了一块连续内存用做堆栈。
+我们拿到了一块连续的内存，是时候从 `allocSpan` 返回了，如此 `stackalloc` 就为新 G 申请到了一块连续内存用作堆栈。
 
 从 goroutine 的新建一直到内核的大门，我们发现了用于申请内存的方式是 `mmap`，但`mmap`从进程虚拟地址空间的哪个位置分配内存呢？`runtime` 源码中给与的`提示地址`又是从何而来呢？
 
@@ -397,7 +397,7 @@ func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
 
 mmap 既是一个系统调用，也是进程虚拟地址空间中的一个区域，让我再次援引《深入 Linux 内核架构》中的一幅图：
 
-![图3-1 mmap 区域自顶向下扩展](https://qiniu.liupzmin.com/mmap-region.png)
+![图3-2 mmap 区域自顶向下扩展](https://qiniu.liupzmin.com/mmap-region.png)
 
 书中介绍了 2.6 版本的内核内存布局，其中 mmap 区域是和 heap 相对增长的，内核会留出足够的空间给主线程 stack，这样便可最大化的利用内存空间，好在 stack 通常不会很大。
 
@@ -405,7 +405,7 @@ mmap 既是一个系统调用，也是进程虚拟地址空间中的一个区域
 
 heap 是用来为进程动态分配内存的，传统的定义是：**堆是一段长度可变的连续虚拟内存，始于进程的未初始化数据段的末尾，随着内存的分配和释放而增减**：
 
-![图 3-2 Linux 进程的虚拟内存布局](https://qiniu.liupzmin.com/virtual-memory-of-a-linux-process.png)
+![图 3-3 Linux 进程的虚拟内存布局](https://qiniu.liupzmin.com/virtual-memory-of-a-linux-process.png)
 
 改变 heap 大小的系统调用是 `brk` 和 `sbrk` ，而 go 主要使用 mmap 来维护堆，这就说明 go 堆和传统的堆位置是不同的。位置虽然不同，但使命毫无二致，让我们来看一个 go 程序的内存布局：
 
