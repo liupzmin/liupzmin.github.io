@@ -549,7 +549,7 @@ Linux 采用的解决方案是把保存在内核态堆栈中的硬件上下文�
 
 因为进入内核态时，用户态的寄存器值已被保存到内核态的堆栈上了，所以内核很容易拿到用户态堆栈的地址，并加以修改。建立的栈帧如下图所示：
 
-![用户态栈帧](https://qiniu.liupzmin.com/user-mode-frame.png)
+![图 7-2 用户态栈帧](https://qiniu.liupzmin.com/user-mode-frame.png)
 
 其中`sc`中保存了进程的硬件上下文，这是从当前进程的内核堆栈上 copy 来的。`precode`位于栈顶，是信号处理函数的返回地址，将会发出`sigreturn()`系统调用。
 
