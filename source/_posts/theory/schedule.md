@@ -18,7 +18,7 @@ categories:
 
 ## 1
 
-​		调度是件很神奇的事，一直以来我都对它无比着迷，并不断地钻营个中奥妙。几年下来，亦略有心得，由是思索着记录下来，已备将来优哉游哉忘乎所以后回来检索之用。
+​		调度是件很神奇的事，一直以来我都对它无比着迷，并不断地钻营个中奥妙。几年下来，略有心得，于是思索着记录下来，以备将来优哉游哉忘乎所以后回来检索之用。
 
 ​		然而吸引我的并不是调度算法，而是调度的时机和原理。因此这篇文章只讨论调度时机和 Linux 内核的调度原理，与调度算法无涉，本文将调度算法当成一个黑盒，优先了解调度行为本身。
 
@@ -775,7 +775,7 @@ goodm:
 
 ## 9
 
-文章写到这里，基本上把我想讲的已经讲完了，也算基本上完成了自己“观其大略，本其脉络”的目标，我曾在[《从CPU的视角说起》](https://liupzmin.com/2021/06/27/theory/stack-insight-01-md/) 一文中说道：**我目前所寻求的信息，意在建立计算机系统的世界观与 Go 语言的世界观，是在陷入具体细节之前为自己提供一个大致的轮廓，让自己对计算机运行的脉络有一个关键性的认识。** 即便如此，里面也不可避免的出现很多具体而微的内容，我略过了很多内容，并不是因为它们不重要，是因为它们是细节，是更丰富的东西，也是我尚未探索的东西。
+文章写到这里，基本上把我想讲的已经讲完了，也算基本上完成了自己“观其大略，本其脉络”的目标，我曾在[《从CPU的视角说起》](https://liupzmin.com/2021/06/27/theory/stack-insight-01-md/) 一文中说道：**我目前所寻求的信息，意在建立计算机系统的世界观与 Go 语言的世界观，是在陷入具体细节之前为自己提供一个大致的轮廓，让自己对计算机运行的脉络有一个关键性的认识。** 即便如此，里面也不可避免的出现很多具体而微的内容。我略过了很多环节，并不是因为它们不重要，是因为它们是细节，是更丰富的东西，也是我尚未探索的东西。
 
 苏轼有自己的一套读书方法叫做“八面受敌”，他在写给侄女婿王庠的《又答王庠书》中作了详细介绍：“但卑意欲少年为学者，每一书皆作数过尽之。书富如入海，百货皆有，人之精力，不能兼收尽取，但得其所欲求者尔。故愿学者每次作一意求之。如欲求古今兴亡治乱、圣贤作用、但作此意求之，勿生余念。又别作一次，求事迹故实典章文物之类，亦如之。他皆仿此。此虽迂钝，而他日学成，八面受敌，与涉猎者不可同日而语也。”
 
@@ -783,19 +783,20 @@ goodm:
 
 最后再聊一聊“程序”，第4节曾讨论过“程序”一词的含义，平时我们习惯将开发最终交付的制品称为“程序”，或有“我写了某某程序”之类云云，“程序”若是躺在计算机硬盘中的二进制文件，那当它被调入内存醒来时，一定会哀叹自己生命的不完整，因为每当它想“耳听之而为声，目遇之而成色”的时候，面前总会横着一道“系统调用”的鸿沟，以至于它永远无法亲自触摸“大自然”的无尽藏。换句话说，我们到底创造了什么？一条流动的进程中，有多少是属于我们这样平凡之人的？刨去内核指令，刨去运行时、库以及不可胜数的框架代码，我相信已所剩无几！
 
-我之所以无法骄傲，是因为我站在巨人的肩上！
+我之所以无法骄傲，是因为站在巨人的肩上！
 
 ***参考文献***
 
 1. [操作系统导论](https://book.douban.com/subject/33463930/)
 2. [深入理解计算机系统](https://book.douban.com/subject/26912767/)
-3. [深入 Linux 内核架构](https://book.douban.com/subject/4843567/)
-4. [操作系统概念](https://book.douban.com/subject/30297919/)
-5. [The Definitive Guide to Linux System Calls](https://blog.packagecloud.io/the-definitive-guide-to-linux-system-calls/)
-6. [深入golang runtime的调度](https://zboya.github.io/post/go_scheduler/)
-7. [从源码剖析Go语言基于信号抢占式调度](https://www.luozhiyun.com/archives/485)
-8. [Misc on Linux fork, switch_to, and scheduling](http://lastweek.io/notes/linux/fork/)
-9. [Evolution of the x86 context switch in Linux](https://www.maizure.org/projects/evolution_x86_context_switch_linux/)
-10. [Go 语言原本](https://golang.design/under-the-hood/zh-cn/part2runtime/ch06sched/preemption/)
-11. [Scheduling In Go : Part II - Go Scheduler](https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html)
+3. [深入理解LINUX内核](https://book.douban.com/subject/2287506/)
+4. [深入 Linux 内核架构](https://book.douban.com/subject/4843567/)
+5. [操作系统概念](https://book.douban.com/subject/30297919/)
+6. [The Definitive Guide to Linux System Calls](https://blog.packagecloud.io/the-definitive-guide-to-linux-system-calls/)
+7. [深入golang runtime的调度](https://zboya.github.io/post/go_scheduler/)
+8. [从源码剖析Go语言基于信号抢占式调度](https://www.luozhiyun.com/archives/485)
+9. [Misc on Linux fork, switch_to, and scheduling](http://lastweek.io/notes/linux/fork/)
+10. [Evolution of the x86 context switch in Linux](https://www.maizure.org/projects/evolution_x86_context_switch_linux/)
+11. [Go 语言原本](https://golang.design/under-the-hood/zh-cn/part2runtime/ch06sched/preemption/)
+12. [Scheduling In Go : Part II - Go Scheduler](https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html)
 
