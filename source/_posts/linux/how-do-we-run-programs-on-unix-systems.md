@@ -13,7 +13,7 @@ categories: linux
 
 ## Have you ever thought ?
 
-前段时间，我在编写一个 `Go` 程序，这个程序要做的一件事是在操作系统上执行一个命令（可执行文件或者可执行脚本），程序大概像下面这样子：
+有一次，我在编写一个 `Go` 程序，这个程序要做的一件事是在操作系统上执行一个命令（可执行文件或者可执行脚本），程序大概像下面这样子：
 
 ```go
 cmdSlice := strings.Fields(strings.TrimSpace(cmdString))
@@ -34,12 +34,12 @@ cmd := exec.Command(executableFile, cmdSlice[1:]...)
 
 当我让程序去执行一个 shell 脚本的时候，收到了 `fork/exec: exec format error` 的错误，然而我在 shell 下执行这个脚本却是正常的，这让我很迷惑。
 
-当我弄清楚原因是我没有在脚本里加 `Shebang`（`#!`） 的时候，我更加疑惑了：`为什么操作系统会容忍我的过错呢？`对此，我会在稍后的章节中进行解释。当我搞清楚问题的始末的之后，我突然对操作系统执行程序的方式产生了极大的兴趣，并试图去搞清楚它。这就是我写这篇文章的初衷。
+当我弄清楚原因是我没有在脚本里加 `Shebang`（`#!`） 的时候，我更加疑惑了：`为什么操作系统会容忍我的过错呢？`对此，我会在稍后的章节中进行解释。当搞清楚问题的始末的之后，我突然对操作系统执行程序的方式产生了极大的兴趣，在好奇心的驱使下，我试图去搞清楚它，这也是我写这篇文章的初衷。
 
 
 你是否想过，除了在 `shell` 下启动一个程序，是否还有其它的方式？ 我们是不是永远无法摆脱 `shell`？ 你是否曾经对 `shell` 下各种的执行方式感到困惑？比如，`“source xxx.sh”`、`“. xxx.sh”`、`“./xxx.sh”`、`“. ./xxx.sh”`、`“sh ./xxx.sh”`。 没关系，这篇文章会带你走出迷雾。
 
-本文会涉及到一点 `Sysvinit` 和 `Systemd` 的内容， 但我不会过多的去介绍他们，只是简单说明，这是一种能让你的程序运行起来的方式，我最后的重点会放在 `shell` 上面。
+本文会涉及到一点 `Sysvinit` 和 `Systemd` 的内容， 但不会过多的去介绍他们，只是简单说明，这是一种能让你的程序运行起来的方式，我最后的重点会放在 `shell` 上面。
 
 ## 让程序跑起来有多少种可能的方法？
 
@@ -55,7 +55,7 @@ cmd := exec.Command(executableFile, cmdSlice[1:]...)
 
 `定时任务`是另一个可能会拉起一个程序的方式，相信很多朋友都有在 Linux 上使用 `crontab` 的经历，而它的替代品 `Systemd Timer` 可能就没那么多人熟悉了。
 
-`shell` 是最常见的启动程序的方式。事实上 `shell` 的主要作用就是去运行其它的程序，即便是前面 3 种方式，很多时候也是使用 shell 来启动需要运行的程序的，只不过不是我们手动在 shell 里执行而已。
+`shell` 是最常见的启动程序的方式。事实上 `shell` 的主要作用就是去运行其它的程序，即便是前面 3 种方式，很多时候也是使用 shell 来启动程序的，只不过不是我们手动在 shell 里执行而已。
 
 还有一种方式就是在桌面环境下，使用 GUI 来启动一个前台程序，你可能通过点击一个 `.desktop` 的快捷方式来启动一个桌面应用，在我的 `Manjaro` 下桌面应用全部是由 `plasmashell` 这个进程 `fork` 出来的子进程。
 
@@ -63,7 +63,7 @@ cmd := exec.Command(executableFile, cmdSlice[1:]...)
 
 Linux 操作系统的启动首先从 BIOS 开始，然后由 Boot Loader 载入内核，并初始化内核。内核初始化的最后一步就是启动 init 进程。这个进程是系统的第一个进程，PID 为 1，又叫超级进程，也叫根进程。它负责产生其他所有用户进程。所有的进程都会被挂在这个进程下，如果这个进程退出了，那么所有的进程都被 kill 。如果一个子进程的父进程退了，那么这个子进程会被挂到 PID 1 下面。
 
-因为大多数 Linux 发行版的 init 系统是和 Unix System V 是相互兼容的，因此 Linux 上的 init 系统也被成为 `Sysvinit` 。
+因为大多数 Linux 发行版的 init 系统是和 Unix System V 是相互兼容的，因此 Linux 上的 init 系统也被成为 `Sysvinit` 。在 `Systemd` 出现之前，大多数常见的 Linux 发行版都使用`Sysvinit`。
 
 在 sysvinit 下有几个 `runlevel` ，并且有 0~6 七个运行级别，比如：常见的 3 级别指定启动到多用户的字符命令行界面，5 级别指定启动到图形界面，0 表示关机，6 表示重启。其配置在 /etc/inittab 文件中。
 
@@ -71,17 +71,17 @@ Linux 操作系统的启动首先从 BIOS 开始，然后由 Boot Loader 载入�
 
 为了将操作系统带入可操作状态，init 系统通过读取 `/etc/inittab` 获得 runlevel，然后依次顺序执行对应 level 下的脚本。rc[X].d 下都是些 link， 链接到 rc.d 中的 shell 脚本， 可见系统初始化过程中依然是使用的 `shell` 来启动相应程序的。
 
-然而这些脚本中需要使用 awk, sed, grep, find, xargs 等等这些操作系统的命令，这些命令需要生成进程（这涉及到 shell 的工作方式，我稍后在 shell 小节详细介绍），生成进程的开销很大，关键是生成完这些进程后，这个进程就干了点屁大的事就退了。这完全是杀鸡用牛刀啊，操作系统废了九牛二虎之力拉起来一个进程，结果这个进程就干了个把字符串转为小写的活，然后丢下一脸懵逼的操作系统就潇洒的退出了。
+然而这些脚本中需要使用 awk, sed, grep, find, xargs 等等这些操作系统的命令，这些命令需要生成进程（这涉及到 shell 的工作方式，我稍后在 shell 小节详细介绍），生成进程的开销很大，关键是生成完这些进程后，这个进程就干了点屁大的事就退了。这完全是大材小用，操作系统废了九牛二虎之力拉起来一个进程，结果这个进程就干了个把字符串转为小写的活，然后丢下一脸懵逼的操作系统就潇洒的退出了。
 
-可以想见，当rc.d中有大量的脚本，且脚本中又有成百上千个类似于 awk、sed、grep 这样的命令，系统的启动过程就会慢的要死。当然对于启停不那么频繁的服务器来说，这依然可以接受，而且这样的系统设计也很符合 Unix 设计哲学：`Do one thing and Do it well`，所以 sysvinit 可以一统江湖几十年。直到 2006年 Linux 内核进入 2.6 时代，Linux 开始进入桌面系统，而桌面系统和服务器系统不一样的是，桌面系统面临频繁重启，而且，用户会非常频繁的使用硬件的热插拔技术。于是，这些新的场景，让 sysvint 受到了很多挑战。
+可以想见，当 rc.d 中有大量的脚本，且脚本中又有成百上千个类似于 awk、sed、grep 这样的命令时，系统的启动过程就会变得漫长。当然对于启停不那么频繁的服务器来说，这依然可以接受，而且这样的系统设计也很符合 Unix 设计哲学：`Do one thing and Do it well`，所以 sysvinit 可以一统江湖几十年。直到 2006年 Linux 内核进入 2.6 时代，Linux 开始进入桌面系统，而桌面系统和服务器系统不一样的是，桌面系统面临频繁重启，而且，用户会非常频繁的使用硬件的热插拔技术。于是，在这些新的使用场景下，sysvint 开始变得不合时宜了。
 
 > 更详细的 sysvint 介绍可以参考 [浅析 Linux 初始化 init 系统-sysvinit](https://www.ibm.com/developerworks/cn/linux/1407_liuming_init1/index.html)
 
 ## 步行夺猛马的 Systemd
 
-**历史上总是会有人站出来对现状说不**，2010 年 [Lennart Poettering](https://en.wikipedia.org/wiki/Lennart_Poettering)和他的小伙伴们开源并发布了一个新的 init 系统——`systemd`。
+**历史上总是会有人站出来对现状说不**，2010 年 [Lennart Poettering](https://en.wikipedia.org/wiki/Lennart_Poettering) 和他的小伙伴们开源并发布了一个新的 init 系统——`Systemd`。
 
-`Systemd` 是 Linux 系统中最新的初始化系统（init），它主要的设计目标是克服 sysvinit 固有的缺点，提高系统的启动速度。systemd 和 ubuntu 的 upstart 是竞争对手，而 ubuntu 在15.04及后续版本中已将 systemd 设置为默认 init 程序，redhat 和 centos 也从 7.0 之后开始使用 systemd，截止目前 systemd 已经运行在大部分的 Linux发行版中。
+`Systemd` 是 Linux 系统中最新的初始化系统（init），它主要的设计目标是克服 sysvinit 固有的缺点，提高系统的启动速度。systemd 和 ubuntu 的 upstart 是竞争对手，而 ubuntu 在 15.04 及后续版本中已将 systemd 设置为默认 init 程序，redhat 和 centos 也从 7.0 之后开始使用 systemd，截止目前 systemd 已经运行在大部分的 Linux发行版中。
 
 在系统启动上 systemd 拥有绝对的优势，有张三方对比图可见分晓：
 
@@ -117,7 +117,7 @@ systemd(1)─┬─ModemManager(494)─┬─{ModemManager}(495)
 
 ## 定时任务
 
-简单说一下定时任务，当我们使用 crontab 配置了一个定时执行任务之后，Cron每分钟做一次检查，看看哪个命令可执行，当 Cron 检查到有命令需要执行时则 fork 子进程，再由此子进程 fork-execve 执行真正的命令：
+简单说一下定时任务，当我们使用 crontab 配置了一个定时执行任务之后，Cron 每分钟做一次检查，看看哪个命令可执行，当 Cron 检查到有命令需要执行时则 fork 子进程，再由此子进程 fork-execve 执行真正的命令：
 
 ```
 init(1)-+-NetworkManager(1747)
@@ -144,7 +144,7 @@ root     17002     1  0 17:19 ?        00:00:00 /usr/bin/python3 /home/liupeng/u
 
 没错，它的功能就是如此纯粹——`a shell is a user interface for access to an operating system's services`，但它却无处不在。
 
-传统的 Sysvinit 系统下绝大部分的系统服务都是通过 shell 拉起来的，虽然到了 Systemd 时代，很多工作由 C 语言重新实现了（具体见[LINUX PID 1 和 SYSTEMD](https://coolshell.cn/articles/17998.html)）,但是你依然可以使用 systemd 来管理你的启停脚本，这些脚本用来启停你的程序。而对于非 Daemon 方式的程序。你仍然需要用 shell 来启动它们到前台，或者使用 nohup、setsid等方式启动到后台。
+传统的 Sysvinit 系统下绝大部分的系统服务都是通过 shell 拉起来的，虽然到了 Systemd 时代，很多工作由 C 语言重新实现了（具体见[LINUX PID 1 和 SYSTEMD](https://coolshell.cn/articles/17998.html)）,但是你依然可以使用 systemd 来管理你的启停脚本，这些脚本用来启停你的程序。而对于非 Daemon 方式的程序。你仍然需要用 shell 来启动它们到前台，或者使用 nohup、setsid 等方式启动到后台。
 
 可见，我们无法逃离 `shell`，它就像是一个造物主，系统中几乎所有的进程都是或曾是它的子民。
 
@@ -175,7 +175,7 @@ root     17002     1  0 17:19 ?        00:00:00 /usr/bin/python3 /home/liupeng/u
 
 3. 如果没有匹配到函数，则从 shell 内置命令（`builtins`）中寻找，如果找到则调用该命令。
 
-4. 如果都没有找到则从 `$PATH` 中寻找，为了避免每次遍历 `$PATH` ,shell 维护了一张 `HASH` 表，记录了每个命令对应的绝对路径，如果 HASH 表中没有再去 `$PATH` 中的目录遍历，如果 PATH 中未找到就执行一个预定义的函数 `command_not_found_handle` 。如果函数存在，则在`子 shell` 中调用，如果不存在则打印错误信息并返回 127 状态码。
+4. 如果都没有找到则从 `$PATH` 中寻找，为了避免每次遍历 `$PATH` ,shell 维护了一张 `HASH` 表，记录了每个命令对应的绝对路径（我的 manjaro 在每次安装新软件之后，需要执行一下`rehash`命令。如此，可执行文件才能在当前 shell 下被找到），如果 HASH 表中没有再去 `$PATH` 中的目录遍历，如果 PATH 中未找到就执行一个预定义的函数 `command_not_found_handle` 。如果函数存在，则在`子 shell` 中调用，如果不存在则打印错误信息并返回 127 状态码。
 
 5. 如果寻找成功或者 command 中含有 `“/”`， shell 将在新环境中执行它（ fork 一个新进程 ）。
 
@@ -202,13 +202,13 @@ root     17002     1  0 17:19 ?        00:00:00 /usr/bin/python3 /home/liupeng/u
 
 我们知道， Linux 下的可执行文件可以分为 `ELF 文件`和`脚本文件`，当我们在 bash 下输入一个命令执行某个 ELF 程序时，Linux 系统是如何装载并执行它的呢？
 
-首先，在用户层面，bash 进程会调用 `fork()` 系统调用创建一个新的进程。其次，新的进程通过调用 `execve()` 系统调用来执行指定的 ELF 文件。原先的 bash 进程继续返回并等待刚才启动的新进程结束，之后继续等待用户输入命令。
+首先，在用户层面，bash 进程会调用 `fork()` 系统调用创建一个新的进程。新进程通过调用 `execve()` 系统调用来执行指定的 ELF 文件。原先的 bash 进程继续返回并等待刚才启动的新进程结束，之后继续等待用户输入命令。
 
-当进入 `execve()` 系统调用之后，Linux 内核就开始进行真正的装载工作。在内核中，`execve()` 系统调用相应的入口是 `sys_execve()`。`sys_execve()` 进行一些参数的检查复制之后，调用 `do_execve()`。`do_execve()` 会首先查找被执行的文件，如果找到文件，则读取文件的前 128 个字节。
+当进入 `execve()` 系统调用之后，Linux 内核就开始进行真正的装载工作。在内核中，`execve()` 系统调用相应的入口是 `sys_execve()`。`sys_execve()` 进行一些参数的检查复制之后，调用 `do_execve()`，`do_execve()` 会首先查找被执行的文件，如果找到文件，则读取文件的前 128 个字节。
 
 为什么要先读取文件的前 128 个字节？这是因为 Linux 支持的可执行文件不止 ELF 一种，还包括 `a.out`、`Java 程序`、以 `#!` 开头的脚本程序。`do_execve()` 通过读取前 128 个字节来判断文件的格式。每种可执行文件格式的开头几个字节都是很特殊的，尤其是前4个字节，被称为 `魔数`（Magic Number）。
 
-我们用一段 C 程序来读取一些各种文件的前 4 个字节：
+我们用一段 C 程序来读取一下各种文件的前 4 个字节：
 
 ```c
 #include <stdio.h>
@@ -262,7 +262,7 @@ int main (int argc, const char * argv[]) {
     {15:51}~/Learing/c/src:master ✗ ➭ ./read4bytes ~/java/HelloWorld.class 
     BEBAFECA
     ```
-    `《程序员的自我修养》`一书 6.5 章节介绍 Linux 装载可执行文件时，依次介绍了 `ELF`、`java 可执行文件`和 `#！`三种情况。ELF 的前4个字节将 16 进制转换为 ASCII 字符是 `E`、`L`、`F`；但是 java 的 class 文件则不同，由上可知读出的前4个字节的 16 进制表示为 `BEBAFECA`。因为是小端，所以 16 进制的表示法刚好是 `CAFEBABE`，并不需要转化成具体的字符，而书中介绍说 `“Java的可执行文件格式的头 4 个字节为 c、a、f、e”`，我猜可能书中存在前后逻辑不一致的问题，除非真的存在所谓的 `java 可执行文件`，如果有朋友了解，欢迎联系我，给我批评指正。
+    `《程序员的自我修养》`一书 6.5 章节介绍 Linux 装载可执行文件时，依次介绍了 `ELF`、`java 可执行文件`和 `#！`三种情况。ELF 的前 4 个字节将 16 进制转换为 ASCII 字符是 `E`、`L`、`F`；但是 java 的 class 文件则不同，由上可知读出的前4个字节的 16 进制表示为 `BEBAFECA`。因为是小端，所以 16 进制的表示法刚好是 `CAFEBABE`，并不需要转化成具体的字符，而书中介绍说 `“Java的可执行文件格式的头 4 个字节为 c、a、f、e”`，我猜可能书中存在前后逻辑不一致的问题，除非真的存在所谓的 `java 可执行文件`，如果有朋友了解，欢迎联系我，给我批评指正。
 
     关于 [CAFEBABE](https://en.wikipedia.org/wiki/Java_class_file)的来源可以参见 wiki 上 James Gosling 的自白。
 
@@ -272,15 +272,15 @@ int main (int argc, const char * argv[]) {
 - a.out 可执行文件：load_aout_binary()
 - 可执行脚本程序：load_script()
 
-有必要提一下 [a.out](https://zh.wikipedia.org/wiki/A.out)， a.out 本身要追溯到更早的 Unix 时代，并且伴随 Linux 的诞生至今在 Linux 中有将近 ~28 年的历史。从 内核 5.1 开始， Linux 移除 a.out 格式的消息，因为ELF 自 1994 年进入 Linux 1.0 以来，已经 ~25 年了，a.out 早已年久失修，而且现在基本上找不到能产生 a.out 格式的编译器了。
+有必要提一下 [a.out](https://zh.wikipedia.org/wiki/A.out)， a.out 本身要追溯到更早的 Unix 时代，并且伴随 Linux 的诞生至今在 Linux 中有将近 ~28 年的历史。从 内核 5.1 开始， Linux 移除 a.out 格式的消息，因为 ELF 自 1994 年进入 Linux 1.0 以来，已经 ~25 年了，a.out 早已年久失修，而且现在基本上找不到能产生 a.out 格式的编译器了。
 
-大家可能会说，gcc 默认编译生成的不就是 a.out 么？非也，此 a.out 非彼 a.out。gcc 默认生成的 a.out 的实际格式也是 ELF，如果你按照刚才的方式读取 a.out 的前四个字节，你会发现同样是 `464C457F`，a.out 这个名字很大意义上属于计算机历史文化的沿袭，想了解更多可以参考[为 a.out 举行一个特殊的告别仪式](https://tinylab.org/goodbye-a.out/)。
+你可能会说，gcc 默认编译生成的不就是 a.out 么？非也，此 a.out 非彼 a.out。gcc 默认生成的 a.out 的实际格式也是 ELF，如果你按照刚才的方式读取 a.out 的前四个字节，你会发现同样是 `464C457F`，a.out 这个名字很大意义上属于计算机历史文化的沿袭，想了解更多可以参考[为 a.out 举行一个特殊的告别仪式](https://tinylab.org/goodbye-a.out/)。
 
-我在这里省去 `load_elf_binary()` 的过程，只需提一下其中一步会修改系统调用的返回地址为 ELF 文件的入口地址，细节可以去参考`《程序员的自我修养》` 6.5 节。我们说当 `load_elf_binary()` 执行完毕之后，返回至 `do_execve()` 再返回至 `sys_execve()` 时，因为 `load_elf_binary()` 已经修改了返回地址，所以当 `sys_execve()` 系统调用从内核态返回到用户态时，EIP 寄存器直接跳转到了 ELF 程序的入口地址，于是开始执行新程序的代码指令， ELF 可执行文件装载完成。
+我在这里省去 `load_elf_binary()` 的过程，只需提一下其中一步会修改系统调用的返回地址为 ELF 文件的入口地址，细节可以去参考`《程序员的自我修养》` 6.5 节。当 `load_elf_binary()` 执行完毕之后，返回至 `do_execve()` 再返回至 `sys_execve()` 时，因为 `load_elf_binary()` 已经修改了返回地址，所以当 `sys_execve()` 系统调用从内核态返回到用户态时，EIP 寄存器直接跳转到了 ELF 程序的入口地址，于是开始执行新程序的代码指令， ELF 可执行文件装载完成。
 
 是时候去破解我在文章开头留下的问题了，我用 Go 程序通过 `fork` 和 `exec` 去执行脚本的时候收获到 `fork/exec: exec format error` 的错误。现在来看是 `search_binary_handle()` 的过程出了问题，内核并没有识别到脚本文件格式，经查确认是我脚本中没有加入 [Shebang](https://zh.wikipedia.org/wiki/Shebang)，当我在首行增加了 `#!/bin/bash` 之后，程序便可以正确运行了。
 
-我还没有解释为什么在交互式的 shell 下执行不带 `Shebang` 的脚本不会触发错误，因为说起我寻找答案的过程总让我喟叹不已，我是从一篇几近 30 年前的文章中找到答案的。这让我想到了 5 年前我学习 Oracle 调优时从一本 10 年前出版的书中获益的经历。我难以想象，我今天写就的一篇博文，有可能会在 30 年后帮助到另一个人，这会让我永葆写作的热情......
+我还没有解释为什么在交互式的 shell 下执行不带 `Shebang` 的脚本不会触发错误，因为说起我寻找答案的过程总让我喟叹不已，我是从一篇几近 30 年前的文章中找到答案的。这让我想到了多年前我学习 Oracle 调优时从一本 10 多年前出版的书中获益的经历。我难以想象，我今天写就的一篇博文，有可能会在 30 年后帮助到另一个人，这会让我永葆写作的热情......
 
 就是这篇 （[Why do some scripts start with #! ... ?](http://www.faqs.org/faqs/unix-faq/faq/part3/section-16.html)）写于 1992 年的文章帮助我找到事实的真相。
 
@@ -298,7 +298,7 @@ if (errno == ENOEXEC)
 perror(program);
 return -1;
 ```
-后来，伯克利的一些 guys 扩充了内核的功能，使其可以识别魔数 `“#！”`，如果内核读到 `#！` 则将继续读取该行的剩余部分，并将其作为命令去运行文件中的内容。
+后来，伯克利的一些 guys 扩充了内核的功能，使其可以识别魔数 `“#！”`，如果内核读到 `#！` 则将继续读取该行的剩余部分，并将其作为命令去解释运行文件中的内容。
 
 试想，当你执行一个没有正确填写 `Shebang` 的脚本文件的时候，shell 很可能会给你报一个没有执行权限的错误，当你依照错误提示给予 `+x` 权限的时候，你很可能收到更多的错误，原因很可能是你正在编写一个 python 脚本。
 
@@ -325,7 +325,7 @@ return -1;
 
 对于非交互式的 shell 典型的情况就是执行脚本啦，而在执行脚本的时候可以通过添加 `--login` 或者 `-l` 的选项来使这个 shell 去读取 `Startup Files`，因为它没有输入口令的登录动作，只有读取和执行 Startup Files 。
 
-另外，你在 X Windows 下运行 `terminal` 软件打开的 shell 是 `non-login & interactive` 模式的。如果你曾有**在视窗下打开 shell 却无法获取 `～/bash_profile` 中定义的变量**的疑惑的话，现在你可以释然了。
+另外，你在 X Windows 下运行 `terminal` 软件打开的 shell 是 `non-login & interactive` 模式的。如果你曾有**在视窗下打开 shell 却无法获取 `～/bash_profile` 中定义的变量**的疑惑的话，现在你可以释然了（尤其是使用图形界面安装过 Oracle 的 DBA 们，你们是否也好奇：明明设置好了环境变量，为何每次在图形界面下执行`dbca`都会找不到命令，还必须手动执行以下`source ~/.bash_profile`）。
 
 来做个实验吧，我事先在 `/etc/profile`、`/etc/bashrc`、`~/.bash_profile`、`~/.bashrc` 中增加了 `echo “Hello from xxxx”` 的语句，让我们来看看各种情况下我们得到的 shell 到底执行了哪些文件：
 
@@ -421,7 +421,7 @@ return -1;
 
 意思是`当你用 sh 来启动 shell 的时候，bash 会以 posix 标准模式运行`，就如同调用了 `bash --posix`。需要注意的是：**`sh` 并不是一个具体的 shell 实现，而是一种规格标准，bash 在这种模式下运行的时候，将遵循 posix 的标准去读取执行文件**。如下图所示：
 
-![sh and startup files](http://qiniu.liupzmin.com/sh.png)
+![sh and startup files](https://qiniu.liupzmin.com/sh.png)
 
 来实地验证一下：
 
@@ -446,7 +446,7 @@ return -1;
     I am script!
     ```
 
-因为生产服务器上使用 Bash 居多，而线上服务多少都依托于 shell 去调用，因为不同的调用方式下 shell 读取执行文件的规则不同，这样就可能对应用造成一定程度的困扰。我曾经维护一个线上的 java 项目，这个项目有几百个 java 服务需要每天定时重启，项目上线时反复检查验证了 cron 服务的配置以确保万无一失，而没有想到启停脚本对环境变量 `JAVA_HOME` 的依赖会在 cron 调用的时候失效。如今看来，只要使用登录非交互模式即可。
+因为生产服务器上使用 Bash 居多，而线上服务多少都依托于 shell 去调用，因为不同的调用方式下 shell 读取执行文件的规则不同，这样就可能对应用造成一定程度的困扰。我曾经维护一个线上的 java 项目，这个项目有上百个 java 服务需要每天定时重启，项目上线时反复检查验证了 cron 服务的配置以确保万无一失，而没有想到启停脚本对环境变量 `JAVA_HOME` 的依赖会在 cron 调用的时候失效。如今看来，只要使用登录非交互模式即可。
 
 ## 总结
 
