@@ -85,7 +85,7 @@ Linux 操作系统的启动首先从 BIOS 开始，然后由 Boot Loader 载入�
 
 在系统启动上 systemd 拥有绝对的优势，有张三方对比图可见分晓：
 
-![](http://qiniu.liupzmin.com/boot.png)
+![](https://qiniu.liupzmin.com/boot.png)
 
 如今 systemd 成为 1 号进程，后续所有的进程都是由它 fork 出来的：
 
@@ -238,7 +238,7 @@ int main (int argc, const char * argv[]) {
     ```
 
     可以看到输出为 `464C457F`，我们查看ASCII 表，得出如下的对应关系：
-    ![ELF Header](http://qiniu.liupzmin.com/elf-header-small.png)
+    ![ELF Header](https://qiniu.liupzmin.com/elf-header-small.png)
 
     我的操作系统字节序是小端法排序，因此，`ELF的可执行文件格式的头 4 个字节为 0x7F、E、L、F`。
 
@@ -250,7 +250,7 @@ int main (int argc, const char * argv[]) {
     ```
 
     前 4 个字节为 `622F2123`，我们再查一下 ASCII 表的对应关系：
-    ![shell script header](http://qiniu.liupzmin.com/bash-header-small.png)
+    ![shell script header](https://qiniu.liupzmin.com/bash-header-small.png)
 
     翻转一下就是 `#!/b`,可以猜测如果我们多读 7 个字节，结果肯定是`#!/bin/bash`.
 
@@ -319,7 +319,7 @@ return -1;
 
 因为 shell 可以运行在交互模式和非交互模式下，并且有 login 和 non-login 的情况，所以每一种组合他们读取并执行的 Startup Files 都有所不同，下面我给出一幅图来展示各种不同的情况：
 
-![bash and startup files](http://qiniu.liupzmin.com/bash.png)
+![bash and startup files](https://qiniu.liupzmin.com/bash.png)
 
 所谓的 `login & interactive` 模式我举两个例子，一个是我们登录 Linux 字符界面的时候，输入用户名密码进入的那个 shell 就是登录交互式的，另一个就是我们使用 `sshd` 服务远程登录，在输入用户名密码后获得的 shell 也是登录交互式的。
 
@@ -344,7 +344,7 @@ return -1;
 
 2. GUI Terminal
 
-    ![terminal bash](http://qiniu.liupzmin.com/terminal-bash.bmp)
+    ![terminal bash](https://qiniu.liupzmin.com/terminal-bash.bmp)
 
     GUI 下打开 shell 只运行了 `~/.bashrc`。
 
