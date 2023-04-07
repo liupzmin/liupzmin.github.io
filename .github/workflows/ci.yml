@@ -29,6 +29,7 @@ jobs:
         npm install hexo-cli -g
         npm install hexo-util --save
         npm install js-yaml --save
+        npm install hexo-deployer-git --save
         npm install
         
     - name: deploy to github
