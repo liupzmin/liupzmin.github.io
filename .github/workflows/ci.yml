@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Use Node.js 10.x
-      uses: actions/setup-node@v1
+    - uses: actions/checkout@v3
+    - name: Use Node.js
+      uses: actions/setup-node@v3
       with:
-            node-version: '10.x'
+            node-version: 16
     - name: Setup Hexo env
       env:
          ACTION_DEPLOY_KEY: ${{secrets.ACTION_DEPLOY_KEY}}
