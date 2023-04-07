@@ -6,7 +6,6 @@ tags:
     categories:
     - computer theory
     - network
-
 ---
 
 原文链接:[Challenges of running gRPC services in production](https://medium.com/incognia-tech/challenges-of-running-grpc-services-in-production-b3a113df2542)
