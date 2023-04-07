@@ -28,6 +28,7 @@ jobs:
         git config --global user.email "676333678@qq.com"
         npm install hexo-cli -g
         npm install hexo-util --save
+        npm install js-yaml --save
         npm install
         
     - name: deploy to github
