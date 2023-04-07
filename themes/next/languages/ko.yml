@@ -1,4 +1,5 @@
 ---
+name: 한국어
 title:
   archive: 아카이브
   category: 카테고리
@@ -9,7 +10,7 @@ menu:
   archives: 아카이브
   categories: 카테고리
   tags: 태그
-  about: About
+  about: 정보
   search: 검색
   schedule: Schedule
   sitemap: Sitemap
@@ -17,6 +18,7 @@ menu:
 sidebar:
   overview: 흝어보기
   toc: 목차
+  links: Links
 post:
   posted: 작성일
   edited: Edited on
@@ -24,30 +26,26 @@ post:
   modified: Updated at
   edit: Edit this post
   in: In
-  more: more
   read_more: 더 읽어보기
   untitled: 제목 없음
   sticky: 고정
-  toc_empty: 목차 없음
   views: Views
-  comments_count: 댓글
   related_posts: Related Posts
-  copy_button: 복사
-  copy_success: Copied
-  copy_failure: Copy failed
   copyright:
-    author: Post author
+    author: 포스트 작성자
     link: Post link
+    post_author: Written by
+    post_link: This article originally appeared on
     license_title: Copyright Notice
     license_content: "All articles in this blog are licensed under %s unless stating additionally."
-page:
-  totally: 모두
-  tags: 태그
+    license_content_reprint: "This article is a reprinted article and has been reprinted with permission. Please indicate the source!"
 footer:
   powered: "Powered by %s"
-  theme: Theme
   total_views: Total Views
   total_visitors: Total Visitors
+widget:
+  github: Follow me on GitHub
+  chat: Chat
 counter:
   tag_cloud:
     zero: 태그 없음
@@ -60,35 +58,43 @@ counter:
   archive_posts:
     zero: 포스트 없음
     one: 1개의 포스트
-    other: "총 %d개의 포스트"
+    other: "총 %d개의 포스트를 작성하셨습니다."
 state:
   posts: 포스트
-  pages: 페이지
   tags: 태그
   categories: 카테고리
 search:
   placeholder: Searching...
+  empty: "We didn't find any results for the search: %s"
+  hits_time: "%s results found in %s ms"
+  hits: "%s results found"
 cheers:
   um: 음..
-  ok: OK
+  ok: 동의해요
   nice: 잘했어요
   good: 좋아요
   great: 훌륭해요
   excellent: 완벽해요
-keep_on: 포스트를 마저 작성하세요
+keep_on: 포스트를 계속 작성하세요.
 symbol:
   comma: ", "
   period: ". "
   colon: ": "
 reward:
-  donate: Donate
+  donate: 도네이션
   wechatpay: WeChat Pay
   alipay: Alipay
-  bitcoin: Bitcoin
+  paypal: PayPal
+  bitcoin: 비트코인
+  comment: Buy me a coffee
+follow_me:
+  welcome: Welcome to my other publishing channels
 accessibility:
   nav_toggle: Toggle navigation bar
   prev_page: 이전 페이지
   next_page: 다음 페이지
+  back_to_top: Back to top
+  select_lang: Select language
 symbols_count_time:
   count: Symbols count in article
   count_total: Symbols count total
