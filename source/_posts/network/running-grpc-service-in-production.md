@@ -1,9 +1,9 @@
 ---
-title: [译]在生产环境中运行 grpc 服务所面临的挑战
+title: 在生产环境中运行 grpc 服务所面临的挑战
 date: 2023-04-01 15:18:20
 tags: 
-	- grape
-    categories:
+	- grpc
+categories:
     - computer theory
     - network
 ---
