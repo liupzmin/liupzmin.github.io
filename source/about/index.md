@@ -4,13 +4,13 @@ date: 2019-07-21 09:26:26
 comments: false
 ---
 
-> 巴流
+> Richard
 
 
-devops工程师，Linux、分布式技术和Golang爱好者，关注大数据、分布式计算、容器等互联网技术及其生态发展；喜欢研究技术原理，曾任职Oracle DBA，热爱数据库技术；立志做计算机技术的传播者。
+非著名程序员，Go 后端工程师，Linux、分布式技术和 Rust 爱好者，关注编程语言、操作系统、分布式计算、容器等互联网技术及其生态发展；喜欢研究技术原理，任职过测试，前端，devops，DBA、Go 后端开发等等
 
 > 联系方式
 
-
-2. QQ： 676333678
-3. Email: 676333678@qq.com; liupzmin@gmail.com
+1. QQ： 676333678
+2. Email: 676333678@qq.com
+3. Email: liupzmin@gmail.com
