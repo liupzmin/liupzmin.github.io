@@ -29,7 +29,7 @@ categories:
    >* Go使用goroutine作为轻量级线程，Tokio使用task作为轻量级线程
    >* Go通过gopark和ready来控制goroutine的状态转换，Tokio通过Executor来调度task的状态转换
    
-   这个回答不是很抽象，如果没有以前了解相关内容的话，并不太好理解。但是解释大致是正确的，“Go使用同步编程模式，Tokio使用异步编程模式”这句话并不准确，Go 是通过netpoller 和 goroutine 的配合为用户提供了编写同步编码的接口，网络的 io 本质上还是基于 epoll 的非阻塞 io，而 Tokio 就需要用户真正的编写异步代码了。
+   这个回答不是很抽象，如果以前没有了解相关内容的话，并不太好理解。但是解释大致是正确的，“Go使用同步编程模式，Tokio使用异步编程模式”这句话并不准确，Go 是通过netpoller 和 goroutine 的配合为用户提供了编写同步编码的接口，网络的 io 本质上还是基于 epoll 的非阻塞 io，而 Tokio 就需要用户真正的编写异步代码了。
 
 2. **请介绍一下tokio的future使用poll来推进执行的内部原理**
 
