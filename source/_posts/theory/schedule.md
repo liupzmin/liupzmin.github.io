@@ -1,5 +1,5 @@
 ---
-title: 在 CPU 上起舞
+title: 在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度
 date: 2022-05-27 15:01:51
 tags: 
     - os
