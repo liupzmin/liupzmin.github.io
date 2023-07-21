@@ -490,13 +490,13 @@ func netpollunblock(pd *pollDesc, mode int32, ioready bool) *g {
 		if ioready {
 			new = pdReady
 		}
-        // 将 gpp 设置为 pdReady
+		// 将 gpp 设置为 pdReady
 		if gpp.CompareAndSwap(old, new) {
 			if old == pdWait {
-                // 如果设置为0，则 (*g)(unsafe.Pointer(old)) 为 nil
+				// 如果设置为0，则 (*g)(unsafe.Pointer(old)) 为 nil
 				old = 0
 			}
-            // 将 old 的值转换为 *g 返回，old 通常就是发生等待的 goroutine 地址
+			// 将 old 的值转换为 *g 返回，old 通常就是发生等待的 goroutine 地址
 			return (*g)(unsafe.Pointer(old))
 		}
 	}
@@ -602,11 +602,11 @@ func (fd *FD) Read(p []byte) (int, error) {
 		p = p[:maxRW]
 	}
 	for {
-        // 发出 Read 系统调用
+		// 发出 Read 系统调用
 		n, err := ignoringEINTRIO(syscall.Read, fd.Sysfd, p)
 		if err != nil {
 			n = 0
-            // 如果 收到 EAGAIN 错误，且文件描述符是可 poll 的，则进入等待
+			// 如果 收到 EAGAIN 错误，且文件描述符是可 poll 的，则进入等待
 			if err == syscall.EAGAIN && fd.pd.pollable() {
 				if err = fd.pd.waitRead(fd.isFile); err == nil {
 					continue
@@ -655,7 +655,7 @@ func netpollblock(pd *pollDesc, mode int32, waitio bool) bool {
 	// this is necessary because runtime_pollUnblock/runtime_pollSetDeadline/deadlineimpl
 	// do the opposite: store to closing/rd/wd, publishInfo, load of rg/wg
 	if waitio || netpollcheckerr(pd, mode) == pollNoError {
-        // 开启 park 流程，休眠当前 goroutine
+		// 开启 park 流程，休眠当前 goroutine
 		gopark(netpollblockcommit, unsafe.Pointer(gpp), waitReasonIOWait, traceEvGoBlockNet, 5)
 	}
 	// be careful to not lose concurrent pdReady notification
@@ -703,9 +703,9 @@ func gopark(unlockf func(*g, unsafe.Pointer) bool, lock unsafe.Pointer, reason w
 	if status != _Grunning && status != _Gscanrunning {
 		throw("gopark: bad g status")
 	}
-    // 此时 lock 是 gpp(pollDesc 中的 rg)
+	// 此时 lock 是 gpp(pollDesc 中的 rg)
 	mp.waitlock = lock
-    // 此时 unlockf 是 netpollblockcommit
+	// 此时 unlockf 是 netpollblockcommit
 	mp.waitunlockf = unlockf
 	gp.waitreason = reason
 	mp.waittraceev = traceEv
@@ -786,7 +786,7 @@ func park_m(gp *g) {
 	dropg()
 
 	if fn := _g_.m.waitunlockf; fn != nil {
-        // 调用 netpollblockcommit
+		// 调用 netpollblockcommit
 		ok := fn(gp, _g_.m.waitlock)
 		_g_.m.waitunlockf = nil
 		_g_.m.waitlock = nil
@@ -798,7 +798,7 @@ func park_m(gp *g) {
 			execute(gp, true) // Schedule it back, never returns.
 		}
 	}
-    // 进入调度循环，不再返回
+	// 进入调度循环，不再返回
 	schedule()
 }
 ```
