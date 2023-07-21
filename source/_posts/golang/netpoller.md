@@ -21,7 +21,7 @@ categories: golang
 
 如果网络的读写都是同步的，就无法应对高并发、高吞吐的应用场景，二十多年前的计算机前辈们就提出了 [C10K](http://www.kegel.com/c10k.html) 问题，也就是单机如何支持 1 万个并发连接的问题。
 
-在 Linux 上， C10K 问题最终的解决方案是**非阻塞 IO+epoll **的 **I/O 多路复用**技术，且一直沿用至今。
+在 Linux 上， C10K 问题最终的解决方案是**非阻塞 IO+epoll** 的 **I/O 多路复用**技术，且一直沿用至今。
 
 所以，一门优秀的语言必须解决 C10K 问题。事实上，这里的“同步”仅仅是指 Go 提供的“编程接口”，而不是内在的网络模型。
 
@@ -375,15 +375,15 @@ func netpoll(delay int64) gList {
 		// 1e9 ms == ~11.5 days.
 		waitms = 1e9
 	}
-    // 准备 epollevent 数组，最多 poll 128个事件
+	// 准备 epollevent 数组，最多 poll 128个事件
 	var events [128]epollevent
 retry:
-    // 发出 epoll_wait 调用
+	// 发出 epoll_wait 调用
 	n := epollwait(epfd, &events[0], int32(len(events)), waitms)
 	...
-    // toRun 是个 goroutine 链表，表示文件描述符已就绪，可以被调度运行的 goroutine
+	// toRun 是个 goroutine 链表，表示文件描述符已就绪，可以被调度运行的 goroutine
 	var toRun gList
-    // 遍历本次 epoll_wait 返回的就绪事件
+	// 遍历本次 epoll_wait 返回的就绪事件
 	for i := int32(0); i < n; i++ {
 		ev := &events[i]
 		if ev.events == 0 {
@@ -402,10 +402,10 @@ retry:
 			mode += 'w'
 		}
 		if mode != 0 {
-            // 从 ev.data 中取出 pollDesc
+			// 从 ev.data 中取出 pollDesc
 			pd := *(**pollDesc)(unsafe.Pointer(&ev.data))
 			pd.setEventErr(ev.events == _EPOLLERR)
-            // 获取相关 goroutine 并插入到 toRun 链表
+			// 获取相关 goroutine 并插入到 toRun 链表
 			netpollready(&toRun, pd, mode)
 		}
 	}
