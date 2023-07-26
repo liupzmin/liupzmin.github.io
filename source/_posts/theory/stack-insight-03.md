@@ -1,5 +1,5 @@
 ---
-title: 一个学渣对于stack的顿悟（3）：溯源 goroutine 堆栈
+title: Stack 顿悟三部曲（3）：溯源 goroutine 堆栈
 date: 2022-04-26 10:30:17
 tags: 
     - os

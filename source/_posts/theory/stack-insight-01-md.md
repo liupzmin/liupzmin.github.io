@@ -1,5 +1,5 @@
 ---
-title: 一个学渣对于stack的顿悟（1）：从CPU的视角说起
+title: Stack 顿悟三部曲（1）：从CPU的视角说起
 date: 2021-06-27 09:56:28
 tags: 
     - os
@@ -11,7 +11,7 @@ categories:
 
 ## 为什么会有这篇文章
 
-今年一直在啃 rust 圣经英文原版，`所有权`那一章就反复看了几遍，作者简要介绍了 `stack` 和 `heap` 的使用区别，这引起了我以前从未有过的一个思考：`stack` 上的数据是如何被引用的？
+我在在啃 rust 圣经英文原版时，`所有权`那一章就反复看了几遍，作者简要介绍了 `stack` 和 `heap` 的使用区别，这引起了我以前从未有过的一个思考：`stack` 上的数据是如何被引用的？
 
 *All data stored on the stack must have a known, fixed size. Data with an unknown size at compile time or a size that might change must be stored on the heap instead. The heap is less organized: when you put data on the heap, you request a certain amount of space. The memory allocator finds an empty spot in the heap that is big enough, marks it as being in use, and returns a pointer, which is the address of that location. This process is called allocating on the heap and is sometimes abbreviated as just allocating. Pushing values onto the stack is not considered allocating. Because the pointer is a known, fixed size, you can store the pointer on the stack, but when you want the actual data, you must follow the pointer.*
 
