@@ -1,5 +1,5 @@
 ---
-title: 1：从CPU的视角说起
+title: Stack 顿悟三部曲（1）：从CPU的视角说起
 date: 2021-06-27 09:56:28
 tags: 
     - os
