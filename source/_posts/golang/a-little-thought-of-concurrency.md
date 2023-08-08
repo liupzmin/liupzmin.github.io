@@ -14,7 +14,7 @@ categories: golang
 
 本文就针对 CPU-bound 和 IO-bound 两种极端场景，来聊一聊 Go 和 Tokio 的并发模型在应对不同并发场景下的异同。
 
-[异步 IO 探秘](https://liupzmin.com/2023/06/28/golang/netpoller/) 和 [对话 ChatGPT 理解 Rust 异步网络 io](https://liupzmin.com/2023/06/08/network/talk-rust-async-netio-with-chatgpt/) 已基于 Linux 平台就 Go 和 Tokio 的网络模型做了简要剖析，大致有如下几个要点：
+[《异步 IO 探秘》](https://liupzmin.com/2023/06/28/golang/netpoller/) 和 [《对话 ChatGPT 理解 Rust 异步网络 io》](https://liupzmin.com/2023/06/08/network/talk-rust-async-netio-with-chatgpt/) 已基于 Linux 平台就 Go 和 Tokio 的网络模型做了简要剖析，大致有如下几个要点：
 
 1. 底层 Reactor 都是 非阻塞 I/O + epoll 模型。
 2. 事件处理方式不同。Go 紧密结合 goroutine，让网络事件转化为对网络文件描述符感兴趣的 goroutine，并将其注入运行队列，伺机调度；Tokio 基于唤醒机制催动 Executor 去轮询每个 Future，每个 Future 都被编译为一个状态机。
