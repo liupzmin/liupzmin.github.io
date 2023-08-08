@@ -23,15 +23,13 @@ categories: golang
 
 关于“**异步编程是对并发模型的考验**"这一点，可以从 Tokio 官方对于异步编程的论述中得到印证：
 
-```
-What is asynchronous programming?
-
-Most computer programs are executed in the same order in which they are written. The first line executes, then the next, and so on. With synchronous programming, when a program encounters an operation that cannot be completed immediately, it will block until the operation completes. For example, establishing a TCP connection requires an exchange with a peer over the network, which can take a sizeable amount of time. During this time, the thread is blocked.
-
-With asynchronous programming, operations that cannot complete immediately are suspended to the background. The thread is not blocked, and can continue running other things. Once the operation completes, the task is unsuspended and continues processing from where it left off. Our example from before only has one task, so nothing happens while it is suspended, but asynchronous programs typically have many such tasks.
-
-Although asynchronous programming can result in faster applications, it often results in much more complicated programs. The programmer is required to track all the state necessary to resume work once the asynchronous operation completes. Historically, this is a tedious and error-prone task.
-```
+> What is asynchronous programming?
+>
+> Most computer programs are executed in the same order in which they are written. The first line executes, then the next, and so on. With synchronous programming, when a program encounters an operation that cannot be completed immediately, it will block until the operation completes. For example, establishing a TCP connection requires an exchange with a peer over the network, which can take a sizeable amount of time. During this time, the thread is blocked.
+>
+> With asynchronous programming, operations that cannot complete immediately are suspended to the background. The thread is not blocked, and can continue running other things. Once the operation completes, the task is unsuspended and continues processing from where it left off. Our example from before only has one task, so nothing happens while it is suspended, but asynchronous programs typically have many such tasks.
+>
+> Although asynchronous programming can result in faster applications, it often results in much more complicated programs. The programmer is required to track all the state necessary to resume work once the asynchronous operation completes. Historically, this is a tedious and error-prone task.
 
 **With asynchronous programming, operations that cannot complete immediately are suspended to the background**，不能继续的任务，要被扔到后台。
 
@@ -208,10 +206,18 @@ Rayon 默认只使用与 CPU 数量相同的线程来执行任务，执行效率
 
 所以，如果计算任务之间没有依赖，更看重总的响应时间的话，使用与 CPU 核数相当的线程池进行并行计算能得到最佳效果；如果任务是并发的，更加注重单个任务的响应时间，类似于 Go 的并发模型可能是更好的选择。
 
-Go 是为并发而生的语言，所以你会发现，在编写 Go 代码的时候，你根本不用去考虑并发任务是计算型还是I/O型的，在其并发模型下所有的任务都能得到很好的处理；而缺乏完善调度运行时的线程池就要注意很多了，你要小心不能在异步任务中写太多计算的代码，甚至有博主指出：[在进入`.await`之前，最好不要超过10 ~ 100 微秒](https://ryhl.io/blog/async-what-is-blocking/)。
+Go 是为并发而生的语言，所以你会发现，在编写 Go 代码的时候，你根本不用去考虑并发任务是计算型还是 I/O 型的，在其并发模型下所有的任务都尽可能得到及时的处理；而缺乏完善调度运行时的线程池的注意事项就很多了，你要小心不能在异步任务中写太多计算的代码，甚至有博主指出：[在进入`.await`之前，最好不要超过10 ~ 100 微秒](https://ryhl.io/blog/async-what-is-blocking/)。
 
-道理不难理解，以 Tokio 为例，虽然可以运行 CPU 密集型任务，但是官方很明确的说你要新开实例去运行，不要饿死 I/O 任务，显然这是因为运行时缺乏调度能力的折中方案。
-
-CPU 密集型任务属于会阻塞 executor 线程的任务，容易霸占 CPU 而饿死其它任务，此时只能靠手动 yield 来让出 CPU，给其它任务以运行的机会；而网络 I/O 之所以适合，完全是因为有非阻塞特性和 Reactor 的存在，每个 I/O 读写点都是一次 yield 的机会！
+道理不难理解，以 Tokio 为例，虽然可以运行 CPU 密集型任务，但是官方很明确的说你要新开实例去运行，不要饿死 I/O 任务，显然这是因为运行时缺乏调度能力的折中方案。CPU 密集型任务属于会阻塞 executor 线程的任务，容易霸占 CPU 而饿死其它任务，此时只能靠手动 yield 来让出 CPU，给其它任务以运行的机会；而网络 I/O 之所以适合，完全是因为有非阻塞特性和 Reactor 的存在，每个 I/O 读写点都是一次 yield 的机会！
 
 不难想见的是，Tokio 虽然适合网络 I/O 型并发，但是也要在 I/O 任务里小心地控制计算型代码的时间，否则会导致运行时任务调度不均，长时间阻塞其它任务的运行。
+
+是总的响应时间优先？还是每个任务的及时响应优先？这是一种选择和权衡！
+
+**PS: 作为静态语言，Go 的性能真是差了 Rust 一大截，希望性能能再上一个台阶！**
+
+***参考文献***
+
+1. [Hello Tokio](https://tokio.rs/tokio/tutorial/hello-tokio)
+2. [CPU-bound tasks and blocking code](https://docs.rs/tokio/latest/tokio/index.html#cpu-bound-tasks-and-blocking-code)
+3. [Async: What is blocking?](https://ryhl.io/blog/async-what-is-blocking/)
