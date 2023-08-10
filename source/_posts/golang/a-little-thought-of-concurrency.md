@@ -45,6 +45,8 @@ categories: golang
 
 我们看一个并发 CPU 的例子，此例中有 1 万个并发任务递归计算斐波那契数列。运行环境为 8 核，16G 内存，Manjaro Linux：
 
+**Go**
+
 ```go
 package main
 
@@ -102,6 +104,8 @@ func main() {
 
 再来看看 Tokio，依据 Tokio 官网建议，计算型任务使用[`spawn_blocking`](https://docs.rs/tokio/1.29.1/tokio/task/fn.spawn_blocking.html) ，它会将任务派发到一个专门的线程池，根据并发任务的数量，这个线程池会增长到最多 500 个线程：
 
+**Tokio**
+
 ```rust
 use std::time::Instant;
 use tokio::task;
@@ -152,6 +156,8 @@ fn fib(n: u64) -> u64 {
 > 耗时区间：0.6 s ~ 564 s    总耗时：564s   平均耗时：56.4 ms 
 
 Tokio 建议使用 Rayon 来运行 CPU-bound 任务，我们再来看一下，Rayon 的版本：
+
+**Rayon**
 
 ```rust
 use rayon::prelude::*;
