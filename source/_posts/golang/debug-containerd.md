@@ -11,7 +11,7 @@ categories: golang
 
 ---
 
-出于好奇，我想弄明白 Containerd 是如何处理容器 stdio 的，因为我在 k8s 环境中使用 Containerd 作为容器运行时，且观察到容器中的标准 io 为如下形式：
+出于好奇，我想弄明白  [Containerd](https://github.com/containerd/containerd) 是如何处理容器 stdio 的，因为我在 k8s 环境中使用 [Containerd](https://github.com/containerd/containerd) 作为容器运行时，且观察到容器中的标准 io 为如下形式：
 
 ```shell
 /proc/1/fd # ls -l
@@ -21,11 +21,11 @@ l-wx------    1 root     root            64 Oct 10 02:25 1 -> pipe:[45731]
 l-wx------    1 root     root            64 Oct 10 02:25 2 -> pipe:[45732]
 ```
 
-这是个非常简单的容器，只是往标准输出打印一些内容。从容器进程打开的文件描述符中，我们看到其标准输入被丢弃（通过重定向到/dev/null），而标准输出和标准错误都被重定向到 Linux 管道。
+这是个非常简单的容器，只是往标准输出打印一些内容。从容器进程打开的文件描述符中，我们看到其标准输入被丢弃（通过重定向到 **/dev/null** ），而标准输出和标准错误都被重定向到 **Linux 管道**。
 
 是的，我对 Containerd 如何做到这一点有着浓厚的兴趣，这驱使我产生了 Debug 容器运行时的念头。
 
-这篇短文仅仅介绍我如何达到 Debug 的目的，并不会介绍 Containerd 如何设置标准 io，这部分内容我会放在接下来的《终端闲思录》里面。
+这篇短文仅仅介绍我如何达到 Debug 的目的，并不会介绍 Containerd 如何设置标准 io，这部分内容我会放在接下来想写的《终端闲思录》里面。
 
 ## Containerd 的生态链位置
 
@@ -38,7 +38,7 @@ l-wx------    1 root     root            64 Oct 10 02:25 2 -> pipe:[45732]
 你可能已经被 OCI 和 CRI 绕晕了，简言之，这是容器圈里的两大标准：
 
 - **Open Container Initiative (OCI):** a set of standards for containers, describing the image format, runtime, and distribution.
-- **Container Runtime Interface (CRI) in [Kubernetes](https://www.tutorialworks.com/kubernetes/):** An API that allows you to use different container runtimes in Kubernetes.
+- **Container Runtime Interface (CRI) in Kubernetes:** An API that allows you to use different container runtimes in Kubernetes.
 
 只要记住 OCI 是容器标准，包扩容器创建，镜像格式等等，而 CRI 是属于 k8s 的接口，每个对接 k8s 的容器运行时都要实现这一套接口才能被 kubelet 调用。
 
@@ -155,3 +155,7 @@ Breakpoint 2 (enabled) at 0x55912734f072 for github.com/containerd/containerd/se
    ```
 
 3. 一定要在你的玩具环境中调试，任何公共环境都不应被用来 debug ！
+
+***参考文献***
+
+1. [The differences between Docker, containerd, CRI-O and runc](https://www.tutorialworks.com/difference-docker-containerd-runc-crio-oci/)
