@@ -51,7 +51,7 @@ l-wx------    1 root     root            64 Oct 10 02:25 2 -> pipe:[45732]
 
 **所以，我决定 Debug 一个运行中的 Containerd！**
 
-这很容易做到，使用 `dlv attach pid`就可以 Debug Containerd 进。万事俱备，只欠一套 k8s 环境。所幸，我们有 minikube ！
+这很容易做到，使用 `dlv attach pid`就可以 Debug Containerd 进程。万事俱备，只欠一套 k8s 环境。所幸，我们有 minikube ！
 
 minikube 是在一个虚拟机中运行所有相关组件的，所以有两个问题需要解决：
 
