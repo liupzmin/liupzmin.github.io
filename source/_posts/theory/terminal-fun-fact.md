@@ -343,3 +343,4 @@ SysVinit 和 Systemd 的 1 号进程无控制终端，其标准三剑客连接�
 6. [Teleprinter](https://en.wikipedia.org/wiki/Teleprinter)
 7. [Daemons](https://www.freedesktop.org/software/systemd/man/latest/daemon.html#)
 8. [systemd.service](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#)
+9. [《人间词话》的哲学基础](https://book.douban.com/subject/34941512/)
