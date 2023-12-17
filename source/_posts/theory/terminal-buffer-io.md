@@ -175,7 +175,3 @@ l-wx------    1 root     root            64 Dec 12 02:25 2 -> pipe:[54792]
 
 1. [UNIX环境高级编程](https://book.douban.com/subject/25900403/)
 2. [Linux/UNIX系统编程手册](https://book.douban.com/subject/25809330/)
-3. ***参考文献***
-
-   1. [UNIX环境高级编程](https://book.douban.com/subject/25900403/)
-   2. [Linux/UNIX系统编程手册](https://book.douban.com/subject/25809330/)
