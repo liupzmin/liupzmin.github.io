@@ -142,7 +142,7 @@ Linux 会为打开的文件分配一个非负整数来表示该文件，文件�
 
 打开文件，获得文件的描述符，似乎文件和文件描述符的一对一关系是不言而喻的，但是，**多个文件描述符可以指向同一打开的文件，这些文件描述符可以在相同或不同的进程打开。**如图 4-1 所示：
 
-![文件描述符，打开的文件描述，文件inode之间的关系](https://qiniu.liupzmin.com/file-fd-releationship.png)
+![图 4-1 文件描述符，打开的文件描述，文件inode之间的关系](https://qiniu.liupzmin.com/file-fd-releationship.png)
 
 上图展示了进程的文件描述符（file descriptor）、内核维护的系统所有打开的文件描述（open file description）以及文件 inode 之间的关系。简单介绍一下，左侧表格代表进程的文件描述符；中间表格称为 open file description table，是内核为所有打开的文件维护的一个系统级描述表；右侧表格代表 inode，可简单理解为硬盘上的文件。
 
