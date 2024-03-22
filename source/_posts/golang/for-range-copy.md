@@ -64,9 +64,7 @@ fib outer:0xc00011c000
 
 让我们看看[spec](https://go.dev/ref/spec#For_statements)中的说明：
 
-```
-The range expression x is evaluated once before beginning the loop, with one exception: if at most one iteration variable is present and len(x) is constant, the range expression is not evaluated.
-```
+> The range expression x is evaluated once before beginning the loop, with one exception: if at most one iteration variable is present and len(x) is constant, the range expression is not evaluated.
 
 这里的意思是：**在进入循环之前，range 表达式只会计算一次！**但这个`evaluate`具体指何意，spec 没有解答，看来只能在编译器源码中寻找答案了，我是没有大海捞针的精力了，不过已经有人替我们做了，美中不足的是参考的 gcc 的代码，不过想来都遵循语言规约的话，[行为方式总是大差不差的](https://github.com/golang/go/blob/ea020ff3de9482726ce7019ac43c1d301ce5e3de/src/cmd/compile/internal/gc/range.go#L169)，来看看 gcc 的 Go 编译器源码中 range 子句的注释：
 
@@ -144,9 +142,7 @@ for i := 0; i < len(slice); i++ { ... }
 
 如果我遍历的是个 map 呢？众所周知，map 是一个指针，range 计算就算 copy 也是 copy 得指针，遍历的时候仍然是同一个 map，事实上 spec 上也说明了这种情况：
 
-``` 
-If a map entry that has not yet been reached is removed during iteration, the corresponding iteration value will not be produced. If a map entry is created during iteration, that entry may be produced during the iteration or may be skipped. 
-```
+> If a map entry that has not yet been reached is removed during iteration, the corresponding iteration value will not be produced. If a map entry is created during iteration, that entry may be produced during the iteration or may be skipped. 
 
 概括来说，你可以在 range 循环中对 map 进行增删，删掉的元素不会在接下来被遍历到，增加的元素则不一定，也许会被遍历，也许不会，这是由 map 底层使用哈希表实现以及随机遍历机制决定的。
 
