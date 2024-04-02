@@ -85,6 +85,17 @@ pagination_dir: page
 
 # Extensions
 ## Plugins: https://hexo.io/plugins/
+Plugins: hexo-generator-feed
+feed:
+    type: atom
+    path: atom.xml
+    limit: 20
+    hub:
+    content:
+    content_limit: 140
+    content_limit_delim: " "
+    order_by: -date
+    icon: /images/favicon_200x200.png
 ## Themes: https://hexo.io/themes/
 theme: next
 
@@ -196,6 +207,11 @@ theme_config:
   social:
     GitHub: https://github.com/liupzmin || github
     E-Mail: mailto:liupzmin@gmail.com || envelope
+    RSS: /atom.xml || fa fa-rss
+  
+  follow_me:
+    # 其他社交按钮
+    RSS: /atom.xml || fa fa-rss
 
 
   social_icons:
