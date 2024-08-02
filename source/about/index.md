@@ -11,6 +11,5 @@ comments: false
 
 > 联系方式
 
-1. QQ： 676333678
-2. Email: 676333678@qq.com
-3. Email: liupzmin@gmail.com
+1. Email: liupzmin@foxmail.com
+2. Email: liupzmin@gmail.com
