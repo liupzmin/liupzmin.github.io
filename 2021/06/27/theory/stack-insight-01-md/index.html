@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="为什么会有这篇文章我在啃 rust 圣经英文原版时，所有权那一章就反复看了几遍，作者简要介绍了 stack 和 heap 的使用区别，这引起了我以前从未有过的一个思考：stack 上的数据是如何被引用的？ All data stored on the stack must have a known, fixed size. Data with an unknown size at compile">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Stack 顿悟三部曲（1）：从CPU的视角说起">
+<meta property="og:url" content="http://liupzmin.com/2021/06/27/theory/stack-insight-01-md/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="为什么会有这篇文章我在啃 rust 圣经英文原版时，所有权那一章就反复看了几遍，作者简要介绍了 stack 和 heap 的使用区别，这引起了我以前从未有过的一个思考：stack 上的数据是如何被引用的？ All data stored on the stack must have a known, fixed size. Data with an unknown size at compile">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiniu.liupzmin.com/bus.jpeg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/cpu-read-data-from-memory.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/memory-byte.jpeg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/cpu-exec-ins.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/push.jpeg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/pop.jpeg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/canonical.png">
+<meta property="article:published_time" content="2021-06-27T01:56:28.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.643Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="os">
+<meta property="article:tag" content="stack">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiniu.liupzmin.com/bus.jpeg">
+
+
+<link rel="canonical" href="http://liupzmin.com/2021/06/27/theory/stack-insight-01-md/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2021/06/27/theory/stack-insight-01-md/","path":"2021/06/27/theory/stack-insight-01-md/","title":"Stack 顿悟三部曲（1）：从CPU的视角说起"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Stack 顿悟三部曲（1）：从CPU的视角说起 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%9C%89%E8%BF%99%E7%AF%87%E6%96%87%E7%AB%A0"><span class="nav-number">1.</span> <span class="nav-text">为什么会有这篇文章</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%92%8C%E5%AE%83%E9%87%8C%E9%9D%A2%E7%9A%84%E4%B8%9C%E8%A5%BF"><span class="nav-number">2.</span> <span class="nav-text">内存和它里面的东西</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU-%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E6%8C%87%E4%BB%A4%E7%9A%84"><span class="nav-number">3.</span> <span class="nav-text">CPU 是如何执行指令的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU-%E6%8F%90%E4%BE%9B%E7%9A%84stack%E6%9C%BA%E5%88%B6"><span class="nav-number">4.</span> <span class="nav-text">CPU 提供的stack机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E4%BB%A3-CPU-%E4%B8%AD%E7%9A%84%E6%AE%B5"><span class="nav-number">5.</span> <span class="nav-text">现代 CPU 中的段</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2021/06/27/theory/stack-insight-01-md/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Stack 顿悟三部曲（1）：从CPU的视角说起 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Stack 顿悟三部曲（1）：从CPU的视角说起<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy90aGVvcnkvc3RhY2staW5zaWdodC0wMS1tZC5tZA==" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-06-27 09:56:28" itemprop="dateCreated datePublished" datetime="2021-06-27T09:56:28+08:00">2021-06-27</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CPU/" itemprop="url" rel="index"><span itemprop="name">CPU</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CPU/computer-theory/" itemprop="url" rel="index"><span itemprop="name">computer theory</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="为什么会有这篇文章"><a href="#为什么会有这篇文章" class="headerlink" title="为什么会有这篇文章"></a>为什么会有这篇文章</h2><p>我在啃 rust 圣经英文原版时，<code>所有权</code>那一章就反复看了几遍，作者简要介绍了 <code>stack</code> 和 <code>heap</code> 的使用区别，这引起了我以前从未有过的一个思考：<code>stack</code> 上的数据是如何被引用的？</p>
+<p><em>All data stored on the stack must have a known, fixed size. Data with an unknown size at compile time or a size that might change must be stored on the heap instead. The heap is less organized: when you put data on the heap, you request a certain amount of space. The memory allocator finds an empty spot in the heap that is big enough, marks it as being in use, and returns a pointer, which is the address of that location. This process is called allocating on the heap and is sometimes abbreviated as just allocating. Pushing values onto the stack is not considered allocating. Because the pointer is a known, fixed size, you can store the pointer on the stack, but when you want the actual data, you must follow the pointer.</em></p>
+<p>简要翻译一下：</p>
+<p><strong>所有存储在 stack 上的数据，其 size 必须是固定不变且在编译期已知的。如果数据的大小不能在编译期决定，亦或是在运行时其大小会发生改变，那么这样的数据就应该放在 heap 上。heap 是一个组织比较松散的区域：当你想把数据放置在 heap 上时，你必须先请求一块存储空间才行。专门的内存分配器会去寻找一块空余的、大小足够的空间，并将其标记为已用，之后返回指向这块区域的指针。这个过程就是在 heap 上分配内存，有时会简称为 allocating。将数据推入 stack（入栈）不会被叫做 allocating（因为 stack 的空间在线程创建时就已分配并初始化）。因为指针类型的大小固定且已知，因此你可以将指针入栈，但是当你想使用数据本身时，你必须追踪跟指针（解引用）。</strong></p>
+<p>正如我开篇所言，让我心头一震的并不是这些随处可见的关于 <code>stack</code> 和 <code>heap</code> 区别的论述，而是我从未深入思考过的一个问题：<strong>stack 上的数据是如何被引用的？</strong></p>
+<p>以前对堆栈的认知就是 <code>PUSH</code> 入栈，使用时 <code>POP</code> 出栈，这大概源于对数据结构课程中 <code>stack</code> 数据结构认知的根深蒂固。所以当我读到 stack 上的数据都是固定大小且日后不会改变、不会增长时，才后知后觉：为何以前没有去想这个细节呢？</p>
+<p><code>CPU</code> 把一块内存当做 stack 使用时，参数和局变量入栈之后仍会被使用，并不像我们数据结构课程中的 stack，只在用的时候才去 POP。CPU中的 stack 机制只有在函数结束时才释放该函数的栈帧，那栈上的数据在没有弹出时是如何被引用到的呢？</p>
+<p>其实，这个问题很好回答，从编译之后的汇编指令上看，是使用的相对定位。<strong>大致是利用 ebp（帧指针寄存器或基指针寄存器） 和 esp（栈顶指针寄存器）中的一个或两个来达到定位的目的。</strong></p>
+<p>以此为由，我深入调查并思考了很多关于 stack 的内容，主要涉及有如下几点：</p>
+<ol>
+<li>CPU 的 stack 机制是如何工作的？</li>
+<li>函数调用是如何利用 stack 的？</li>
+<li>进、线程在创建时 stack 如何分配，虚拟内存中的 stack 区域是线程共有的么？</li>
+<li>从指令级别理解 Go 语言的 goroutine 是如何调度和分配 stack 的？</li>
+</ol>
+<p>因此，我将分几篇文章分别对这些内容进行叙述，虽然我是围绕着 stack 来进行思考的，但文章内容也会谈及很多 stack 之外的东西，比如虚拟内存、线程调度，上下文切换等等。</p>
+<p>友情提醒一下，因个人能力有限，我并不会去深抠相关的源码细节，<strong>我目前所寻求的信息，意在建立计算机系统的世界观与 Go 语言的世界观，是在陷入具体细节之前为自己提供一个大致的轮廓，让自己对计算机运行的脉络有一个关键性的认识。</strong></p>
+<p>这是这个系列的第一篇，本篇我主要从 CPU 的视角来带大家一起复习一下理论知识，看一看 CPU 是如何执行指令，如何将一块内存当做 stack 来使用。</p>
+<p>因 stack 一般会被翻译为堆栈，因此后续文章内容能使用英文原文 stack 的地方，我会尽量使用 stack，需要中文的地方我会使用堆栈一词，如果堆栈一词放上去比较突兀的话，我会直接使用栈这个字。所以，无论是 stack、堆栈、栈，我希望阅读文章的你能铭记我指的就是 stack！</p>
+<h2 id="内存和它里面的东西"><a href="#内存和它里面的东西" class="headerlink" title="内存和它里面的东西"></a>内存和它里面的东西</h2><p>众所周知，计算机内部用二进制表示一切。从应用的角度而言，内存中存放的信息大致可分为指令和数据，然而在内存看来，这些信息并没有什么区别。一段信息是指令还是数据，全看 CPU 如何使用它们。CPU 在工作的时候，把有的信息看作指令，有的信息看作数据，为同样的信息赋予了不同的意义。那这是如何做到的呢？我们以 <code>8086 CPU</code> 为例来简要说明。</p>
+<p><img data-src="https://qiniu.liupzmin.com/bus.jpeg" alt="CPU与内存之间的总线"></p>
+<p>如图所示，CPU 与内存之间有三类总线，分别为地址总线、控制总线和数据总线。数据的读、写就是靠这三类总线配合完成的。我们来看一下 CPU 从内存 3 号单元中读取数据的过程。</p>
+<p><img data-src="https://qiniu.liupzmin.com/cpu-read-data-from-memory.png" alt="CPU 从内存读取数据"></p>
+<ol>
+<li>CPU 通过地址线将地址信息 3 发出。</li>
+<li>CPU 通过控制线发出内存读命令，选中存储器芯片，并通知它，将要从中读取数据。</li>
+<li>存储器将 3 号单元中的数据 08 通过数据线送入 CPU。</li>
+</ol>
+<p>写操作与读操作的步骤相似。如向 3 号单元写入数据 26 ：</p>
+<ol>
+<li>CPU 通过地址线将地址信息 3 发出。</li>
+<li>CPU 通过控制线发出内存写命令，选中存储器芯片，并通知它，要向其中写入数据。</li>
+<li>CPU 通过数据线将数据 26 送入内存的 3 号单元中。</li>
+</ol>
+<p>当然，现实当中地址并不总是像 3 这样简单，我们可以把每个字节当成一个小盒子，内存就是一堆小盒子的线性排列，如果从第一个盒子开始给他们都编上号，那么每个盒子的号码就是对应内存空间的地址，也就是说在计算机主存当中，每一个字节都有它的地址。你可以把内存想象成下面这样（图中每一行代表前文论述的盒子）：</p>
+<p><img data-src="https://qiniu.liupzmin.com/memory-byte.jpeg" alt="memory"></p>
+<p>有一点很明显，就是 CPU 能寻址的空间大小是受地址总线导线数量限制的。在 8086 中，其地址总线是 20 根，也就是它能用 20 个 bit 来表示一个地址，算来它最大的寻址空间就是 2 的 20 次方，即 1M 大小。</p>
+<p>但问题是，在 8086 内部用于倒腾数据的寄存器都是 16 位的， 16 位最大寻址空间只有 64K，那如何用 16 位的寄存器组合成 20 位的地址呢？8086 的处理方法是使用 2 个 16 位地址，通过一个地址加法器的运算来得出 20 位的物理地址。运算的逻辑就是一个 16 位的段地址左移 4 位再加上偏移地址：<strong>物理地址&#x3D;段地址*16 + 偏移地址</strong>。此处不再举例描述细节，有兴趣的可以参考任意讲解段地址和偏移地址的资料，此处只需要记住，8086 CPU 下读写内存时，都需要一个段地址的辅助，这个段地址就放在段寄存器中。</p>
+<p>8086 有 4 个段寄存器，CS、DS、SS、ES，分别是代码段寄存器、数据段寄存器、堆栈段寄存器以及扩展段寄存器，本文主要涉及代码段和堆栈段，那么先从 CS 代码段寄存器说起吧。</p>
+<h2 id="CPU-是如何执行指令的"><a href="#CPU-是如何执行指令的" class="headerlink" title="CPU 是如何执行指令的"></a>CPU 是如何执行指令的</h2><p>我们都知道，CPU 的任务说起来很简单，就是从程序计数器（PC）中拿到地址，将该地址处的数据看作指令并读入指令缓冲器，之后指令缓冲器中的指令便会进入执行控制器执行。当PC中的地址所指向的数据被读取之后，PC中的值会自动增加为下一条指令的地址，接下来就会重复之前的内容。</p>
+<p>但在 8086 中， PC 是由两个寄存器来共同表示的，那就是 CS 和 IP，CS是代码段寄存器，IP是指令指针寄存器。任意时刻，设 CS 中的内容为 M，IP 中的内容为 N，8086 CPU 将从内存单元 <code>M*16 + N</code> 开始，读取一条指令并执行。换句话说，任意时刻，CPU 将 <code>CS:IP</code> 指向的内容当作指令执行。</p>
+<p>下图为CPU执行一条指令的过程拆解，其中 CS 寄存器的值为 <code>2000H</code>，<code>IP 寄存器</code>的值为 <code>0000H</code>，内存 <code>20000H~20009H</code> 单元存放着可执行的机器码。</p>
+<p><img data-src="https://qiniu.liupzmin.com/cpu-exec-ins.png" alt="CPU 执行指令"></p>
+<p>CPU 会将<code>CS、IP</code>中的内容送入加法器得出物理地址 <code>2000H*16+0000H（20000H）</code>，之后 <code>20000H</code> 送入地址总线，位于 <code>20000H</code> 单元处的指令 <strong>B8 23 01</strong> 会被读入指令缓冲器并增加 IP 的值（增加的值为本次读取的指令的长度，此处为 3 个字节），接下来就会进入执行阶段。因为此时 <code>CS:IP</code> 中的内容已经是下一条指令的地址（<code>mov bx,0003H</code>），CPU 便进入下一次循环，如此往复。</p>
+<p>上图执行完第一条指令之后 AX 寄存器的内容已变为 <strong>0123H</strong>。</p>
+<p>更详细的内容，请参考<code>王爽《汇编语言》2.10 章节</code>。在这里描述 CPU 指令的执行过程是为了在后面的文章中方便描述线程调度，其实线程切换的原理很简单，就是修改 <strong>CS:IP</strong> 的值让 CPU 去执行另外一个地方的指令，而这个地方就是新线程的函数指令入口。</p>
+<h2 id="CPU-提供的stack机制"><a href="#CPU-提供的stack机制" class="headerlink" title="CPU 提供的stack机制"></a>CPU 提供的stack机制</h2><p>如今的 CPU 都有堆栈的设计，提供相关的指令来以堆栈的方式访问内存空间。这意味着在编程的时候，可以将一段内存当作堆栈来使用。CPU 提供了以堆栈方式访问内存的机制，操作系统用这种机制实现了函数调用。</p>
+<p>CPU 提供了入栈和出栈的指令，最基本的就是 <strong>PUSH</strong> 和 <strong>POP</strong> 指令，比如 <code>PUSH AX</code> 表示将寄存器AX中的内容送入堆栈，<code>POP AX</code> 就是将栈顶的元素送入 AX 寄存器，并移动栈顶。那么，CPU 是如何知道一段内存被当做栈来用的呢？答案是 <strong>SS 堆栈寄存器</strong>和 <strong>SP 栈顶寄存器</strong>。</p>
+<p>任意时刻，<code>SS:SP</code> 指向栈顶元素，PUSH 和 POP 指令执行的时候，CPU 从 SS 和 SP 处获取栈顶地址，并在执行过程中自动加减SP寄存器中的值，是的 SS:SP 永远指向栈顶。</p>
+<p><strong>PUSH AX</strong> 的指令，由以下两步完成。</p>
+<ol>
+<li>SP&#x3D;SP-2, SS:SP 指向当前栈顶的下方的单元，以当前栈顶下方的单元为新的栈顶；</li>
+<li>将 AX 中的内容送入 SS:SP 指向的内存单元处，SS:SP 此时指向新的栈顶。</li>
+</ol>
+<p>下图描述了 8086CPU 对 PUSH 指令的执行过程。</p>
+<p><img data-src="https://qiniu.liupzmin.com/push.jpeg" alt="PUSH"></p>
+<p><strong>POP AX</strong> 的指令更好相反，由以下两步完成。</p>
+<ol>
+<li>将 SS:SP 指向的内存单元的数据送入 AX 中；</li>
+<li>SP&#x3D;SP+2，SS:SP 指向当前栈顶上方的单元，以当前栈顶上方的单元为新的栈顶。</li>
+</ol>
+<p>下图描述了 8086CPU 对 POP 指令的执行过程。</p>
+<p><img data-src="https://qiniu.liupzmin.com/pop.jpeg" alt="POP"></p>
+<p>注意，栈由高地址向低地址增长，这两幅图相当于倒置的状态。</p>
+<p>从中我们可以得出一点结论，将一段内存当做栈，仅仅是我们在编程时的一种安排，CPU 并不在乎这段内存在哪，也不在乎内存放的到底是指令还是数据。换句话说，内存并无区别，区别只在 CPU 如何看待它们。我们会在后面讲述线程或协程堆栈使用的内存，只要将一块内存的地址设置为 SS:SP 那么这段内存就会在你使用 PUSH、POP 的时候作为堆栈来用。</p>
+<p>我们在学习虚拟内存的时候（下一章会简单介绍虚拟内存）容易被其划分的各种区域迷惑，某段区域用于 stack ，某块区域用于 heap。很容易让人产生这些区域都有各自特殊之处的错觉。加上一些盛行理论的影响，让问题更加扑朔迷离，常见的如：数据放在 stack 上要比 heap 上快，因为入栈只需要一条指令，而在 heap 上申请内存则十分耗时，简言之使用 stack 廉价，使用 heap 昂贵。</p>
+<p>其实这种说法不严谨，除了会迷惑初学者之外，别无益处。试想一下，stack 与 heap 有什么区别？区别只在 stack 已经分配，且使用方式不同；heap 只在需要的时候去分配，耗时的是分配的过程，而不是访问的过程；<strong>CPU 访问 stack 中的内容和 heap 中内容的方式并无二致，都是使用的标准的内存寻址方式</strong>（注：stack 相对 heap 对 cpu cache 更加友好，从程序运行的空间局部性来讲，CPU Cache 命中率会高一些）。</p>
+<p>CPU 把主存当做什么用，完全看我们的规划以及使用的指令，比如设置了代码段之后，代码段部分保存的数据就被 CPU 看做指令，当设置了 DS 数据段之后，使用 mov 等操作时 CPU 即将内存中的内容视作数据，当设置了 SS 段之后，使用 PUSH 和 POP 时 CPU 就把那块内存当做堆栈来使用。</p>
+<p>CPU 对主存的一视同仁可以在另外一个现象上得到印证，如果使用现代的编译器编译为汇编文件，你会发现很多理论上应该使用 PUSH 的地方却使用了 MOV，这是因为编译器做了优化，PUSH 隐含了两个操作，一个是移动数据，一个是维护堆栈指针。当操作较多时，指针维护较为频繁，为性能计转而使用 mov 来达到目的，并在必要的时候手动维护栈顶指针。这间接说明了堆栈段的内存并无甚特别之处，其特别只在于使用的方式（入栈和出栈的操作同样可以用 mov 和数据段来配合达到）。</p>
+<h2 id="现代-CPU-中的段"><a href="#现代-CPU-中的段" class="headerlink" title="现代 CPU 中的段"></a>现代 CPU 中的段</h2><p>8086 采用了段的方式来增加寻址空间，使得最大寻址空间达到 1M，但它并没有对内存访问做寻址检查，也不支持现在广为流行的虚拟内存（虚拟内存的内容，我们在下一篇探讨函数栈帧的时候详述）。这意味着 8086 没有内存保护功能，且此种寻址方式无法对多道程序提供支持，这种使用段直接生成物理地址的模式被称为实模式。</p>
+<p>Intel 在 8086 的继任者身上实现了保护模式，对虚拟内存提供了硬件上的支持。保护模式依然使用段来加强寻址，且方案设计非常复杂精巧，这种方式人们将其称为 IA-32 保护模式，但是此种模式应用甚少，进入 64 bit 时代后，CPU 仅仅作为兼容需要予以保留。</p>
+<p>AMD 是第一个吃螃蟹的，首次从架构上将 CPU 的虚拟寻址空间带入 64 bit 模式（可参考 wiki <span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvWDg2LTY0I09wZXJhdGluZ19tb2Rlcw==">x86-64<i class="fa fa-external-link-alt"></i></span> 的描述，内容还算详实），虽然在架构上已支持 64 bit，但是 AMD 在处理器的实现上实际仅支持 48 bit 的虚拟寻址空间，以及 40 bit 的物理寻址空间；对应的 Intel i7 实现为 48 bit 虚拟寻址空间 和 52 bit 的物理寻址空间。这主要是出于经济上的考虑，并在架构设计上做了功夫，使得日后可以很容易扩展到真正的 64 位。不要小看 48 bit 的寻址空间，这意味着当前实现的 CPU 最大支持 256 TB 的内存寻址，然而当下几乎没有场景会达到这一临界点。更详细的内容可以参考这两篇讨论：</p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvNjM5NzU0NDcvd2h5LXZpcnR1YWwtYWRkcmVzcy1hcmUtNDgtYml0cy1ub3QtNjQtYml0cw==">why virtual address are 48 bits not 64 bits?<i class="fa fa-external-link-alt"></i></span> </li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvNjcxNjk0Ni93aHktZG8teDg2LTY0LXN5c3RlbXMtaGF2ZS1vbmx5LWEtNDgtYml0LXZpcnR1YWwtYWRkcmVzcy1zcGFjZQ==">Why do x86-64 systems have only a 48 bit virtual address space?<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+<p>在这里有必要提一下 64 bit 模式下与寻址相关的<code>Canonical form addresses</code>，AMD 标准规定：虚拟地址的高 16 位 也就是从 48 位到 63 位必须拷贝第 47 位的值。<code>Canonical form addresses</code> 规定有效的地址空间为 <strong>0</strong> 到 <strong>00007FFF&#39;FFFFFFFF</strong>，以及 <strong>FFFF8000&#39;00000000</strong> 到 <strong>FFFFFFFF&#39;FFFFFFFF</strong>，可以看下图形象的表示：</p>
+<p><img data-src="https://qiniu.liupzmin.com/canonical.png" alt="Canonical form addresses"></p>
+<p><code>Canonical form addresses</code> 将空间分为上下两部分，可见 48 bit 寻址空间下中间有很大的的空洞。Linux 将上部 128TB 用于内核空间，下部 128TB 用于用户空间，即可以寻址 256 TB 的内存空间。无论如何地址已经是 64 bit 的了，不再需要借助段寄存器。</p>
+<p>如果上面这些内容难以理解，那么你只需要明晰一点：<strong>在汇编语言中，修改指令寄存器和栈顶寄存器的时候，只需设置一个寄存器即可，已不再需要段的参与！</strong></p>
+<p><em><strong>程序调度、堆栈初始化无非就是修改 CPU 对应的寄存器，之后就可以控制进程执行流的走向，以及进程用到的 stack。这一点也是本系列文章围绕的核心所在，故不厌其烦的简述其原理于此。</strong></em></p>
+<p><em><strong>参考文献</strong></em></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNTcyNjAxOS8=">汇编语言<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNjkxMjc2Ny8=">深入理解计算机系统<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zNjUyMzg4Lw==">程序员的自我修养<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yMDQ1MjM4Ny8=">计算机体系结构：量化研究方法<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvNjM5NzU0NDcvd2h5LXZpcnR1YWwtYWRkcmVzcy1hcmUtNDgtYml0cy1ub3QtNjQtYml0cw==">why virtual address are 48 bits not 64 bits?<i class="fa fa-external-link-alt"></i></span> </li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvNjcxNjk0Ni93aHktZG8teDg2LTY0LXN5c3RlbXMtaGF2ZS1vbmx5LWEtNDgtYml0LXZpcnR1YWwtYWRkcmVzcy1zcGFjZQ==">Why do x86-64 systems have only a 48 bit virtual address space?<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvWDg2LTY0I09wZXJhdGluZ19tb2Rlcw==">x86-64<i class="fa fa-external-link-alt"></i></span> </li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMzg5Nzc3NTUvYWRkcmVzcy1jYW5vbmljYWwtZm9ybS1hbmQtcG9pbnRlci1hcml0aG1ldGlj">Address canonical form and pointer arithmetic<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMjExNjU2Nzgvd2h5LTY0LWJpdC1tb2RlLWxvbmctbW9kZS1kb2VzbnQtdXNlLXNlZ21lbnQtcmVnaXN0ZXJz">Why 64 bit mode ( Long mode ) doesn&#39;t use segment registers?<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9yZXZlcnNlZW5naW5lZXJpbmcuc3RhY2tleGNoYW5nZS5jb20vcXVlc3Rpb25zLzIwMDYvaG93LWFyZS10aGUtc2VnbWVudC1yZWdpc3RlcnMtZnMtZ3MtY3Mtc3MtZHMtZXMtdXNlZC1pbi1saW51eA==">How are the segment registers (fs, gs, cs, ss, ds, es) used in Linux?<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/os/" rel="tag"># os</a>
+              <a href="/tags/stack/" rel="tag"># stack</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/02/28/golang/explore-io-fs/" rel="prev" title="译:探索 Go1.16 io/fs 包以提高测试性能和可测试性">
+                  <i class="fa fa-chevron-left"></i> 译:探索 Go1.16 io/fs 包以提高测试性能和可测试性
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/07/20/theory/stack-insight-02/" rel="next" title="Stack 顿悟三部曲（2）：穿越虚拟内存的迷雾">
+                  Stack 顿悟三部曲（2）：穿越虚拟内存的迷雾 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"0de93715d3b54294633fb21d12a6ec71"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

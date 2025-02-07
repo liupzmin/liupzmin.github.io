@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="最近在看一段源码的时候，发现了一个从未见过的 slice 的用法： 12345for batchSize &lt; len(readValues) &amp;#123;    rawValues[address] &#x3D; readValues[0:batchSize:batchSize]    address &#x3D; address + 1    readValues &#x3D; readValues[batchSize">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go 语言中的 Three-index slices">
+<meta property="og:url" content="http://liupzmin.com/2020/07/16/golang/three-index-slice/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="最近在看一段源码的时候，发现了一个从未见过的 slice 的用法： 12345for batchSize &lt; len(readValues) &amp;#123;    rawValues[address] &#x3D; readValues[0:batchSize:batchSize]    address &#x3D; address + 1    readValues &#x3D; readValues[batchSize">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-07-16T02:41:24.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="golang">
+<meta property="article:tag" content="slice">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://liupzmin.com/2020/07/16/golang/three-index-slice/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2020/07/16/golang/three-index-slice/","path":"2020/07/16/golang/three-index-slice/","title":"Go 语言中的 Three-index slices"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Go 语言中的 Three-index slices | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-overview-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2020/07/16/golang/three-index-slice/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Go 语言中的 Three-index slices | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Go 语言中的 Three-index slices<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9nb2xhbmcvdGhyZWUtaW5kZXgtc2xpY2UubWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-07-16 10:41:24" itemprop="dateCreated datePublished" datetime="2020-07-16T10:41:24+08:00">2020-07-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%81%87%E8%A7%81Go/" itemprop="url" rel="index"><span itemprop="name">遇见Go</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在看一段源码的时候，发现了一个从未见过的 slice 的用法：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> batchSize &lt; <span class="built_in">len</span>(readValues) &#123;</span><br><span class="line">    rawValues[address] = readValues[<span class="number">0</span>:batchSize:batchSize]</span><br><span class="line">    address = address + <span class="number">1</span></span><br><span class="line">    readValues = readValues[batchSize:]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中<code>readValues[0:batchSize:batchSize]</code>为一个切片操作，但令人困惑的是其拥有3个索引值；这种书写形式在我读过的有限书籍中从未见过，官方的 <code>[Specification](https://golang.org/ref/spec)</code> 也没有找到相应的描述，所以打算将其弄个一清二楚。</p>
+<p>经过一番 google 之后，<span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMjc5MzgxNzcvZ29sYW5nLXNsaWNlLXNsaWNpbmctYS1zbGljZS13aXRoLXNsaWNlYWJj">golang slice, slicing a slice with slice[a:b:c]<i class="fa fa-external-link-alt"></i></span> 和 <span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMTI3Njg3NDQvcmUtc2xpY2luZy1zbGljZXMtaW4tZ29sYW5n">Re-slicing slices in Golang<i class="fa fa-external-link-alt"></i></span> 两篇问答让我顺藤摸瓜找到了源头，它源自 Go1.2 中的新特性——<span class="exturl" data-url="aHR0cHM6Ly90aXAuZ29sYW5nLm9yZy9kb2MvZ28xLjIjdGhyZWVfaW5kZXg=">Three-index slices<i class="fa fa-external-link-alt"></i></span>。</p>
+<p>我们知道，一个 slice 由三个部分构成：<strong>指针、长度和容量</strong>:</p>
+<ul>
+<li>指针, 指向其第一个元素对应的底层数组元素的地址</li>
+<li>长度,对应的是slice中的元素个数，也就是通过下标对slice中的元素进行访问时，不得超过长度的大小，否则会<code>panic</code></li>
+<li>容量,<code>一般是</code>从slice的第一个元素位置到底层数据的结尾位置。</li>
+</ul>
+<p><code>slice[i:j:k]</code> 第二个冒号之后的索引便是<code>容量</code>，默认情况下的容量是这个slice能<code>hold</code>住的最大元素个数，也就是上文提到的从slice的第一个元素位置到底层数据的结尾位置，即使这个slice再被截取，容量也是从起始位置到底层数组的结尾位置。</p>
+<p>那什么叫<code>hold</code>住呢？<code>长度以外容量以内</code>的元素又不能通过下标访问，这能叫<code>hold</code>么？当然，<code>长度以外容量以内</code>意味着你可以<code>append</code>，我们试举一例：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> a = []<span class="type">int</span>&#123;<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>&#125;</span><br><span class="line">b := a[<span class="number">2</span>:<span class="number">5</span>]</span><br><span class="line">fmt.Println(b[<span class="number">3</span>]) <span class="comment">// panic</span></span><br><span class="line">b = <span class="built_in">append</span>(b, <span class="number">100</span>)</span><br><span class="line">fmt.Println(b[<span class="number">3</span>])</span><br><span class="line">fmt.Println(a) <span class="comment">// [1 2 3 4 5 100 7 8 9 10]</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到切片b的长度为3，直接通过下标访问b[3]会报运行时恐慌，而它的默认容量是8，所以可以append新值进去，并且最终修改了底层数组的值，通过打印切片a就可以看到底层数组也被修改了，a与b共享底层数组。</p>
+<p>接下来我们使用第三个索引来指定切片的容量和长度一样：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">c := a[<span class="number">2</span>:<span class="number">5</span>:<span class="number">5</span>]</span><br><span class="line">c = <span class="built_in">append</span>(c, <span class="number">200</span>)</span><br><span class="line">fmt.Println(c) <span class="comment">// [3 4 5 200]</span></span><br><span class="line">fmt.Println(a) <span class="comment">// [1 2 3 4 5 100 7 8 9 10]</span></span><br></pre></td></tr></table></figure>
+
+<p>可见，切片a的内容并没有变，因为c的容量有限，append操作引起了扩容，从而使得切片c的底层数组与切片a的底层数组分道扬镳。<span class="exturl" data-url="aHR0cHM6Ly9xY3Jhby5jb20v">码农桃花源<i class="fa fa-external-link-alt"></i></span>的<span class="exturl" data-url="aHR0cHM6Ly93d3cuY25ibG9ncy5jb20vcWNyYW8tMjAxOC9wLzEwNjMxOTg5Lmh0bWw=">深度解密Go语言之Slice<i class="fa fa-external-link-alt"></i></span>中对于数组扩容有更精彩的图文论述，其中也有<code>data[low:high:max]</code>的论述，只是当时阅读数未曾引起重视。</p>
+<p>官网用于说明的例子是：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> array [<span class="number">10</span>]<span class="type">int</span></span><br><span class="line">slice = array[<span class="number">2</span>:<span class="number">4</span>:<span class="number">7</span>]</span><br></pre></td></tr></table></figure>
+
+<p>一句话来表述容量被限制之后的结果：<code> It is impossible to use this new slice value to access the last three elements of the original array.</code> </p>
+<p>这个特性偶尔会很有用，比如在处理底层的[]byte时，如果很清楚调用者不会去修改slice中的值，那么就可以使用这种方式来更好的保护底层的数组，正如我开篇提到的那段代码一样。</p>
+<p>三个索引值，第一个可以省略，如果省略就代表 0.</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/golang/" rel="tag"># golang</a>
+              <a href="/tags/slice/" rel="tag"># slice</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/03/24/c/static-link-dynamic-link-1/" rel="prev" title="重学C语言：编译和链接那些事儿（一）—— 编译过程">
+                  <i class="fa fa-chevron-left"></i> 重学C语言：编译和链接那些事儿（一）—— 编译过程
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/07/25/c/struct/" rel="next" title="结构体速记">
+                  结构体速记 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"d60c1e47c4b887ff7a701854d3c4675c"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

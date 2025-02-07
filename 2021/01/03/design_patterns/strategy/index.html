@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本篇为策略模式的上篇，我以传统的严格意义上的面向对象语言 Java为例来说明此模式；我会在下一篇用非严格意义上的OO语言 Go基于同样的例子进行说明。  有一个游戏假设我们在设计一款鸭子游戏。玩家可以通过按钮选择任意一款鸭子，使得对应的鸭子可以在屏幕上展现，并且做相应的动作。为此我们设计了如下的高层代码： 1234567891011121314151617public class Game &amp;#">
+<meta property="og:type" content="article">
+<meta property="og:title" content="策略模式（上）">
+<meta property="og:url" content="http://liupzmin.com/2021/01/03/design_patterns/strategy/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="本篇为策略模式的上篇，我以传统的严格意义上的面向对象语言 Java为例来说明此模式；我会在下一篇用非严格意义上的OO语言 Go基于同样的例子进行说明。  有一个游戏假设我们在设计一款鸭子游戏。玩家可以通过按钮选择任意一款鸭子，使得对应的鸭子可以在屏幕上展现，并且做相应的动作。为此我们设计了如下的高层代码： 1234567891011121314151617public class Game &amp;#">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiniu.liupzmin.com/duck">
+<meta property="og:image" content="https://qiniu.liupzmin.com/duck-fly">
+<meta property="og:image" content="https://qiniu.liupzmin.com/duck-interface">
+<meta property="og:image" content="https://qiniu.liupzmin.com/separate-behavior">
+<meta property="og:image" content="https://qiniu.liupzmin.com/impl-duck-behavior">
+<meta property="og:image" content="https://qiniu.liupzmin.com/new-duck.png">
+<meta property="article:published_time" content="2021-01-03T12:42:35.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="strategy">
+<meta property="article:tag" content="策略模式">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiniu.liupzmin.com/duck">
+
+
+<link rel="canonical" href="http://liupzmin.com/2021/01/03/design_patterns/strategy/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2021/01/03/design_patterns/strategy/","path":"2021/01/03/design_patterns/strategy/","title":"策略模式（上）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>策略模式（上） | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%89%E4%B8%80%E4%B8%AA%E6%B8%B8%E6%88%8F"><span class="nav-number">1.</span> <span class="nav-text">有一个游戏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B6%85%E7%B1%BB"><span class="nav-number">2.</span> <span class="nav-text">超类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E5%9C%A8%E8%A6%81%E8%AE%A9%E9%B8%AD%E5%AD%90%E9%A3%9E"><span class="nav-number">3.</span> <span class="nav-text">现在要让鸭子飞</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A5%E5%8F%A3%E8%83%BD%E8%A7%A3%E5%86%B3%E9%97%AE%E9%A2%98%E4%B9%88"><span class="nav-number">4.</span> <span class="nav-text">接口能解决问题么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%BC%80%E5%8F%98%E5%8C%96%E5%92%8C%E4%B8%8D%E5%8F%98%E7%9A%84%E9%83%A8%E5%88%86"><span class="nav-number">5.</span> <span class="nav-text">分开变化和不变的部分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E8%A1%8C%E4%B8%BA"><span class="nav-number">6.</span> <span class="nav-text">实现行为</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%AF%E7%9A%84%EF%BC%8C%E8%BF%99%E5%B0%B1%E6%98%AF%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F"><span class="nav-number">7.</span> <span class="nav-text">是的，这就是策略模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F%E5%B0%B1%E6%98%AF%E7%AE%80%E5%8D%95%E7%9A%84%E5%A4%9A%E6%80%81%E4%B9%88"><span class="nav-number">8.</span> <span class="nav-text">策略模式就是简单的多态么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8EUnix%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%E4%B8%AD%E5%8F%96%E7%BB%8F"><span class="nav-number">9.</span> <span class="nav-text">从Unix设计哲学中取经</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93%E5%AD%A6%E5%88%B0%E7%9A%84%E6%80%9D%E6%83%B3"><span class="nav-number">10.</span> <span class="nav-text">总结学到的思想</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2021/01/03/design_patterns/strategy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="策略模式（上） | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          策略模式（上）<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9kZXNpZ25fcGF0dGVybnMvc3RyYXRlZ3kubWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-01-03 20:42:35" itemprop="dateCreated datePublished" datetime="2021-01-03T20:42:35+08:00">2021-01-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/DesignPatterns/" itemprop="url" rel="index"><span itemprop="name">DesignPatterns</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/DesignPatterns/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">设计模式</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>本篇为策略模式的上篇，我以<strong>传统的严格意义上的面向对象语言 <strong><code>Java</code>为例来说明此模式；我会在下一篇用</strong>非严格意义上的OO语言</strong> <code>Go</code>基于同样的例子进行说明。</p>
+</blockquote>
+<h2 id="有一个游戏"><a href="#有一个游戏" class="headerlink" title="有一个游戏"></a>有一个游戏</h2><p>假设我们在设计一款鸭子游戏。玩家可以通过按钮选择任意一款鸭子，使得对应的鸭子可以在屏幕上展现，并且做相应的动作。为此我们设计了如下的高层代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Game</span> &#123;</span><br><span class="line">    Duck duck;</span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">Game</span><span class="params">(String type)</span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (type.equals(<span class="string">&quot;picnic&quot;</span>)) &#123;</span><br><span class="line">            duck = <span class="keyword">new</span> <span class="title class_">MallardDuck</span>();</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (type.equals(<span class="string">&quot;hunting&quot;</span>)) &#123;</span><br><span class="line">            duck = <span class="keyword">new</span> <span class="title class_">DecoyDuck</span>();</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span>(type.equals(<span class="string">&quot;inBathTub&quot;</span>)) &#123;</span><br><span class="line">            duck = <span class="keyword">new</span> <span class="title class_">RubberDuck</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">play</span><span class="params">()</span> &#123;</span><br><span class="line">        duck.display();</span><br><span class="line">        duck.swim();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们希望<code>Duck</code>是一个超类，并且在这里起到多态的作用。通过<code>type</code>输入参数来模拟用户通过按钮选择鸭子这一行为，并且在构造函数中初始化相应的鸭子实例，以便于后续调用<code>play</code>函数来在屏幕上展示。</p>
+<p>我们假定<strong>每种鸭子都有独一无二的外观，并且每种鸭子都有相同的游泳方式</strong>。记住我们的这两个假设，因为我们马上要据此设计超类。</p>
+<h2 id="超类"><a href="#超类" class="headerlink" title="超类"></a>超类</h2><p>我们之前假设了鸭子的两种特征：</p>
+<ol>
+<li>每种鸭子都有独一无二的外观</li>
+<li>每种鸭子的游泳方式都相同</li>
+</ol>
+<p>我们把<code>Duck</code>设计为一个抽象类，因为外观是独一无二的，所以<code>display</code>设计为抽象方法，具体的外观由每一个具体的子类去实现；<code>swim</code>的行为每种鸭子都一样，所以我们在抽象类里将其实现，以达到所有子类共享的目的。</p>
+<p>但是，我们忽然又意识到鸭子还有<code>quack</code>叫的特征，但是目前又不确定quack是不是有变化，所以暂时将其也在抽象类里实现。我们的超类代码大概如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">Duck</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">display</span><span class="params">()</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">quack</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;quack quack quack!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">swim</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;All ducks float, even decoys!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们来总结一下如此设计的目的：</p>
+<ol>
+<li>抽象类<code>Duck</code>用于实现多态</li>
+<li>抽象方法<code>display</code>用于统一接口，让子类分别实现</li>
+<li><code>quack</code>和<code>swim</code>分别用于继承，以达到代码复用的目的</li>
+</ol>
+<p>我们用一张图来表示这种继承关系：</p>
+<p><img data-src="https://qiniu.liupzmin.com/duck" alt="duck"></p>
+<p>我们的设计是利用继承达到多态和代码复用的目的。绿头鸭和红头鸭分别是具体的实现，它们继承了<code>quack</code>和<code>swim</code>代码，又各自实现了<code>display</code>的方法。目前来看，我们的设计还算完美，如果不是一只<code>橡皮鸭子</code>出现的话。</p>
+<h2 id="现在要让鸭子飞"><a href="#现在要让鸭子飞" class="headerlink" title="现在要让鸭子飞"></a>现在要让鸭子飞</h2><p>​	现在游戏上线了一种新的鸭子—<strong>橡皮鸭</strong>，橡皮鸭与之前的鸭子不同的是，它不会“呱呱”叫，只会“吱吱”叫。我们所有种类的鸭子都是<code>继承</code>自超类<code>Duck</code>，所以我们可以在橡皮鸭的子类中覆盖<code>Duck</code>的<code>quack</code>方法，向下面这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">RubberDuck</span> <span class="keyword">extends</span> <span class="title class_">Duck</span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">display</span><span class="params">()</span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;I am a rubber duck!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">quack</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;squeak squeak squeak!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因为橡皮鸭子不会呱呱叫，所以我们覆写了<code>quack</code>方法。子类重写虽然能解决当前的问题，但也势必会引入新的问题，我们接着往下看。</p>
+<p>现在有一个新的需求要加入到游戏当中去，那就是我们需要让鸭子展示<code>飞行</code>的动作。基于我们目前的设计，很容易想到的是：在<code>Duck</code>中加入<code>fly()</code>方法：</p>
+<p><img data-src="https://qiniu.liupzmin.com/duck-fly" alt="fly"></p>
+<p>那么，问题来了，我们是将<code>fly()</code>设计成抽象方法呢，还是将其在超类里实现呢？在超类里实现就会出现橡皮鸭子会飞的情况，我们自然会想到子类重写，就像重写<code>quack</code>函数一样。但是，如果以后又加入了其它的不会飞也不会叫的鸭子怎么办？比如诱饵鸭是木头鸭，不会飞也不会叫；橡皮鸭不会飞但是会叫。长此以往，我们的代码会充斥着各种子类、各种重写的方法，这显然是有问题的。换句话说，我们之前的重写<code>quack</code>是不明智之举。</p>
+<p>其实，问题的本质是<strong>继承不适用于目前的场景。</strong></p>
+<p>使用继承的问题：</p>
+<ul>
+<li>如果是抽象的方法，代码在多个子类中重复，即代码无法复用。试想一下：一部分鸭子的飞行代码相同，而又有很多种类的鸭子飞行行为各有特色。</li>
+<li>每次新增行为都要修改抽象类和子类，包括以后面临的修改，这都违反了开闭原则，且不可能预知全部的行为。</li>
+<li>如果超类实现子类继承，复写子类方法同样无法达到代码复用，因为可能有多个种类的鸭子飞行行为相同，但又不同于超类里的实现。如果一旦涉及到修改，势必会带来维护上的噩梦。</li>
+<li>改变会牵一发而动全身，造成其他鸭子不想要的改变。</li>
+</ul>
+<h2 id="接口能解决问题么"><a href="#接口能解决问题么" class="headerlink" title="接口能解决问题么"></a>接口能解决问题么</h2><p><code>Java</code>为我们提供了<code>interface</code>来实现多态。既然不能使用继承和重写来实现对应的功能，那么我们很容易想到用定义接口的方式让子类分别实现<code>quack</code>和<code>fly</code>接口：</p>
+<p><img data-src="https://qiniu.liupzmin.com/duck-interface" alt="duck interface"></p>
+<p>像图中那样将<code>quack</code>和<code>fly</code>作为单独的接口去实现。这可以解决部分问题，也就是不会有鸭子和行为不符合的情况，但依然面临严峻的问题：</p>
+<ul>
+<li>行为只是可能会发生变化的话，每个子类都实现接口，会造成代码无法复用，继而也会带来维护上的噩梦。</li>
+<li>如果我想在运行中随时改变飞行的动作呢？继承超类和子类实现单独的接口都无法有效的解决问题。</li>
+</ul>
+<p>其实，单独的接口和抽象方法所面临的问题是一致的，即代码复用和维护变更的问题。试想一下，如果有48个Duck子类的飞行行为相同，代码实现就会有48份，而你恰巧在某个时刻需要修改这个行为...</p>
+<p>这时，你肯定期待着<code>设计模式</code>能骑着白马来解救你！</p>
+<h2 id="分开变化和不变的部分"><a href="#分开变化和不变的部分" class="headerlink" title="分开变化和不变的部分"></a>分开变化和不变的部分</h2><p>幸运的是，有一个设计原则，恰好适用于此状况。</p>
+<blockquote>
+<p>找出应用中可能需要变化之处，把它们独立出来，不要和那些不需要变化的代码混在一起。</p>
+</blockquote>
+<p>这样的概念很简单，几乎是每个设计模式背后的精神所在。所有的模式都提供了一套方法让<strong>“系统中的某部分改变不会影响其它部分”</strong>。</p>
+<p>我们试分析一下，关于变和不变存在以下三种情况：</p>
+<ol>
+<li>一定不变的</li>
+<li>一定会变的</li>
+<li>可能会变的</li>
+</ol>
+<p>对于<strong>一定会变的</strong>，我们很容易用<strong>抽象方法或者接口</strong>来解决（<code>display</code>）。对于<strong>一定不变</strong>的（<code>swim</code>），我们就用<strong>继承</strong>，把实现放在超类里。</p>
+<p>棘手的是可能会变化的部分，比如这里的<code>fly</code>和<code>quack</code>，这正是让我们左支右绌、进退维谷的根源。根据上面提到的原则，我们应该把这两个部分从<code>Duck</code>类中取出来，建立一组新类来代表每个行为。</p>
+<p><img data-src="https://qiniu.liupzmin.com/separate-behavior" alt="separate behavior"></p>
+<p>我们该如何实现新的行为类呢？我们希望每种Duck在使用行为类的时候具有弹性和灵活性，比如可以动态改变，也就是说我们可以在Duck类中增加设定行为的方法，这样就可以在运行时动态的改变鸭子的行为了。</p>
+<p>那么，有什么设计原则可以指导我们么？</p>
+<blockquote>
+<p>针对接口编程，而不是针对实现编程。</p>
+</blockquote>
+<p>我们理应在Duck类中使用接口，而不是具体的实现。也就是说Duck类不负责实现<code>fly</code>和<code>quack</code>，具体的实现交给新的类去实现<code>FlyBehavior</code>和<code>QuackBehavior</code>接口。</p>
+<p>Duck类应该只针对接口编程，<strong>“针对接口编程”真正的意思是“针对超类型编程”。</strong>这里所谓的“接口”有多个含义，关键在于使用<code>多态</code>。利用多态，程序可以针对超类型编程，执行时会根据实际状况执行到真正的行为，不会被绑死在超类型的行为上。“针对超类型编程”这句话，可以明确的说成“变量的声明应该是超类型，通常是一个抽象类或者是一个接口。如此，只要是具体实现次超类型的类所产生的对象，都可以指定给这个变量。这也意味着，声明类时不用理会以后执行时的真正对象类型！”</p>
+<p><strong>也就是说，高层代码应该针对行为编程！</strong></p>
+<h2 id="实现行为"><a href="#实现行为" class="headerlink" title="实现行为"></a>实现行为</h2><p><img data-src="https://qiniu.liupzmin.com/impl-duck-behavior" alt="implement duck&#39;s behavior"></p>
+<p>我们设计了两个接口<strong>FlyBehavior</strong>和<strong>QuackBehavior</strong>，还有它们对应的类，负责实现具体的行为。这样的设计，可以让飞行和呱呱叫的动作被其它的对象复用，因为这些行为已经与鸭子类无关了。而我们可以新增一些行为，不会影响到既有的行为类，也不会影响到使用飞行行为的鸭子类。这么一来，有了继承的代码复用好处，却没有了继承所带来的包袱。</p>
+<p>用代码实现一下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">FlyBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">fly</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">FlyWithWings</span> <span class="keyword">implements</span> <span class="title class_">FlyBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">fly</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;I&#x27;m flying!!&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">FlyNoWay</span> <span class="keyword">implements</span> <span class="title class_">FlyBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">fly</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;I can&#x27;t fly&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">FlyRocketPowered</span> <span class="keyword">implements</span> <span class="title class_">FlyBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">fly</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;I&#x27;m flying with a rocket&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">QuackBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">quack</span><span class="params">()</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Quack</span> <span class="keyword">implements</span> <span class="title class_">QuackBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">quack</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;Quack&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Squeak</span> <span class="keyword">implements</span> <span class="title class_">QuackBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">quack</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;Squeak&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MuteQuack</span> <span class="keyword">implements</span> <span class="title class_">QuackBehavior</span> &#123;</span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">quack</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;&lt;&lt; Silence &gt;&gt;&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>把行为整合进抽象类duck</p>
+<p><img data-src="https://qiniu.liupzmin.com/new-duck.png" alt="new duck"></p>
+<p>上图是新的鸭子类，实现代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">Duck</span> &#123;</span><br><span class="line"></span><br><span class="line">    FlyBehavior flyBehavior;</span><br><span class="line">    QuackBehavior quackBehavior;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">display</span><span class="params">()</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">performQuack</span><span class="params">()</span> &#123;</span><br><span class="line">        flyBehavior.quack();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">performFly</span><span class="params">()</span> &#123;</span><br><span class="line">        flyBehavior.fly();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">swim</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;All ducks float, even decoys!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>我们重新实现一下绿头鸭：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MallardDuck</span> <span class="keyword">extends</span> <span class="title class_">Duck</span> &#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">public</span> <span class="title function_">MallardDuck</span><span class="params">()</span> &#123;</span><br><span class="line"></span><br><span class="line">		quackBehavior = <span class="keyword">new</span> <span class="title class_">Quack</span>();</span><br><span class="line">		flyBehavior = <span class="keyword">new</span> <span class="title class_">FlyWithWings</span>();</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">display</span><span class="params">()</span> &#123;</span><br><span class="line">		System.out.println(<span class="string">&quot;I&#x27;m a real Mallard duck&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们的绿头鸭代码里有针对实现的代码，就是实例化行为的两行，这貌似违背了了我们之前所述，<strong>针对接口编程，而不是针对实现</strong>；其实，这里可以改为工厂模式，使得我们的代码彻底的面向接口。但工厂模式不是我们本次的重点，关于这一点我会稍后再略作解释，让我们继续完善我们的代码吧！</p>
+<p>之前我们说要把鸭子的行为设计成可以动态改变，现在貌似还差点火候。那么，让我们在Duck类中再加入两个设定行为的方法吧：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">setFlyBehavior</span><span class="params">(FlyBehavior fb)</span> &#123;</span><br><span class="line">		flyBehavior = fb;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">setQuackBehavior</span><span class="params">(QuackBehavior qb)</span> &#123;</span><br><span class="line">		quackBehavior = qb;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>​	从此以后，我们可以随时调用这两个方法来改变鸭子的行为。来做个模拟吧：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MiniDuckSimulator</span> &#123;</span><br><span class="line"> </span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line"> </span><br><span class="line">		<span class="type">Duck</span> <span class="variable">mallard</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">MallardDuck</span>();</span><br><span class="line">		mallard.performQuack();</span><br><span class="line">		mallard.performFly();</span><br><span class="line">   </span><br><span class="line">		<span class="type">Duck</span> <span class="variable">model</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ModelDuck</span>();</span><br><span class="line">		model.performFly();</span><br><span class="line">		model.setFlyBehavior(<span class="keyword">new</span> <span class="title class_">FlyRocketPowered</span>());</span><br><span class="line">		model.performFly();</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>output：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Quack</span><br><span class="line">I&#x27;m flying!!</span><br><span class="line">I can&#x27;t fly</span><br><span class="line">I&#x27;m flying with a rocket!</span><br></pre></td></tr></table></figure>
+
+<p>​	可见，在运行时想改变鸭子的行为，只需要调用<code>setter</code>方法即可。我们通过把可能变化的行为抽象为接口，使用单独的类去实现它。这样即解决了代码复用的问题，又使得维护变得简单。</p>
+<h2 id="是的，这就是策略模式"><a href="#是的，这就是策略模式" class="headerlink" title="是的，这就是策略模式"></a>是的，这就是策略模式</h2><p><em><strong>没错，我们刚刚完成一个策略模式！</strong></em></p>
+<p>是时候了解一下<code>策略模式</code>的具体定义了：</p>
+<blockquote>
+<p>Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets the algorithm vary independently from clients that use it.</p>
+</blockquote>
+<p>翻译一下：<strong>定义一族算法类，将每个算法分别封装起来，让它们可以互相替换。策略模式可以使算法的变化独立于使用它们的客户端（这里的客户端代指使用算法的代码）。</strong></p>
+<p>让我们把描述问题的措辞稍作改变，不再把鸭子的行为说成是“一组行为”，我们开始把行为想成“一族算法”，算法代表了鸭子能做的事。如今算法和鸭子类之间不再是<code>IS-A</code>的关系，而是<code>HAS-A</code>的关系。</p>
+<p><code>“有一个”</code>关系相当有趣：每一个鸭子都有一个<code>FlyBehavior</code>和一个<code>QuackBehavior</code>，好将飞行和呱呱叫的行为委托给它们代为处理。当你将两个类结合起来使用，如同本例一般，这就是<strong>“组合”</strong>。这种做法和“继承”的不同之处在于，鸭子的行为不是继承来的，而是和合适的行为对象“组合”来的。</p>
+<p>这也是我们通常所说的另一个设计原则：<strong>多用组合，少用继承</strong>。</p>
+<h2 id="策略模式就是简单的多态么"><a href="#策略模式就是简单的多态么" class="headerlink" title="策略模式就是简单的多态么"></a>策略模式就是简单的多态么</h2><p>纵观<code>策略模式</code>的定义以及各种围绕<code>策略模式</code>的示例，我们很容易产生一个疑问：<strong>策略模式就是简单的多态么？策略模式的定义何其标题看不出任何联系，到底何为策略？</strong></p>
+<p>从维基百科上策略模式的定义可以看出，策略模式乃是一个方法论，不拘于多态一种实现方式：</p>
+<blockquote>
+<p>Typically, the strategy pattern stores a reference to some code in a data structure and retrieves it. This can be achieved by mechanisms such as the native <span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvRnVuY3Rpb25fcG9pbnRlcg==">function pointer<i class="fa fa-external-link-alt"></i></span>, the <span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvRmlyc3QtY2xhc3NfZnVuY3Rpb24=">first-class function<i class="fa fa-external-link-alt"></i></span>, classes or class instances in <span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvT2JqZWN0LW9yaWVudGVkX3Byb2dyYW1taW5n">object-oriented programming<i class="fa fa-external-link-alt"></i></span> languages, or accessing the language implementation&#39;s internal storage of code via <span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvUmVmbGVjdGlvbl8oY29tcHV0ZXJfc2NpZW5jZSk=">reflection<i class="fa fa-external-link-alt"></i></span>.</p>
+</blockquote>
+<p><code>stackoverflow</code>上亦有相同的发问 <span class="exturl" data-url="aHR0cHM6Ly9zdGFja292ZXJmbG93LmNvbS9xdWVzdGlvbnMvMzc2NzA4NDIvaXMtc3RyYXRlZ3ktZGVzaWduLXBhdHRlcm4tbm8tbW9yZS10aGFuLXRoZS1iYXNpYy11c2Utb2YtcG9seW1vcnBoaXNt">Is &#39;Strategy Design Pattern&#39; no more than the basic use of polymorphism?<i class="fa fa-external-link-alt"></i></span> 得票最高的回答也阐述了相同的意思：<strong>策略模式，或者说设计本身，它不是指细节代码，而是一种思维方式。</strong></p>
+<p>我们虽然在这里用多态的方式实现了策略模式，但策略模式的实现方式绝非多态一种。</p>
+<p>另外我观 <span class="exturl" data-url="aHR0cHM6Ly90aW1lLmdlZWtiYW5nLm9yZy9jb2x1bW4vaW50cm8vMTAwMDM5MDAx">设计模式之美<i class="fa fa-external-link-alt"></i></span> 中对策略模式的阐述，其称：<strong>不使用工厂模式而直接实例化行为对象的情况为简单的面向接口编程，并非严格意义的策略模式。</strong>如此观点虽有启发，但仍未消除心中疑虑，因为<strong>“策略”</strong>一词在我心中还有另一个概念。</p>
+<p>策略模式的概念与定义难以让我释怀。我必须自己寻找一个答案，并说服自己去相信它，即便它可能不那么正确。因为我们每个人之所以要不断的思考，就是要缝合自我认知体系里矛盾的地方。</p>
+<p>而<code>策略</code>一词，在我的知识体系里，是矛盾的！</p>
+<h2 id="从Unix设计哲学中取经"><a href="#从Unix设计哲学中取经" class="headerlink" title="从Unix设计哲学中取经"></a>从Unix设计哲学中取经</h2><p>在最初接触<code>策略模式</code>时，我很自然的就联想到<code>Unix设计哲学</code>中的一条原则：<strong>分离原则。</strong></p>
+<p><em><strong>Rule of Separation: Separate policy from mechanism; separate interfaces from engines.</strong></em></p>
+<p><strong>分离原则：策略同机制分离，接口同引擎分离</strong></p>
+<p><strong>policy</strong> 和 <strong>strategy</strong> 同被翻译为“策略”，我以为思想肯定也很接近。但是<code>Gof</code>中描述的算法族，每个具体的算法就是一个策略，让我一度觉得这两个原则之间可能没有关系。</p>
+<p>的确，按照定义，这两个原则对<code>策略</code>的理解不是一个层面的东西，就如同英语中的微妙区别一样，一个是具体的行动计划，一个是指导性原则。</p>
+<p>但吊诡的是，这两者居然能品出一丝完全相反的味道来。</p>
+<p>先来了解一下分离原则。其实它比策略模式要更加普世，虽然分离原则和策略模式同为软件设计原则，但分离原则要更加抽象，而策略模式更贴近于代码，分离原则更偏向于架构。</p>
+<p>分离原则讲究把策略同机制分离，策略是针对使用方，机制则说的是实现方。分离原则认为，策略和机制是按照不同的时间尺度变化的，策略的变化要远远快于机制。所以，把策略和机制揉成一团有两个负面影响：一来会使策略变的死板，难以适应用户需求的改变；二来也意味着任何策略的改变都极有可能动摇机制。</p>
+<p>相反，将两者剥离，就有可能<strong>在探索新策略的时候不会打破机制</strong>。另外也更容易为机制写出较好的测试，因为策略都太过短命，不值得花太多经历在上面。《UNIX编程艺术》一书中，举了x图形引擎的例子。让X成为一个通用的图形引擎，而将用户界面风格留给工具包或者系统其它层来决定。GUI工具包的观感时尚来去匆匆，而光栅操作和组合却是永恒的。</p>
+<p>让我们回想一下策略模式中的策略，<code>Gof</code>说每个具体的算法类就是策略。我认为以此起**&quot;策略模式&quot;<strong>这个名字多少有些以偏概全，未准确传达此模式使</strong>“算法族可以互相替换”<strong>的主旨。分离原则和策略模式中的策略是不同场景下对不同内容的描述：</strong>分离原则的策略是指使用多种不同机制的方法，让机制与使用分离，本质上还是抽离不变与变化的东西**；而策略模式之策略是指一系列做同类事的算法，因为同类，所以可互换，可多态！</p>
+<p>所以，忘掉<code>策略模式</code>概念本身吧，它或许不是一个好名字，但却是一个好的、常用的、易用的代码设计方法。只要心中牢记“面向接口，而不是实现编程”，也许一不小心就会写出<strong>策略模式</strong>了！</p>
+<h2 id="总结学到的思想"><a href="#总结学到的思想" class="headerlink" title="总结学到的思想"></a>总结学到的思想</h2><ol>
+<li><strong>面向接口编程，而不是面向实现编程</strong></li>
+<li><strong>“针对接口编程”真正的意思是“针对超类型编程”</strong></li>
+<li><strong>“针对超类型编程”这句话，可以明确的说成“变量的声明应该是超类型，通常是一个抽象类或者是一个接口。如此，只要是具体实现次超类型的类所产生的对象，都可以指定给这个变量。这也意味着，声明类时不用理会以后执行时的真正对象类型”</strong></li>
+<li><strong>多用组合，少用继承</strong></li>
+<li><strong>唯一不变的就是变化本身</strong></li>
+<li><strong>所有的模式都提供了一套方法让“系统中的某部分改变不会影响其它部分”</strong></li>
+</ol>
+<p><em><strong>参考文献：</strong></em></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zNDI2MjMwNS8=">设计模式：可复用面向对象软件的基础<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yMjQzNjE1Lw==">Head First 设计模式<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly90aW1lLmdlZWtiYW5nLm9yZy9jb2x1bW4vaW50cm8vMTAwMDM5MDAx">设计模式之美<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/strategy/" rel="tag"># strategy</a>
+              <a href="/tags/%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F/" rel="tag"># 策略模式</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/01/python/everything-is-an-object-in-python/" rel="prev" title="浅析 python 一切皆对象">
+                  <i class="fa fa-chevron-left"></i> 浅析 python 一切皆对象
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/01/15/design_patterns/strategy-go/" rel="next" title="策略模式（下）">
+                  策略模式（下） <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"60e646874c9e15c1a96dfd4b1fe19ed6"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="C 语言有很多种运算符（差不多50种），如果一条表达式中有多个运算符，就不可避免的产生二义性．C 语言通过优先级与结合性来解决这个问题，因运算符过多，优先级难以全部准确记忆，故将运算符优先级表记录在此，以备日后有疑问时进行查阅．   运算符的种类常用的运算符有如下几类：  算数运算符（+ - * &#x2F; % ++ --） 关系运算符（&#x3D;&#x3D; !&#x3D; &gt; &lt; &gt;&#x3D; &lt;&#x3D;） 逻辑运算">
+<meta property="og:type" content="article">
+<meta property="og:title" content="重学C语言：运算符与优先级">
+<meta property="og:url" content="http://liupzmin.com/2020/03/19/c/operator-precedence/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="C 语言有很多种运算符（差不多50种），如果一条表达式中有多个运算符，就不可避免的产生二义性．C 语言通过优先级与结合性来解决这个问题，因运算符过多，优先级难以全部准确记忆，故将运算符优先级表记录在此，以备日后有疑问时进行查阅．   运算符的种类常用的运算符有如下几类：  算数运算符（+ - * &#x2F; % ++ --） 关系运算符（&#x3D;&#x3D; !&#x3D; &gt; &lt; &gt;&#x3D; &lt;&#x3D;） 逻辑运算">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qiniu.liupzmin.com/operator-precedence.png">
+<meta property="article:published_time" content="2020-03-19T02:20:42.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="C">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qiniu.liupzmin.com/operator-precedence.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2020/03/19/c/operator-precedence/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2020/03/19/c/operator-precedence/","path":"2020/03/19/c/operator-precedence/","title":"重学C语言：运算符与优先级"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>重学C语言：运算符与优先级 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%90%E7%AE%97%E7%AC%A6%E7%9A%84%E7%A7%8D%E7%B1%BB"><span class="nav-number">1.</span> <span class="nav-text">运算符的种类</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%97%E6%95%B0%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="nav-number">2.</span> <span class="nav-text">算数运算符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B5%8B%E5%80%BC%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="nav-number">3.</span> <span class="nav-text">赋值运算符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%87%AA%E5%A2%9E%E8%BF%90%E7%AE%97%E7%AC%A6%E5%92%8C%E8%87%AA%E5%87%8F%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="nav-number">4.</span> <span class="nav-text">自增运算符和自减运算符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%A8%E8%BE%BE%E5%BC%8F%E8%AF%AD%E5%8F%A5"><span class="nav-number">5.</span> <span class="nav-text">表达式语句</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%B8%AA%E4%BC%98%E5%85%88%E7%BA%A7%E5%BC%95%E8%B5%B7%E7%9A%84%E9%94%99%E8%AF%AF"><span class="nav-number">6.</span> <span class="nav-text">一个优先级引起的错误</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2020/03/19/c/operator-precedence/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="重学C语言：运算符与优先级 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          重学C语言：运算符与优先级<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9jL29wZXJhdG9yLXByZWNlZGVuY2UubWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-19 10:20:42" itemprop="dateCreated datePublished" datetime="2020-03-19T10:20:42+08:00">2020-03-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>C 语言有很多种运算符（差不多50种），如果一条表达式中有多个运算符，就不可避免的产生二义性．C 语言通过优先级与结合性来解决这个问题，因运算符过多，优先级难以全部准确记忆，故将运算符优先级表记录在此，以备日后有疑问时进行查阅．</p>
+</blockquote>
+<p><img data-src="http://qiniu.liupzmin.com/operator-precedence.png" alt="C 运算符优先级"></p>
+<h2 id="运算符的种类"><a href="#运算符的种类" class="headerlink" title="运算符的种类"></a>运算符的种类</h2><p>常用的运算符有如下几类：</p>
+<ol>
+<li>算数运算符（<code>+ - * / % ++ --</code>）</li>
+<li>关系运算符（<code>== != &gt; &lt; &gt;= &lt;=</code>）</li>
+<li>逻辑运算符（<code>&amp;&amp; || !</code>）</li>
+<li>位运算符（<code>&amp; | ^</code>）</li>
+<li>赋值运算符（<code>= += -+ *= /= %= &lt;&lt;= &gt;&gt;= &amp;= ^= |=</code>）</li>
+<li>杂项运算符（<code>sizeof() &amp; * ?:</code>）</li>
+</ol>
+<h2 id="算数运算符"><a href="#算数运算符" class="headerlink" title="算数运算符"></a>算数运算符</h2><p><code>+</code>和<code>-</code>既可以是一元运算符正负号，又可以是二元运算符加减．一元运算符优先级要高于二元运算符．</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-i + j / k; <span class="comment">// 等价于 (-i) + ( j / k)</span></span><br></pre></td></tr></table></figure>
+
+<p>当表达式中包含两个或者更多个相同优先级的运算符时，就需要根据<code>结合性</code>的规则来运算．</p>
+<p>如果运算符是从左向右结合的，就称为<code>左结合</code>，如果是从右像左结合的就称为<code>右结合</code>．二元算数运算符都是左结合的．</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">i - j - k; <span class="comment">// 等价于 (i - j) - k</span></span><br><span class="line">i * j / k; <span class="comment">// 等价于 (i * j) / k</span></span><br></pre></td></tr></table></figure>
+
+<p>一元算数运算符都是右结合的．</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- + i; <span class="comment">// 等价于 -(+i)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="赋值运算符"><a href="#赋值运算符" class="headerlink" title="赋值运算符"></a>赋值运算符</h2><p>在许多编程语言中，赋值是<code>语句</code>．然而，在C语言中，赋值就像 <code>+</code> 一样是<code>运算符</code>．换句话说，赋值操作产生结果，就如同两数相加产生结果一样．赋值表达式 <code>v=e</code> 的值就是赋值运算后 v 的值.</p>
+<p>既然赋值是运算符，那么多个赋值就可以串联在一起：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">i = j = k = <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>运算符 <code>=</code> 是右结合的，所以上述表达式等价于：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">i = (j = (k = <span class="number">0</span>));</span><br></pre></td></tr></table></figure>
+
+<p>有一个例子来说明赋值表达式：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> *<span class="title function_">strcat</span> <span class="params">(<span class="type">char</span> *s1, <span class="type">const</span> <span class="type">char</span> *s2)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">char</span> *p = s1;</span><br><span class="line">    <span class="keyword">while</span> (*p)</span><br><span class="line">        p++;</span><br><span class="line">    <span class="keyword">while</span> (*p++ = *s2++)</span><br><span class="line">        ;</span><br><span class="line">    <span class="keyword">return</span> s1;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是个字符串拼接函数，函数中的两个 while 循环的条件表达式都是赋值表达式，因此除了<code>空字符</code>以外所有的字符都为真，当指针到达字符串末尾的 <code>&#39;\0&#39;</code> 时，表达式的值为　<code>0</code>.</p>
+<h2 id="自增运算符和自减运算符"><a href="#自增运算符和自减运算符" class="headerlink" title="自增运算符和自减运算符"></a>自增运算符和自减运算符</h2><p>自增自减运算符略微有些复杂，那是因为它们既可以作为前缀又可以作为后缀，而且它们还有个副作用就是:<code>会改变操作数的值</code>.</p>
+<p>因此，使用自增自减运算符时，我们要谨记两点：</p>
+<ol>
+<li>表达式的值</li>
+<li>操作数的值</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> i = <span class="number">1</span>;</span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;i is %d\n&quot;</span>, i++); <span class="comment">// prints &quot;i is 1&quot;</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;i is %d\n&quot;</span>, i);   <span class="comment">// prints &quot;i is 2&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> i = <span class="number">1</span>;</span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;i is %d\n&quot;</span>, ++i); <span class="comment">// prints &quot;i is 2&quot;</span></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;i is %d\n&quot;</span>, i);   <span class="comment">// prints &quot;i is 2&quot;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><code>i++</code> 先赋值再自增，<code>++i</code> 先自增再赋值．</p>
+<p>需要注意的是，后缀运算符要比前缀运算符优先级要高，从文章开头的表格中可以看到，后缀自增自减优先级为 1，前缀自增自减优先级为 2．</p>
+<p>试想一下，对于 <code>*p++;</code>　语句，自增的是指针还是指针指向的值呢？</p>
+<p>很多地方包括 K&amp;R 都是这样解释：尽管 * 和 ++ 的优先级相同，但由于连接的规则是从右往左，所以 p 先和 ++ 进行连接．因此，被自增的不是 *p 而是 p．</p>
+<p>对照开头的优先级表，后缀 ++ 优先级要比间接寻址运算符 * 高，因此被进行加法的不是 *p 而是 p．</p>
+<p>从语法上看，这种解释才比较合理．</p>
+<h2 id="表达式语句"><a href="#表达式语句" class="headerlink" title="表达式语句"></a>表达式语句</h2><p>C 语言有一条不同寻常的规则，那就是任何表达式都可以用作语句．换句话说，不论表达式是什么类型，计算什么结果，我们都可以通过在后面添加分号将其转化为语句．例如，可以把表达式 ++i 转换为语句</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">i++;</span><br></pre></td></tr></table></figure>
+
+<p>i 先自增再赋值，但是值会被丢弃，接着执行下一条语句．</p>
+<h2 id="一个优先级引起的错误"><a href="#一个优先级引起的错误" class="headerlink" title="一个优先级引起的错误"></a>一个优先级引起的错误</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">str_cli</span><span class="params">(FILE *fp, <span class="type">int</span> sockfd)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">ssize_t</span> n;</span><br><span class="line">    <span class="type">char</span> sendline[MAXLINE];</span><br><span class="line">    <span class="type">char</span> recieve[MAXLINE];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (fgets(sendline, MAXLINE, fp) != <span class="literal">NULL</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">// 消除字符串中的换行符</span></span><br><span class="line">        <span class="type">int</span> i = <span class="built_in">strlen</span>(sendline);</span><br><span class="line">        <span class="keyword">if</span> (sendline[i - <span class="number">1</span>] == <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            sendline[i - <span class="number">1</span>] = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Writen(sockfd, sendline, <span class="built_in">strlen</span>(sendline));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> ((n = read(sockfd, recieve, MAXLINE) == <span class="number">0</span>))</span><br><span class="line">            err_quit(<span class="string">&quot;str_cli: server terminated prematurely&quot;</span>);</span><br><span class="line"></span><br><span class="line">        recieve[n] = <span class="number">0</span>;</span><br><span class="line">        Fputs(recieve, <span class="built_in">stdout</span>);</span><br><span class="line">        Fputs(<span class="string">&quot;\n&quot;</span>, <span class="built_in">stdout</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是我编写的一个 socket 客户端的代码，我在读取 socket 描述符中的内容时犯了错误，在 if 条件中的括号放错了位置，这导致我原本想要进行：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> ((n = read(sockfd, recieve, MAXLINE)) == <span class="number">0</span>)</span><br></pre></td></tr></table></figure>
+
+<p>变成了：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> ((n = read(sockfd, recieve, MAXLINE) == <span class="number">0</span>))</span><br></pre></td></tr></table></figure>
+
+<p>也就是条件变成了 <code>n = read() == 0</code>，对照优先级表，关系运算符 <code>==</code> 要比赋值运算符 <code>=</code> 优先级高，所以这里先进行 read　读取，再与0进行判等，当有正常内容被读出的时候，结果为假，之后赋值给 n，这里 n 会变成 0，进而造成 recieve 被置空．</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/C/" rel="tag"># C</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/02/26/network/tcp-time-wait/" rel="prev" title="好朋友 TIME_WAIT">
+                  <i class="fa fa-chevron-left"></i> 好朋友 TIME_WAIT
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/03/24/c/static-link-dynamic-link-1/" rel="next" title="重学C语言：编译和链接那些事儿（一）—— 编译过程">
+                  重学C语言：编译和链接那些事儿（一）—— 编译过程 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"8c370b3cbf4891c7d37d743455e69855"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

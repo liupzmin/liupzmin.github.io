@@ -1,0 +1,603 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>兔子先生</title>
+  <icon>http://liupzmin.com/images/favicon_200x200.png</icon>
+  <subtitle>探寻计算机的历史与哲学密码</subtitle>
+  <link href="http://liupzmin.com/atom.xml" rel="self"/>
+  
+  <link href="http://liupzmin.com/"/>
+  <updated>2025-02-07T01:32:12.639Z</updated>
+  <id>http://liupzmin.com/</id>
+  
+  <author>
+    <name>巴流</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>白兔与魔法师</title>
+    <link href="http://liupzmin.com/2024/07/27/essay/rabbit-and-conjuror/"/>
+    <id>http://liupzmin.com/2024/07/27/essay/rabbit-and-conjuror/</id>
+    <published>2024-07-27T02:17:59.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;ol&gt;
+&lt;li&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;乔斯坦·贾德在他的哲学启蒙著作《苏菲的世界》中有过一个很形象的比喻：&lt;strong&gt;我们的世界就像是魔法师从礼帽中变出的一只白兔，白兔就像是整个宇宙，而我们人类则是寄居在兔子皮毛深处的微生物。而哲学家总是试图沿着兔子的细毛往上爬，想</summary>
+        
+      
+    
+    
+    
+    <category term="随笔" scheme="http://liupzmin.com/categories/%E9%9A%8F%E7%AC%94/"/>
+    
+    
+    <category term="随笔" scheme="http://liupzmin.com/tags/%E9%9A%8F%E7%AC%94/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Go 语法糖 for range 中的 copy 问题</title>
+    <link href="http://liupzmin.com/2024/03/21/golang/for-range-copy/"/>
+    <id>http://liupzmin.com/2024/03/21/golang/for-range-copy/</id>
+    <published>2024-03-21T14:17:31.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;Go 的赋值、参数传递都是值传递，也就是说你得到的是一份 copy，对于如下的 for range 循环：&lt;/p&gt;
+&lt;figure class=&quot;highlight go&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="Go" scheme="http://liupzmin.com/tags/Go/"/>
+    
+    <category term="For-range" scheme="http://liupzmin.com/tags/For-range/"/>
+    
+    <category term="Iterating" scheme="http://liupzmin.com/tags/Iterating/"/>
+    
+    <category term="Copy" scheme="http://liupzmin.com/tags/Copy/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>谈 Go 的使用感受</title>
+    <link href="http://liupzmin.com/2024/01/03/golang/impression-of-go/"/>
+    <id>http://liupzmin.com/2024/01/03/golang/impression-of-go/</id>
+    <published>2024-01-03T12:17:31.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;假设让你在三种不同的条件下完成一副画，要求笔尖接触纸面到离开纸面即算一笔，三种条件分别是：只能落笔 1、100、10000</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/tags/golang/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>终端闲思录（2）- 终端与缓冲的关系</title>
+    <link href="http://liupzmin.com/2023/12/17/theory/terminal-buffer-io/"/>
+    <id>http://liupzmin.com/2023/12/17/theory/terminal-buffer-io/</id>
+    <published>2023-12-17T02:34:44.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;我们已经知道标准三剑客（标准输入、标准输出、标准错误）的本质是文件描述符，其连接的目的地可以是任意类型的文件，终端只是常用的目的地之一。那么，当目的地类型不同，IO</summary>
+        
+      
+    
+    
+    
+    <category term="terminal" scheme="http://liupzmin.com/categories/terminal/"/>
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/terminal/computer-theory/"/>
+    
+    <category term="buffer io" scheme="http://liupzmin.com/categories/terminal/computer-theory/buffer-io/"/>
+    
+    
+    <category term="computer theory" scheme="http://liupzmin.com/tags/computer-theory/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>终端闲思录（1）- 世界是我的表象</title>
+    <link href="http://liupzmin.com/2023/11/22/theory/terminal-fun-fact/"/>
+    <id>http://liupzmin.com/2023/11/22/theory/terminal-fun-fact/</id>
+    <published>2023-11-22T12:23:00.000Z</published>
+    <updated>2025-02-07T01:32:12.647Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;&lt;strong&gt;终端&lt;/strong&gt;是我们习焉不察，日用而不知的一种工具，如果去问一个 Linux 爱好者：“Linux 中最神秘的东西是什么？”</summary>
+        
+      
+    
+    
+    
+    <category term="terminal" scheme="http://liupzmin.com/categories/terminal/"/>
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/terminal/computer-theory/"/>
+    
+    
+    <category term="computer theory" scheme="http://liupzmin.com/tags/computer-theory/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>我想 Debug 容器运行时</title>
+    <link href="http://liupzmin.com/2023/10/14/golang/debug-containerd/"/>
+    <id>http://liupzmin.com/2023/10/14/golang/debug-containerd/</id>
+    <published>2023-10-14T02:08:00.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;出于好奇，我想弄明白  &lt;span class=&quot;exturl&quot; data-url=&quot;aHR0cHM6Ly9naXRodWIuY29tL2NvbnRhaW5lcmQvY29udGFpbmVyZA==&quot;&gt;Containerd&lt;i class=&quot;fa</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="docker" scheme="http://liupzmin.com/tags/docker/"/>
+    
+    <category term="kubernetes" scheme="http://liupzmin.com/tags/kubernetes/"/>
+    
+    <category term="golang" scheme="http://liupzmin.com/tags/golang/"/>
+    
+    <category term="containerd" scheme="http://liupzmin.com/tags/containerd/"/>
+    
+    <category term="k8s" scheme="http://liupzmin.com/tags/k8s/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>神奇的 lua</title>
+    <link href="http://liupzmin.com/2023/10/05/theory/lua/"/>
+    <id>http://liupzmin.com/2023/10/05/theory/lua/</id>
+    <published>2023-10-05T01:56:28.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;从来没去了解过 lua，今天抽空看了一下原理，特此记录一下。&lt;/p&gt;
+&lt;p&gt;在此，我们先不去管 lua 的语法，仅就其神奇之处论之，看看它到底神在哪里。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;lua 的神奇之处是它的解释器很小，目前 5.4.6 版本的二进制只有</summary>
+        
+      
+    
+    
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/computer-theory/"/>
+    
+    
+    <category term="lua" scheme="http://liupzmin.com/tags/lua/"/>
+    
+    <category term="Lua 编程" scheme="http://liupzmin.com/tags/Lua-%E7%BC%96%E7%A8%8B/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>关于并发的一点思考</title>
+    <link href="http://liupzmin.com/2023/08/08/golang/a-little-thought-of-concurrency/"/>
+    <id>http://liupzmin.com/2023/08/08/golang/a-little-thought-of-concurrency/</id>
+    <published>2023-08-08T10:08:30.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;计算机之所以需要并发，是为了提高 CPU 的利用率，因为大多数任务场景是混合了计算和 I&amp;#x2F;O 的，那么为了减少响应时间，使任务能够“同时”进行，计算机程序便演化出了并发的概念。&lt;/p&gt;
+&lt;p&gt;本文就针对 CPU-bound 和 IO-bound</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="golang - network - tokio - asynchronous" scheme="http://liupzmin.com/tags/golang-network-tokio-asynchronous/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>异步 I/O 探秘 —— 为什么说 Go 为我们提供了同步的网络编程接口 ？</title>
+    <link href="http://liupzmin.com/2023/06/28/golang/netpoller/"/>
+    <id>http://liupzmin.com/2023/06/28/golang/netpoller/</id>
+    <published>2023-06-28T12:08:30.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;本文主要讲述了我对 I&amp;#x2F;O 的一些理解，剖析了 Go 语言&lt;code&gt;netpoller&lt;/code&gt;是如何结合 epoll 和 goroutine 的，文章还简单畅想了 io_uring</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="golang - network - netpoller - synchronous/asynchronous" scheme="http://liupzmin.com/tags/golang-network-netpoller-synchronous-asynchronous/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>对话 ChatGPT 理解 Rust 异步网络 io</title>
+    <link href="http://liupzmin.com/2023/06/08/network/talk-rust-async-netio-with-chatgpt/"/>
+    <id>http://liupzmin.com/2023/06/08/network/talk-rust-async-netio-with-chatgpt/</id>
+    <published>2023-06-08T13:18:20.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;从已知理解未知是人类的自然思维模式，但这很容易让人陷入认知偏差的思维陷阱。我在理解 Rust 异步网络 io 时就陷入了思维定式，总是试图以线程切换或者 goroutine 协程切换的模式来理解 Rust 协程的调度，而这两种调度方式有着天壤之别。&lt;/p&gt;
+&lt;p&gt;以</summary>
+        
+      
+    
+    
+    
+    <category term="network" scheme="http://liupzmin.com/categories/network/"/>
+    
+    <category term="rust" scheme="http://liupzmin.com/categories/network/rust/"/>
+    
+    
+    <category term="async/await - tokio - rust" scheme="http://liupzmin.com/tags/async-await-tokio-rust/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>在生产环境中运行 grpc 服务所面临的挑战</title>
+    <link href="http://liupzmin.com/2023/04/01/network/running-grpc-service-in-production/"/>
+    <id>http://liupzmin.com/2023/04/01/network/running-grpc-service-in-production/</id>
+    <published>2023-04-01T07:18:20.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;原文链接:&lt;span class=&quot;exturl&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/computer-theory/"/>
+    
+    <category term="network" scheme="http://liupzmin.com/categories/computer-theory/network/"/>
+    
+    
+    <category term="grpc" scheme="http://liupzmin.com/tags/grpc/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度</title>
+    <link href="http://liupzmin.com/2022/05/27/theory/schedule/"/>
+    <id>http://liupzmin.com/2022/05/27/theory/schedule/</id>
+    <published>2022-05-27T07:01:51.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;CPU是一个舞台，操作系统内核是位技艺精湛的指挥家，形形色色的进程就是舞者，它们在内核的指挥下轮番上台表演，演奏一场生命的赞歌！&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&quot;1&quot;&gt;&lt;a href=&quot;#1&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="CPU" scheme="http://liupzmin.com/categories/CPU/"/>
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/CPU/computer-theory/"/>
+    
+    
+    <category term="os" scheme="http://liupzmin.com/tags/os/"/>
+    
+    <category term="groutine" scheme="http://liupzmin.com/tags/groutine/"/>
+    
+    <category term="进程" scheme="http://liupzmin.com/tags/%E8%BF%9B%E7%A8%8B/"/>
+    
+    <category term="线程" scheme="http://liupzmin.com/tags/%E7%BA%BF%E7%A8%8B/"/>
+    
+    <category term="go" scheme="http://liupzmin.com/tags/go/"/>
+    
+    <category term="抢占式调度" scheme="http://liupzmin.com/tags/%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/"/>
+    
+    <category term="上下文切换" scheme="http://liupzmin.com/tags/%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Stack 顿悟三部曲（3）：溯源 goroutine 堆栈</title>
+    <link href="http://liupzmin.com/2022/04/26/theory/stack-insight-03/"/>
+    <id>http://liupzmin.com/2022/04/26/theory/stack-insight-03/</id>
+    <published>2022-04-26T02:30:17.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;通过 &lt;a href=&quot;https://liupzmin.com/2021/06/27/theory/stack-insight-01-md/&quot;&gt;从CPU的视角说起&lt;/a&gt; 和 &lt;a</summary>
+        
+      
+    
+    
+    
+    <category term="CPU" scheme="http://liupzmin.com/categories/CPU/"/>
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/CPU/computer-theory/"/>
+    
+    
+    <category term="os" scheme="http://liupzmin.com/tags/os/"/>
+    
+    <category term="groutine" scheme="http://liupzmin.com/tags/groutine/"/>
+    
+    <category term="stack" scheme="http://liupzmin.com/tags/stack/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>另一个 effective go 中文版</title>
+    <link href="http://liupzmin.com/2022/03/28/golang/effective-go/"/>
+    <id>http://liupzmin.com/2022/03/28/golang/effective-go/</id>
+    <published>2022-03-28T02:08:30.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;希望能给 Go 后学带来更多有意义的内容&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;span class=&quot;exturl&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="effective-go" scheme="http://liupzmin.com/tags/effective-go/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>go 1.18 bufio 包中的 Writer.AvailableBuffer</title>
+    <link href="http://liupzmin.com/2022/03/22/golang/writer-availablebuffer-in-bufio/"/>
+    <id>http://liupzmin.com/2022/03/22/golang/writer-availablebuffer-in-bufio/</id>
+    <published>2022-03-22T02:08:30.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;go 1.18 于近日发布，带来了 go 历史上最大的一次语言级改变——&lt;code&gt;泛型&lt;/code&gt;！但本文只聚焦于本次发布中标准库 bufio 包中的一个小小的改变——&lt;strong&gt;Writer.AvailableBuffer&lt;/strong&gt;。go</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="Go1.18" scheme="http://liupzmin.com/tags/Go1-18/"/>
+    
+    <category term="bufio" scheme="http://liupzmin.com/tags/bufio/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Stack 顿悟三部曲（2）：穿越虚拟内存的迷雾</title>
+    <link href="http://liupzmin.com/2021/07/20/theory/stack-insight-02/"/>
+    <id>http://liupzmin.com/2021/07/20/theory/stack-insight-02/</id>
+    <published>2021-07-20T12:30:40.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;文中的示例基于 X86_64 体系架构，基于 Linux 内核 5.9.16 版本，汇编语言采用 AT&amp;amp;T 汇编&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在上一篇文章中，我简要介绍了 CPU 执行指令的过程，以及 CPU</summary>
+        
+      
+    
+    
+    
+    <category term="CPU" scheme="http://liupzmin.com/categories/CPU/"/>
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/CPU/computer-theory/"/>
+    
+    
+    <category term="os" scheme="http://liupzmin.com/tags/os/"/>
+    
+    <category term="stack" scheme="http://liupzmin.com/tags/stack/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Stack 顿悟三部曲（1）：从CPU的视角说起</title>
+    <link href="http://liupzmin.com/2021/06/27/theory/stack-insight-01-md/"/>
+    <id>http://liupzmin.com/2021/06/27/theory/stack-insight-01-md/</id>
+    <published>2021-06-27T01:56:28.000Z</published>
+    <updated>2025-02-07T01:32:12.643Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;h2 id=&quot;为什么会有这篇文章&quot;&gt;&lt;a href=&quot;#为什么会有这篇文章&quot; class=&quot;headerlink&quot; title=&quot;为什么会有这篇文章&quot;&gt;&lt;/a&gt;为什么会有这篇文章&lt;/h2&gt;&lt;p&gt;我在啃 rust</summary>
+        
+      
+    
+    
+    
+    <category term="CPU" scheme="http://liupzmin.com/categories/CPU/"/>
+    
+    <category term="computer theory" scheme="http://liupzmin.com/categories/CPU/computer-theory/"/>
+    
+    
+    <category term="os" scheme="http://liupzmin.com/tags/os/"/>
+    
+    <category term="stack" scheme="http://liupzmin.com/tags/stack/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>译:探索 Go1.16 io/fs 包以提高测试性能和可测试性</title>
+    <link href="http://liupzmin.com/2021/02/28/golang/explore-io-fs/"/>
+    <id>http://liupzmin.com/2021/02/28/golang/explore-io-fs/</id>
+    <published>2021-02-28T02:08:30.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;原文出处：&lt;span class=&quot;exturl&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="golang" scheme="http://liupzmin.com/categories/golang/"/>
+    
+    
+    <category term="Go1.16" scheme="http://liupzmin.com/tags/Go1-16/"/>
+    
+    <category term="io/fs" scheme="http://liupzmin.com/tags/io-fs/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>此间有什么歇不得处</title>
+    <link href="http://liupzmin.com/2021/02/27/essay/sudongpo-lin/"/>
+    <id>http://liupzmin.com/2021/02/27/essay/sudongpo-lin/</id>
+    <published>2021-02-27T09:17:59.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;blockquote&gt;
+&lt;p&gt;这一篇无关技术，仅仅是在读完林语堂版《苏东坡传》之后的随笔小记。从最近开始，我要求自己尽量做到每读完一本书、一篇有感想的文章、研究过某种技术、亦或某件我认为有趣的事之后，都要写一写感受，以此磨炼一下思想、锻炼一下笔触。&lt;/p&gt;
+&lt;/blockquo</summary>
+        
+      
+    
+    
+    
+    <category term="随笔" scheme="http://liupzmin.com/categories/%E9%9A%8F%E7%AC%94/"/>
+    
+    
+    <category term="随笔" scheme="http://liupzmin.com/tags/%E9%9A%8F%E7%AC%94/"/>
+    
+    <category term="苏东坡" scheme="http://liupzmin.com/tags/%E8%8B%8F%E4%B8%9C%E5%9D%A1/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>策略模式（下）</title>
+    <link href="http://liupzmin.com/2021/01/15/design_patterns/strategy-go/"/>
+    <id>http://liupzmin.com/2021/01/15/design_patterns/strategy-go/</id>
+    <published>2021-01-15T10:22:55.000Z</published>
+    <updated>2025-02-07T01:32:12.639Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;​	我在上一篇 &lt;a href=&quot;https://liupzmin.com/2021/01/03/design_patterns/strategy/&quot;&gt;策略模式（上）&lt;/a&gt;</summary>
+        
+      
+    
+    
+    
+    <category term="DesignPatterns" scheme="http://liupzmin.com/categories/DesignPatterns/"/>
+    
+    <category term="设计模式" scheme="http://liupzmin.com/categories/DesignPatterns/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/"/>
+    
+    
+    <category term="strategy" scheme="http://liupzmin.com/tags/strategy/"/>
+    
+    <category term="策略模式" scheme="http://liupzmin.com/tags/%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F/"/>
+    
+  </entry>
+  
+</feed>

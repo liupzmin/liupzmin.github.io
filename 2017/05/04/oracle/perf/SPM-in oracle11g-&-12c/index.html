@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本文主要介绍SPM的原理与运行机制，针对12c做一些补充记录，并添加一些11g和12c里面的知识点，以做备忘。  干预SQL执行计划的历史  SQL的执行效率，取决于它的执行计划是否高效。 优化器的算法是一个平衡，需要收集尽量少的信息，用尽量快的速度试图去得到一个最优的执行计划，这也决定了它不是万能的。 所以Oracle提供了一些辅助手段来“修复”优化器可能产生的错误，并不断改进这些方法。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL Plan Management（SPM）in oracle 11g &amp; 12c">
+<meta property="og:url" content="http://liupzmin.com/2017/05/04/oracle/perf/SPM-in%20oracle11g-&-12c/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="本文主要介绍SPM的原理与运行机制，针对12c做一些补充记录，并添加一些11g和12c里面的知识点，以做备忘。  干预SQL执行计划的历史  SQL的执行效率，取决于它的执行计划是否高效。 优化器的算法是一个平衡，需要收集尽量少的信息，用尽量快的速度试图去得到一个最优的执行计划，这也决定了它不是万能的。 所以Oracle提供了一些辅助手段来“修复”优化器可能产生的错误，并不断改进这些方法。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qiniu.liupzmin.com/SMB.png">
+<meta property="og:image" content="http://qiniu.liupzmin.com/SPM-CONFIG.png">
+<meta property="og:image" content="http://qiniu.liupzmin.com/manual%20load%20plan%20into%20plan%20baseline.png">
+<meta property="og:image" content="http://qiniu.liupzmin.com/SQL%20Plan%20Selection%20decision%20tree.png">
+<meta property="og:image" content="http://qiniu.liupzmin.com/Evolving%20SQL%20Plan%20Baselines.png">
+<meta property="article:published_time" content="2017-05-04T13:29:00.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.643Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="SQL Plan Management">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qiniu.liupzmin.com/SMB.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2017/05/04/oracle/perf/SPM-in%20oracle11g-&-12c/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2017/05/04/oracle/perf/SPM-in%20oracle11g-&-12c/","path":"2017/05/04/oracle/perf/SPM-in oracle11g-&-12c/","title":"SQL Plan Management（SPM）in oracle 11g & 12c"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SQL Plan Management（SPM）in oracle 11g & 12c | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B9%B2%E9%A2%84SQL%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%E7%9A%84%E5%8E%86%E5%8F%B2"><span class="nav-number">1.</span> <span class="nav-text">干预SQL执行计划的历史</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQL-Plan-Management"><span class="nav-number">2.</span> <span class="nav-text">SQL Plan Management</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SPM%E7%BB%84%E6%88%90"><span class="nav-number">2.1.</span> <span class="nav-text">SPM组成</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SQL-Management-Base"><span class="nav-number">2.2.</span> <span class="nav-text">SQL Management Base</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Plan-capture%EF%BC%88%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%E7%9A%84%E6%8D%95%E8%8E%B7%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">Plan capture（执行计划的捕获）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Automatic-Initial-Plan-Capture%EF%BC%88%E8%87%AA%E5%8A%A8%E6%8D%95%E8%8E%B7%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">Automatic Initial Plan Capture（自动捕获）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Manual-Plan-Capture%EF%BC%88%E6%89%8B%E5%8A%A8%E6%8D%95%E8%8E%B7%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">Manual Plan Capture（手动捕获）</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Plan-Selection%EF%BC%88%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%E7%9A%84%E9%80%89%E6%8B%A9%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">Plan Selection（执行计划的选择）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Plan-Evolution%EF%BC%88%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%E6%BC%94%E5%8C%96%EF%BC%89"><span class="nav-number">5.</span> <span class="nav-text">Plan Evolution（执行计划演化）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#11g-DBMS-SPM-EVOLVE-SQL-PLAN-BASELINE"><span class="nav-number">5.1.</span> <span class="nav-text">11g DBMS_SPM.EVOLVE_SQL_PLAN_BASELINE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#12c-SPM-Evolve-Advisor-Task-Manually-Evolve-Task"><span class="nav-number">5.2.</span> <span class="nav-text">12c SPM Evolve Advisor Task &amp; Manually Evolve Task</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#SPM-Evolve-Advisor-Task"><span class="nav-number">5.2.1.</span> <span class="nav-text">SPM Evolve Advisor Task</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Manually-Evolve-Task"><span class="nav-number">5.2.2.</span> <span class="nav-text">Manually Evolve Task</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Managing-the-SQL-Management-Base"><span class="nav-number">6.</span> <span class="nav-text">Managing the SQL Management Base</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9SMB%E7%A3%81%E7%9B%98%E4%BD%BF%E7%94%A8%E9%99%90%E9%A2%9D"><span class="nav-number">6.1.</span> <span class="nav-text">修改SMB磁盘使用限额</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9%E4%BF%9D%E7%95%99%E7%AD%96%E7%95%A5"><span class="nav-number">6.2.</span> <span class="nav-text">修改保留策略</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Monitoring-SQL-plan-baselines"><span class="nav-number">7.</span> <span class="nav-text">Monitoring SQL plan baselines</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dropping-SQL-Plan-Baselines"><span class="nav-number">8.</span> <span class="nav-text">Dropping SQL Plan Baselines</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2017/05/04/oracle/perf/SPM-in%20oracle11g-&-12c/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SQL Plan Management（SPM）in oracle 11g & 12c | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SQL Plan Management（SPM）in oracle 11g & 12c<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9vcmFjbGUvcGVyZi9TUE0taW4gb3JhY2xlMTFnLSYtMTJjLm1k" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2017-05-04 21:29:00" itemprop="dateCreated datePublished" datetime="2017-05-04T21:29:00+08:00">2017-05-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/oracle/" itemprop="url" rel="index"><span itemprop="name">oracle</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>本文主要介绍SPM的原理与运行机制，针对12c做一些补充记录，并添加一些11g和12c里面的知识点，以做备忘。</p>
+</blockquote>
+<h3 id="干预SQL执行计划的历史"><a href="#干预SQL执行计划的历史" class="headerlink" title="干预SQL执行计划的历史"></a>干预SQL执行计划的历史</h3><p>  SQL的执行效率，取决于它的执行计划是否高效。 优化器的算法是一个平衡，需要收集尽量少的信息，用尽量快的速度试图去得到一个最优的执行计划，这也决定了它不是万能的。 所以Oracle提供了一些辅助手段来“修复”优化器可能产生的错误，并不断改进这些方法。 </p>
+<ul>
+<li>Oracle 8： hint</li>
+<li>Oracle 8i&amp;9i: stored outline</li>
+<li>Oracle 10g: sql profile</li>
+<li>Oracle 11g: sql plan manangement 、adaptive cursor sharing</li>
+<li>Oracle 12c: sql plan manangement 、adaptive cursor sharing、Adaptive Execution Plans</li>
+</ul>
+<h3 id="SQL-Plan-Management"><a href="#SQL-Plan-Management" class="headerlink" title="SQL Plan Management"></a>SQL Plan Management</h3><h4 id="SPM组成"><a href="#SPM组成" class="headerlink" title="SPM组成"></a>SPM组成</h4><p>  SQL Plan Management（以下简称SPM）是一种优化器自动管理执行计划的预防机制，它确保数据库仅使用已知的、经过验证的执行计划。在Oracle 11g之前，执行计划一直是作为“运行时”生成的对象存在。虽然oracle提供了一些方法去指导它的生成，但Oracle一直没有试图去保存完整的执行计划。 从11g开始，执行计划就可以作为一类资源被保存下来，允许特定SQL语句只能选择“已知”的执行计划。</p>
+<p>  同其他方法相比，SPM更加的灵活。如我们所熟知的，一条带有绑定变量的SQL语句，最好的执行计划会根据绑定变量的值而不同，11g以前的方法都无法解决这个问题。在11g中，与adaptive cursor sharing配合，SPM允许你同时接受多个执行计划。执行时，根据不同的变量值，SPM会花费很少的运算从中选择一条最合适的。</p>
+<p>  SPM有以下三个主要组件：</p>
+<ul>
+<li><p>Plan capture</p>
+<p>捕捉并存储与SQL执行计划相关的信息</p>
+</li>
+<li><p>Plan selection</p>
+<p>使用SQL plan baselines选择合适的执行计划以避免性能退化</p>
+</li>
+<li><p>Plan evolution</p>
+<p>向SQL plan baselines增加新的执行计划</p>
+</li>
+</ul>
+<h4 id="SQL-Management-Base"><a href="#SQL-Management-Base" class="headerlink" title="SQL Management Base"></a>SQL Management Base</h4><p>   SMB是数据字典的一部分，位于SYSAUX表空间，其中存储着statement logs, plan histories, SQL plan baselines, and SQL profiles等内容。</p>
+<p>   Plan History是优化器生成的所有执行计划的总称；SQL Plan Baseline是Plan History里那些被标记为“ACCEPTED”的执行计划的总称，称为SQL执行计划基线；SQL Statement Log是一系列的查询签名（signatures），用于在自动捕获执行计划时辨别重复执行的sql；关系如下图所示：</p>
+<p>   <img data-src="http://qiniu.liupzmin.com/SMB.png" alt="SQL Management Base"></p>
+<h3 id="Plan-capture（执行计划的捕获）"><a href="#Plan-capture（执行计划的捕获）" class="headerlink" title="Plan capture（执行计划的捕获）"></a>Plan capture（执行计划的捕获）</h3><h4 id="Automatic-Initial-Plan-Capture（自动捕获）"><a href="#Automatic-Initial-Plan-Capture（自动捕获）" class="headerlink" title="Automatic Initial Plan Capture（自动捕获）"></a>Automatic Initial Plan Capture（自动捕获）</h4><p>   开启自动捕获只需在初始化参数中将<strong>OPTIMIZER_CAPTURE_SQL_PLAN_BASELINES</strong>设置为<strong>TRUE</strong>(默认为FALSE)，开启之后数据库就会为每个重复执行的sql创建SQL Plan Baseline，甄别是否是重复执行的SQL就是利用的上文提到的SQL Statement Log，基线包括供优化器重新生成该执行计划的所有信息，例如SQL text, outline, bind variable values, and compilation environment，这个初始的执行计划会被自动标记为“accepted”，如果之后又有新的执行计划生成，那么该执行计划会被加入到Plan History但是会被标记为“unaccepted”。</p>
+<p>   Oracle Database 12c Release 2 增加了自动捕获时sql过滤的功能，利用<strong>DBMS_SPM.CONFIGURE</strong>存储过程可以创建automatic capture filter。因此，你可以设置仅仅捕获你想要捕获的SQL，可以从<strong>DBA_SQL_MANAGEMENT_CONFIG</strong>视图中查询当前的设置：</p>
+<p>   <img data-src="http://qiniu.liupzmin.com/SPM-CONFIG.png" alt="SPM CONFIG"></p>
+<p>   自动捕获状态下执行计划的匹配算法如下：</p>
+<ul>
+<li>如果SQL plan baseline不存在，那么优化器会为该SQL创建SQL plan baseline和Plan History，并将捕获的plan标记为accepted，加入SQL plan baseline</li>
+<li>如果SQL plan baseline存在，那么优化器的行为就依赖于解析时生产的基于成本的执行计划<ul>
+<li>如果该plan与SQL plan baseline中的plan都不匹配，那么优化器将其标记为unaccepted加入Plan History</li>
+<li>如果该plan匹配到SQL plan baseline中的plan，那么执行该plan，不对现有的SQL plan baseline与Plan History做任何改动</li>
+</ul>
+</li>
+</ul>
+<h4 id="Manual-Plan-Capture（手动捕获）"><a href="#Manual-Plan-Capture（手动捕获）" class="headerlink" title="Manual Plan Capture（手动捕获）"></a>Manual Plan Capture（手动捕获）</h4><p>   手动加载已存在的执行计划到SPM是最常用的方式，需要注意的是，默认情况下手动load的plan，会被自动标记为”accepted“，创建新的SQL plan baseline或加入到已有的SQL plan baseline中，oracle提供以下5种方式手动加载Execution Plan：</p>
+<ul>
+<li>From a SQL Tuning Set（DBMS_SPM.LOAD_PLANS_FROM_SQLSET）</li>
+<li>From the cursor cache （DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE）</li>
+<li>From the AWR repository (new to Oracle Database 12c Release 2)（DBMS_SPM.LOAD_PLANS_FROM_AWR）</li>
+<li>Unpacked from a staging table（DBMS_SPM.UNPACK_STGTAB_BASELINE）</li>
+<li>From existing stored outlines（DBMS_SPM.MIGRATE_STORED_OUTLINE）</li>
+</ul>
+<p>   <img data-src="http://qiniu.liupzmin.com/manual%20load%20plan%20into%20plan%20baseline.png" alt="Loading Plans into a SQL Plan Baseline"></p>
+<p>  手动load的结果有2种情况，由baseline是否存在而决定：</p>
+<ul>
+<li>如果SQL Plan Baseline不存在，则数据库做如下事情<ol>
+<li>Creates a plan history and plan baseline for the statement</li>
+<li>Marks the initial plan for the statement as accepted</li>
+<li>Adds the plan to the new baseline</li>
+</ol>
+</li>
+<li>如果SQL Plan Baseline存在，则数据库做如下事情<ol>
+<li>Marks the loaded plan as accepted</li>
+<li>Adds the plan to the plan baseline for the statement without verifying the plan&#39;s performance</li>
+</ol>
+</li>
+</ul>
+<p>   手动load的plan会被自动标为accepted，因为优化器会假定任何由管理员手动加载的plan都是性能上可接受的；当然，你也可以在load的时候在<em>DBMS_SPM.LOAD_PLANS_FROM_%</em> 函数中将<strong>enable</strong>设为<strong>NO</strong>，从而达到禁用的目的。</p>
+<p>  具体的load过程，本文暂不做讨论，详情请参阅官方文档 <span class="exturl" data-url="aHR0cDovL2RvY3Mub3JhY2xlLmNvbS9kYXRhYmFzZS8xMjIvVEdTUUwvbWFuYWdpbmctc3FsLXBsYW4tYmFzZWxpbmVzLmh0bSNUR1NRTDk0NjIx">Managing SQL Plan Baselines<i class="fa fa-external-link-alt"></i></span>，这里需要说明的一点是从AWR导入执行计划是oracle 12.2才开始加入的，12.2以前要想实现从AWR中导入执行计划，需要先创建SQL Tuning set，并从AWR中将plan load进STS，再使用DBMS_SPM.LOAD_PLANS_FROM_SQLSET将计划加载到SPM中。</p>
+<p>  下面再谈一下，对于已存在SQL Plan Baseline的SQL，其后续的新的执行计划的捕获情况；</p>
+<p>  不论使用哪种方式创建了SQL Plan Baseline，后续新的plan都会被加入到Plan History并被标记为”unaccepted“，此行为不依赖于<strong>OPTIMIZER_CAPTURE_SQL_PLAN_ BASELINES</strong>的设置，新加入的plan不会被使用，直到其经过验证比已accepted的plan性能更好，并演化为accepted加入SQL Plan Baseline。</p>
+<h3 id="Plan-Selection（执行计划的选择）"><a href="#Plan-Selection（执行计划的选择）" class="headerlink" title="Plan Selection（执行计划的选择）"></a>Plan Selection（执行计划的选择）</h3><p>  SPM通过几个标记来实现对执行计划的控制，这些标记可以在视图<strong>DBA_SQL_PLAN_BASELINES</strong>中查到：</p>
+<ul>
+<li><p>Enabled（控制活动）</p>
+<ul>
+<li>YES（活动的，但不一定会被使用）</li>
+<li>NO（禁用的，不活动的，肯定不被使用）</li>
+</ul>
+</li>
+<li><p>Accepted（控制使用）</p>
+<ul>
+<li>YES（只有 “Enabled” 并且 “Accepted” 的计划才会被选择使用）</li>
+<li>NO（如果是“Enabled” 那么只有被evolve成“Accepted”才有可能被执行）</li>
+</ul>
+</li>
+<li><p>Fixed（控制优先级）</p>
+<ul>
+<li>YES（如果是“Enabled”并且“Accepted”，会优先选择这个计划，这个计划会被视为不需要改变的、固定的）</li>
+<li>NO（普通的计划，无需优先）</li>
+</ul>
+</li>
+<li><p>Reproduced（有效性）</p>
+<ul>
+<li>YES（优化器可以使用这个计划）</li>
+<li>NO（计划无效，比如索引被删除）</li>
+</ul>
+</li>
+<li><p>ADAPTIVE(12c引入，标记是否是Adaptive Plans)</p>
+<ul>
+<li>YES（是一个adaptive plan，在evolve的时候会被考虑，evolve时会测试执行，验证后final plan会变为accepted）</li>
+<li>NO（adaptive plan被evolve后会被标记为NO）</li>
+</ul>
+<p>先来看一下SQL Plan Selection的决策树：</p>
+</li>
+</ul>
+<p><img data-src="http://qiniu.liupzmin.com/SQL%20Plan%20Selection%20decision%20tree.png" alt="Decision Tree for SQL Plan Selection"></p>
+<p>  当数据库为一条sql执行硬解析的时候，优化器会生成一个best-cost plan，如果初始化参数<strong>OPTIMIZER_USE_SQL_PLAN_BASELINES</strong>被设置成为<strong>TRUE</strong>（默认为TRUE），那么在执行best-cost plan之前会先检查是否存在对应的SQL Plan Baseline，匹配的时候使用SQL语句的signature，signature是一个由SQL文本规范化后的SQL标识符（case insensitivity and with whitespaces removed）（由此可见只要一条sql生成了baseline之后，那么无论大小写改变、空格多少都会被认为是一条sql），这个比较是内存操作，因此开销很小。</p>
+<p>  如果baseline不存在，就按生成的计划执行。如果baseline存在，那么要查看history里是否有这个计划，如果没有，就将这个计划插入，并标记为ENABLED,NON-ACCEPTED。</p>
+<p>  在baseline中查看是否有FIXED的计划存在，如果存在，执行FIXED的计划，如果存在多个FIXED的计划，根据统计信息重新计算cost，选择cost小的那个。</p>
+<p>  如果FIXED的计划不存在，就选择ACCEPTED的计划执行。 如果存在多个ACCEPTED的计划，根据统计信息重新计算cost，选择cost小的那个。</p>
+<p>  如果因为某些系统的改变（例如索引删除）导致已accepted的计划无法reproducible，那么优化器将使用新生成的best-cost plan，并将其加入plan history标记为unaccepted</p>
+<p>  <em>* 注意，这里每次重新计算cost的代价不大，因为执行计划是已知的，优化器不必遍历所有的可能，只需根据算法计算出已知计划的cost便可。</em></p>
+<p>  <em>* 注意，当sql plan baseline中有Fixed的时候，新生成的执行计划是不会被加入到plan history中的。</em></p>
+<h3 id="Plan-Evolution（执行计划演化）"><a href="#Plan-Evolution（执行计划演化）" class="headerlink" title="Plan Evolution（执行计划演化）"></a>Plan Evolution（执行计划演化）</h3><p>  当优化器生成一个新的执行计划后，将其加入到plan history中作为一个unaccepted的plan，它需要被verified之后才可以使用，Verification是一个比较unaccepted和accepted（所有accepted中最小cost的）plan的执行性能的过程，verify的过程是实际执行该plan的过程，通过与accepted的plan比较elapse time, CPU time and buffer gets等性能统计信息来判断新plan的性能，如果新的plan的性能优于原plan或者相差无几，那么该plan会被标记为accepted加入SQL Plan Baseline，否则它仍然是一个unaccepted的plan，但是<em>LAST_VERIFIED</em>属性会被更新为当前时刻，12c之后的Automatic plan evolution过程还会考虑自上次被verify之后超过30天的plan，oracle认为如果系统有所改变，也许之前的plan会有更好的性能，当然这个功能可以通过<em>dbms_spm.alter_sql_plan_baseline</em>来禁止。</p>
+<p>  12c之前没有自动Evolve的机制，从12.1开始automatic plan evolution由SPM Evolve Advisor来完成，11g时代的<em>DBMS_SPM.EVOLVE_SQL_PLAN_BASELINE</em>被废弃，下面将分别针对11g和12c来介绍Plan Evolution的过程：</p>
+<h4 id="11g-DBMS-SPM-EVOLVE-SQL-PLAN-BASELINE"><a href="#11g-DBMS-SPM-EVOLVE-SQL-PLAN-BASELINE" class="headerlink" title="11g DBMS_SPM.EVOLVE_SQL_PLAN_BASELINE"></a>11g DBMS_SPM.EVOLVE_SQL_PLAN_BASELINE</h4><p>  11g可以使用Oracle Enterprise Manager或者DBMS_SPM.EVOLVE_SQL_PLAN_BASELINE函数来演化SQL Plan，语法如下：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">DBMS_SPM.EVOLVE_SQL_PLAN_BASELINE (</span><br><span class="line"> 	sql_handle   <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="keyword">NULL</span>,</span><br><span class="line"> 	plan_name    <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="keyword">NULL</span>,</span><br><span class="line"> 	time_limit   <span class="keyword">IN</span> <span class="type">INTEGER</span>  :<span class="operator">=</span> DBMS_SPM.AUTO_LIMIT,</span><br><span class="line"> 	verify       <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="string">&#x27;YES&#x27;</span>,</span><br><span class="line"> 	<span class="keyword">commit</span>       <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="string">&#x27;YES&#x27;</span>)</span><br><span class="line"><span class="keyword">RETURN</span> <span class="type">CLOB</span>;</span><br></pre></td></tr></table></figure>
+
+<p>  这里由两个标记控制：</p>
+<pre><code>- Verify 
+    - YES (验证比较性能)
+    - NO (不验证性能)
+- Commit
+    - YES (演化)
+    - NO (只生成报告，不演化)
+</code></pre>
+<p>  这里可以通过不同的排列组合，达到不同的效果：</p>
+<ul>
+<li>自动接收所有性能更好的执行计划，并生成report (Verify-&gt;YES, Commit-&gt;YES)</li>
+<li>自动接收所有新的执行计划，不验证性能，生成report (Verify-&gt;NO, Commit-&gt;YES)</li>
+<li>比较性能，生成report，人工确认是否演化 (Verify-&gt;YES, Commit-&gt;NO)</li>
+</ul>
+<h4 id="12c-SPM-Evolve-Advisor-Task-Manually-Evolve-Task"><a href="#12c-SPM-Evolve-Advisor-Task-Manually-Evolve-Task" class="headerlink" title="12c SPM Evolve Advisor Task &amp; Manually Evolve Task"></a>12c SPM Evolve Advisor Task &amp; Manually Evolve Task</h4><h5 id="SPM-Evolve-Advisor-Task"><a href="#SPM-Evolve-Advisor-Task" class="headerlink" title="SPM Evolve Advisor Task"></a>SPM Evolve Advisor Task</h5><p>  从12.1开始，自动演化任务由SPM Evolve Advisor每天在维护窗口期内自动执行，SPM Evolve Advisor是一个自动任务（SYS_AUTO_SPM_EVOLVE_TASK），它每天做如下操作：</p>
+<ol>
+<li>Locates unaccepted plans</li>
+<li>Ranks all unaccepted plans</li>
+<li>Performs test executions of as many plans as possible during the maintenance window</li>
+<li>Selects the lowest-cost plan to compare against each unaccepted plan</li>
+<li>Accepts automatically any unaccepted plan that performs sufficiently better, using a cost-based algorithm, than the existing accepted plan</li>
+</ol>
+<p>  <em>* 需要注意的是，没有单独针对Automatic SPM Evolve Advisor task的scheduler client，Automatic SQL Tuning Advisor 和 Automatic SPM Evolve Advisor共用一个client，因此它们两个同时启用或同时禁用。</em></p>
+<p>  自动任务属性可以通过<em>DBMS_SPM.SET_EVOLVE_TASK_PARAMETER</em>来配置，下面列举几个重要的属性：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">COL PARAMETER_NAME FORMAT a25</span><br><span class="line">COL <span class="keyword">VALUE</span> FORMAT a42</span><br><span class="line"><span class="keyword">SELECT</span> PARAMETER_NAME, PARAMETER_VALUE <span class="keyword">AS</span> &quot;VALUE&quot;</span><br><span class="line"><span class="keyword">FROM</span>   DBA_ADVISOR_PARAMETERS</span><br><span class="line"><span class="keyword">WHERE</span>  ( (TASK_NAME <span class="operator">=</span> <span class="string">&#x27;SYS_AUTO_SPM_EVOLVE_TASK&#x27;</span>) <span class="keyword">AND</span></span><br><span class="line">       ( (PARAMETER_NAME <span class="operator">=</span> <span class="string">&#x27;ACCEPT_PLANS&#x27;</span>) <span class="keyword">OR</span></span><br><span class="line">         (PARAMETER_NAME <span class="keyword">LIKE</span> <span class="string">&#x27;%ALT%&#x27;</span>) <span class="keyword">OR</span></span><br><span class="line">         (PARAMETER_NAME <span class="operator">=</span> <span class="string">&#x27;TIME_LIMIT&#x27;</span>) ) );</span><br></pre></td></tr></table></figure>
+<p>  12.2的默认值如下(各个属性的意义详见官方文档)：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">PARAMETER_NAME		    <span class="keyword">VALUE</span></span><br><span class="line"><span class="comment">------------------------- ------------------------------------------</span></span><br><span class="line">TIME_LIMIT		        <span class="number">3600</span></span><br><span class="line">ALTERNATE_PLAN_LIMIT	    <span class="number">10</span></span><br><span class="line">ALTERNATE_PLAN_SOURCE	    CURSOR_CACHE<span class="operator">+</span>AUTOMATIC_WORKLOAD_REPOSITORY</span><br><span class="line">ALTERNATE_PLAN_BASELINE   EXISTING</span><br><span class="line">ACCEPT_PLANS		        <span class="literal">TRUE</span></span><br></pre></td></tr></table></figure>
+<p>  修改属性：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">  <span class="keyword">BEGIN</span></span><br><span class="line">  DBMS_SPM.SET_EVOLVE_TASK_PARAMETER(</span><br><span class="line">    task_name <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;SYS_AUTO_SPM_EVOLVE_TASK&#x27;</span></span><br><span class="line">,   <span class="keyword">parameter</span> <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;TIME_LIMIT&#x27;</span></span><br><span class="line">,   <span class="keyword">value</span>     <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;1200&#x27;</span></span><br><span class="line">);</span><br><span class="line">  DBMS_SPM.SET_EVOLVE_TASK_PARAMETER(</span><br><span class="line">    task_name <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;SYS_AUTO_SPM_EVOLVE_TASK&#x27;</span></span><br><span class="line">,   <span class="keyword">parameter</span> <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;ACCEPT_PLANS&#x27;</span></span><br><span class="line">,   <span class="keyword">value</span>     <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;true&#x27;</span></span><br><span class="line">);</span><br><span class="line">  DBMS_SPM.SET_EVOLVE_TASK_PARAMETER(</span><br><span class="line">    task_name <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;SYS_AUTO_SPM_EVOLVE_TASK&#x27;</span></span><br><span class="line">,   <span class="keyword">parameter</span> <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;ALTERNATE_PLAN_LIMIT&#x27;</span></span><br><span class="line">,   <span class="keyword">value</span>     <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;500&#x27;</span></span><br><span class="line">);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p> 查看结果：</p>
+ <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"> PARAMETER_NAME            <span class="keyword">VALUE</span></span><br><span class="line"><span class="comment">------------------------- ------------------------------------------</span></span><br><span class="line">ALTERNATE_PLAN_LIMIT      <span class="number">500</span></span><br><span class="line">ALTERNATE_PLAN_SOURCE     CURSOR_CACHE<span class="operator">+</span>AUTOMATIC_WORKLOAD_REPOSITORY</span><br><span class="line">ALTERNATE_PLAN_BASELINE   EXISTING</span><br><span class="line">ACCEPT_PLANS              <span class="literal">true</span></span><br><span class="line">TIME_LIMIT                <span class="number">1200</span></span><br></pre></td></tr></table></figure>
+
+<p> 自动演化的报告可以通过函数<em>DBMS_SPM.REPORT_AUTO_EVOLVE_TASK</em>来查询：</p>
+ <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; SET LONG 1000000 PAGESIZE 1000 LONGCHUNKSIZE 100 LINESIZE 100</span><br><span class="line">SQL&gt; SELECT DBMS_SPM.report_auto_evolve_task FROM   dual;</span><br><span class="line"></span><br><span class="line">REPORT_AUTO_EVOLVE_TASK</span><br><span class="line">----------------------------------------------------------------------------------------------------</span><br><span class="line">GENERAL INFORMATION SECTION</span><br><span class="line">---------------------------------------------------------------------------------------------</span><br><span class="line"></span><br><span class="line"> Task Information:</span><br><span class="line"> ---------------------------------------------</span><br><span class="line"> Task Name	          : SYS_AUTO_SPM_EVOLVE_TASK</span><br><span class="line"> Task Owner	          : SYS</span><br><span class="line"> Description	      : Automatic SPM Evolve Task</span><br><span class="line"> Execution Name       : EXEC_1173</span><br><span class="line"> Execution Type       : SPM EVOLVE</span><br><span class="line"> Scope		          : COMPREHENSIVE</span><br><span class="line"> Status 	          : COMPLETED</span><br><span class="line"> Started	          : 04/20/2017 22:00:05</span><br><span class="line"> Finished	          : 04/20/2017 22:00:09</span><br><span class="line"> Last Updated	      : 04/20/2017 22:00:09</span><br><span class="line"> Global Time Limit    : 3600</span><br><span class="line"> Per-Plan Time Limit  : UNUSED</span><br><span class="line"> Number of Errors     : 0</span><br><span class="line">---------------------------------------------------------------------------------------------</span><br><span class="line"></span><br><span class="line">SUMMARY SECTION</span><br><span class="line">---------------------------------------------------------------------------------------------</span><br><span class="line">  Number of plans processed  : 0</span><br><span class="line">  Number of findings	     : 0</span><br><span class="line">  Number of recommendations  : 0</span><br><span class="line">  Number of errors	         : 0</span><br><span class="line">---------------------------------------------------------------------------------------------</span><br></pre></td></tr></table></figure>
+
+<h5 id="Manually-Evolve-Task"><a href="#Manually-Evolve-Task" class="headerlink" title="Manually Evolve Task"></a>Manually Evolve Task</h5><p>  手动演化的过程大致如下图：</p>
+<p>  <img data-src="http://qiniu.liupzmin.com/Evolving%20SQL%20Plan%20Baselines.png" alt="Evolving SQL Plan Baselines"></p>
+<ol>
+<li>Create an evolve task</li>
+<li>Optionally, set evolve task parameters(在12.2.0.1中仅TIME_LIMIT有效)</li>
+<li>Execute the evolve task</li>
+<li>Implement the recommendations in the task</li>
+<li>Report on the task outcome</li>
+</ol>
+<p>  个人认为4、5无绝对先后顺序</p>
+<p>  具体操作，本文暂不讨论，请浏览<a href="https://liupzmin.com/2017/04/24/oracle/perf/Manually-Evolving-SQL-Plan-Baselines-in-Oracle-Database-12c-Release-2/">Manually Evolving SQL Plan Baselines in Oracle Database 12c Release 2</a></p>
+<h3 id="Managing-the-SQL-Management-Base"><a href="#Managing-the-SQL-Management-Base" class="headerlink" title="Managing the SQL Management Base"></a>Managing the SQL Management Base</h3><p>   利用<em>DBMS_SPM.CONFIGURE</em>存储过程可以配置SMB，视图<em>DBA_SQL_MANAGEMENT_CONFIG</em>显示了各个配置项的状态。</p>
+<p>   参数有如下几个：</p>
+<ul>
+<li>SPACE_BUDGET_PERCENT（SYSAUX表空间的最大使用率）</li>
+<li>PLAN_RETENTION_WEEKS（没被使用的plan的最大保留weeks，默认是53周）</li>
+<li>AUTO_CAPTURE_PARSING_SCHEMA_NAME（自动捕获过滤schema）</li>
+<li>AUTO_CAPTURE_MODULE</li>
+<li>AUTO_CAPTURE_MODULE</li>
+<li>AUTO_CAPTURE_SQL_TEXT（自动捕获指定的sql）</li>
+</ul>
+<h4 id="修改SMB磁盘使用限额"><a href="#修改SMB磁盘使用限额" class="headerlink" title="修改SMB磁盘使用限额"></a>修改SMB磁盘使用限额</h4><p>  1.查询当前配置</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">  </span><br><span class="line">  <span class="keyword">SELECT</span> PARAMETER_NAME, PARAMETER_VALUE <span class="keyword">AS</span> &quot;%_LIMIT&quot;, </span><br><span class="line">       ( <span class="keyword">SELECT</span> <span class="built_in">sum</span>(bytes<span class="operator">/</span><span class="number">1024</span><span class="operator">/</span><span class="number">1024</span>) <span class="keyword">FROM</span> DBA_DATA_FILES </span><br><span class="line">         <span class="keyword">WHERE</span> TABLESPACE_NAME <span class="operator">=</span> <span class="string">&#x27;SYSAUX&#x27;</span> ) <span class="keyword">AS</span> SYSAUX_SIZE_IN_MB,</span><br><span class="line">       PARAMETER_VALUE<span class="operator">/</span><span class="number">100</span> <span class="operator">*</span> </span><br><span class="line">       ( <span class="keyword">SELECT</span> <span class="built_in">sum</span>(bytes<span class="operator">/</span><span class="number">1024</span><span class="operator">/</span><span class="number">1024</span>) <span class="keyword">FROM</span> DBA_DATA_FILES </span><br><span class="line">         <span class="keyword">WHERE</span> TABLESPACE_NAME <span class="operator">=</span> <span class="string">&#x27;SYSAUX&#x27;</span> ) <span class="keyword">AS</span> &quot;CURRENT_LIMIT_IN_MB&quot;</span><br><span class="line"><span class="keyword">FROM</span> DBA_SQL_MANAGEMENT_CONFIG</span><br><span class="line"><span class="keyword">WHERE</span> PARAMETER_NAME <span class="operator">=</span> <span class="string">&#x27;SPACE_BUDGET_PERCENT&#x27;</span>;</span><br><span class="line"></span><br><span class="line">PARAMETER_NAME          <span class="operator">%</span>_LIMIT SYSAUX_SIZE_IN_MB CURRENT_LIMIT_IN_MB</span><br><span class="line"><span class="comment">-------------------- ---------- ----------------- -------------------</span></span><br><span class="line">SPACE_BUDGET_PERCENT         <span class="number">10</span>          <span class="number">211.4375</span>            <span class="number">21.14375</span></span><br></pre></td></tr></table></figure>
+
+<p>  2.修改配额</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXECUTE</span> DBMS_SPM.CONFIGURE(<span class="string">&#x27;space_budget_percent&#x27;</span>,<span class="number">30</span>);</span><br></pre></td></tr></table></figure>
+
+<p>  3.查看结果</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">  <span class="keyword">SELECT</span> PARAMETER_NAME, PARAMETER_VALUE <span class="keyword">AS</span> &quot;%_LIMIT&quot;, </span><br><span class="line">       ( <span class="keyword">SELECT</span> <span class="built_in">sum</span>(bytes<span class="operator">/</span><span class="number">1024</span><span class="operator">/</span><span class="number">1024</span>) <span class="keyword">FROM</span> DBA_DATA_FILES </span><br><span class="line">         <span class="keyword">WHERE</span> TABLESPACE_NAME <span class="operator">=</span> <span class="string">&#x27;SYSAUX&#x27;</span> ) <span class="keyword">AS</span> SYSAUX_SIZE_IN_MB,</span><br><span class="line">       PARAMETER_VALUE<span class="operator">/</span><span class="number">100</span> <span class="operator">*</span> </span><br><span class="line">       ( <span class="keyword">SELECT</span> <span class="built_in">sum</span>(bytes<span class="operator">/</span><span class="number">1024</span><span class="operator">/</span><span class="number">1024</span>) <span class="keyword">FROM</span> DBA_DATA_FILES </span><br><span class="line">         <span class="keyword">WHERE</span> TABLESPACE_NAME <span class="operator">=</span> <span class="string">&#x27;SYSAUX&#x27;</span> ) <span class="keyword">AS</span> &quot;CURRENT_LIMIT_IN_MB&quot;</span><br><span class="line"><span class="keyword">FROM</span>   DBA_SQL_MANAGEMENT_CONFIG</span><br><span class="line"><span class="keyword">WHERE</span>  PARAMETER_NAME <span class="operator">=</span> <span class="string">&#x27;SPACE_BUDGET_PERCENT&#x27;</span>;</span><br><span class="line"></span><br><span class="line">PARAMETER_NAME          <span class="operator">%</span>_LIMIT SYSAUX_SIZE_IN_MB CURRENT_LIMIT_IN_MB</span><br><span class="line"><span class="comment">-------------------- ---------- ----------------- -------------------</span></span><br><span class="line">SPACE_BUDGET_PERCENT         <span class="number">30</span>          <span class="number">211.4375</span>            <span class="number">63.43125</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="修改保留策略"><a href="#修改保留策略" class="headerlink" title="修改保留策略"></a>修改保留策略</h4><p>1.查看当前配置</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> PARAMETER_NAME, PARAMETER_VALUE</span><br><span class="line">  <span class="number">2</span>  <span class="keyword">FROM</span>   DBA_SQL_MANAGEMENT_CONFIG</span><br><span class="line">  <span class="number">3</span>  <span class="keyword">WHERE</span>  PARAMETER_NAME <span class="operator">=</span> <span class="string">&#x27;PLAN_RETENTION_WEEKS&#x27;</span>;</span><br><span class="line"> </span><br><span class="line">PARAMETER_NAME                 PARAMETER_VALUE</span><br><span class="line"><span class="comment">------------------------------ ---------------</span></span><br><span class="line">PLAN_RETENTION_WEEKS                        <span class="number">53</span></span><br></pre></td></tr></table></figure>
+
+<p>2.修改配置</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXECUTE</span> DBMS_SPM.CONFIGURE(<span class="string">&#x27;plan_retention_weeks&#x27;</span>,<span class="number">105</span>);</span><br></pre></td></tr></table></figure>
+
+<p>3.查看结果</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> PARAMETER_NAME, PARAMETER_VALUE</span><br><span class="line">  <span class="number">2</span>  <span class="keyword">FROM</span>   DBA_SQL_MANAGEMENT_CONFIG</span><br><span class="line">  <span class="number">3</span>  <span class="keyword">WHERE</span>  PARAMETER_NAME <span class="operator">=</span> <span class="string">&#x27;PLAN_RETENTION_WEEKS&#x27;</span>;</span><br><span class="line"> </span><br><span class="line">PARAMETER_NAME                 PARAMETER_VALUE</span><br><span class="line"><span class="comment">------------------------------ ---------------</span></span><br><span class="line">PLAN_RETENTION_WEEKS                       <span class="number">105</span></span><br></pre></td></tr></table></figure>
+
+
+<h3 id="Monitoring-SQL-plan-baselines"><a href="#Monitoring-SQL-plan-baselines" class="headerlink" title="Monitoring SQL plan baselines"></a>Monitoring SQL plan baselines</h3><p>  视图DBA_SQL_PLAN_BASELINES展示了当前SQL plan baselines的信息：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> SIGNATURE,</span><br><span class="line">     SQL_HANDLE,</span><br><span class="line">     SQL_TEXT,</span><br><span class="line">     PLAN_NAME,</span><br><span class="line">     PARSING_SCHEMA_NAME,</span><br><span class="line">     LAST_EXECUTED,</span><br><span class="line">     ENABLED,</span><br><span class="line">     ACCEPTED,</span><br><span class="line">     REPRODUCED,</span><br><span class="line">     EXECUTIONS</span><br><span class="line"><span class="keyword">from</span> dba_sql_plan_baselines;</span><br></pre></td></tr></table></figure>
+
+<p>  结果如下：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">                SIGNATURE SQL_HANDLE           SQL_TEXT                       PLAN_NAME                      PARSING_SC LAST_EXECUTED                       ENA ACC REP EXECUTIONS</span><br><span class="line"><span class="comment">----------------------- -------------------- ------------------------------ ------------------------------ ---------- ----------------------------------- --- --- --- ----------</span></span><br><span class="line">                                             here id<span class="operator">=</span><span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="number">1962643652257108320</span> SQL_1b3cb600d175d160 <span class="keyword">select</span> <span class="comment">/*liu*/</span> <span class="operator">*</span>  <span class="keyword">from</span> test wh SQL_PLAN_1qg5q038rbnb025a3834b SCOTT      <span class="number">13</span><span class="operator">-</span>APR<span class="number">-17</span> <span class="number">02.23</span><span class="number">.12</span><span class="number">.000000</span> PM        YES YES YES          <span class="number">0</span></span><br><span class="line">                                             ere id<span class="operator">=</span><span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="number">1962643652257108320</span> SQL_1b3cb600d175d160 <span class="keyword">select</span> <span class="comment">/*liu*/</span> <span class="operator">*</span>  <span class="keyword">from</span> test wh SQL_PLAN_1qg5q038rbnb097bbe3d0 HR         <span class="number">13</span><span class="operator">-</span>APR<span class="number">-17</span> <span class="number">02.35</span><span class="number">.09</span><span class="number">.000000</span> PM        YES YES YES          <span class="number">0</span></span><br><span class="line">                                             ere id<span class="operator">=</span><span class="number">1</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>需要注意的一点是，该视图中LAST_EXECUTED和EXECUTIONS并不是实时更新的。</p>
+</blockquote>
+<p>  函数DBMS_XPLAN.DISPLAY_SQL_PLAN_BASELINE可以查看baseline中的执行计划，语法如下：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"> DBMS_XPLAN.DISPLAY_SQL_PLAN_BASELINE (</span><br><span class="line">  sql_handle      <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="keyword">NULL</span>,</span><br><span class="line">  plan_name       <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="keyword">NULL</span>,</span><br><span class="line">  format          <span class="keyword">IN</span> VARCHAR2 :<span class="operator">=</span> <span class="string">&#x27;TYPICAL&#x27;</span>)</span><br><span class="line"><span class="keyword">RETURN</span> dbms_xplan_type_table;</span><br></pre></td></tr></table></figure>
+
+<p>  例如：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> </span><br><span class="line">   <span class="operator">*</span> </span><br><span class="line"><span class="keyword">from</span> <span class="keyword">table</span>( </span><br><span class="line">    dbms_xplan.display_sql_plan_baseline( </span><br><span class="line">        sql_handle<span class="operator">=</span><span class="operator">&gt;</span><span class="string">&#x27;SQL_5671036d51fd678f&#x27;</span>, </span><br><span class="line">        format<span class="operator">=</span><span class="operator">&gt;</span><span class="string">&#x27;basic&#x27;</span>));</span><br><span class="line"><span class="comment">--或者        </span></span><br><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> <span class="keyword">table</span>(dbms_xplan.display_sql_plan_baseline(<span class="string">&#x27;SQL_17574e83c195631c&#x27;</span>,<span class="keyword">null</span>,<span class="string">&#x27;BASIC +NOTE&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<p>  也可以通过V$SQL视图查看一条SQL是否使用SQL Base Line，如果使用了baseline，那么它的sql_plan_baseline列将会显示plan_name，因此可以连接DBA_SQL_PLAN_BASELINES和V$SQL视图：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> s.SQL_ID, s.SQL_TEXT, b.plan_name, b.origin, b.accepted</span><br><span class="line"> <span class="keyword">from</span> dba_sql_plan_baselines b, v$<span class="keyword">sql</span> s</span><br><span class="line"><span class="keyword">where</span> s.EXACT_MATCHING_SIGNATURE <span class="operator">=</span> b.signature</span><br><span class="line">  <span class="keyword">and</span> s.SQL_PLAN_BASELINE <span class="operator">=</span> b.plan_name;</span><br></pre></td></tr></table></figure>
+
+<p>  查看v$sql中的sql是否有baseline：</p>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> sql_handle,</span><br><span class="line">  plan_name</span><br><span class="line"><span class="keyword">FROM</span> dba_sql_plan_baselines</span><br><span class="line"><span class="keyword">WHERE</span> signature <span class="keyword">IN</span></span><br><span class="line">  ( <span class="keyword">SELECT</span> exact_matching_signature <span class="keyword">FROM</span> v$<span class="keyword">sql</span> <span class="keyword">WHERE</span> sql_id<span class="operator">=</span><span class="string">&#x27;1s6a8wn4p6rym&#x27;</span></span><br><span class="line">  );</span><br></pre></td></tr></table></figure>
+
+<h3 id="Dropping-SQL-Plan-Baselines"><a href="#Dropping-SQL-Plan-Baselines" class="headerlink" title="Dropping SQL Plan Baselines"></a>Dropping SQL Plan Baselines</h3><p>1.查询要删除的baseline</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> SQL_HANDLE, SQL_TEXT, PLAN_NAME, ORIGIN,</span><br><span class="line">  <span class="number">2</span>         ENABLED, ACCEPTED</span><br><span class="line">  <span class="number">3</span>  <span class="keyword">FROM</span>   DBA_SQL_PLAN_BASELINES</span><br><span class="line">  <span class="number">4</span>  <span class="keyword">WHERE</span>  SQL_TEXT <span class="keyword">LIKE</span> <span class="string">&#x27;SELECT /* repeatable_sql%&#x27;</span>;</span><br><span class="line"> </span><br><span class="line">SQL_HANDLE           SQL_TEXT             PLAN_NAME                      ORIGIN         ENA ACC</span><br><span class="line"><span class="comment">-------------------- -------------------- ------------------------------ -------------- --- ---</span></span><br><span class="line">SQL_b6b0d1c71cd1807b <span class="keyword">SELECT</span> <span class="comment">/* repeatable SQL_PLAN_bdc6jswfd303v2f1e9c20 AUTO-CAPTURE   YES YES</span></span><br><span class="line"><span class="comment">                     _sql */</span> <span class="built_in">count</span>(<span class="operator">*</span>) fro</span><br><span class="line">                     m hr.jobs</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>2.删除sql plan baseline</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">  v_dropped_plans number;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  v_dropped_plans :<span class="operator">=</span> DBMS_SPM.DROP_SQL_PLAN_BASELINE (</span><br><span class="line">     sql_handle <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;SQL_b6b0d1c71cd1807b&#x27;</span></span><br><span class="line">);</span><br><span class="line">  DBMS_OUTPUT.PUT_LINE(<span class="string">&#x27;dropped &#x27;</span> <span class="operator">||</span> v_dropped_plans <span class="operator">||</span> <span class="string">&#x27; plans&#x27;</span>);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>3.确认删除</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> SQL_HANDLE, SQL_TEXT, PLAN_NAME, ORIGIN,</span><br><span class="line">       ENABLED, ACCEPTED</span><br><span class="line"><span class="keyword">FROM</span>   DBA_SQL_PLAN_BASELINES</span><br><span class="line"><span class="keyword">WHERE</span>  SQL_TEXT <span class="keyword">LIKE</span> <span class="string">&#x27;SELECT /* repeatable_sql%&#x27;</span>;</span><br><span class="line"> </span><br><span class="line"><span class="keyword">no</span> <span class="keyword">rows</span> selected</span><br></pre></td></tr></table></figure>
+
+<p><strong>参考文献：</strong></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ibG9ncy5vcmFjbGUuY29tL0RhdGFiYXNlNENOL2VudHJ5L29yYWNsZV8xMWdfJUU5JTkyJTg4JUU1JUFGJUI5c3FsJUU2JTgwJUE3JUU4JTgzJUJEJUU3JTlBJTg0JUU2JTk2JUIwJUU3JTg5JUI5JUU2JTgwJUE3XyVFNCVCOCU4OV9zcWw=">Oracle 11g 针对SQL性能的新特性（三）- SQL Plan Management <i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL2RvY3Mub3JhY2xlLmNvbS9kYXRhYmFzZS8xMjIvVEdTUUwvdG9jLmh0bQ==">Database SQL Tuning Guide<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL3d3dy5vcmFjbGUuY29tL3RlY2huZXR3b3JrL2RhdGFiYXNlL2ZvY3VzLWFyZWFzL2JpLWRhdGF3YXJlaG91c2luZy90d3Atc3FsLXBsYW4tbWFuYWdlbWVudC0xMWdyMi0xMzMwOTkucGRm"> White Paper:SQL Plan Management in Oracle Database 11g<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL3d3dy5vcmFjbGUuY29tL3RlY2huZXR3b3JrL2RhdGFiYXNlL2JpLWRhdGF3YXJlaG91c2luZy90d3Atc3FsLXBsYW4tbWdtdC0xMmMtMTk2MzIzNy5wZGY=">White Paper:SQL Plan Management with Oracle Database 12c Release 2<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/SQL-Plan-Management/" rel="tag"># SQL Plan Management</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2017/04/26/oracle/perf/SPM-Using-SPM-to-Correct-Regressed-SQL-Statements/" rel="prev" title="SPM Using SPM to Correct Regressed SQL Statements">
+                  <i class="fa fa-chevron-left"></i> SPM Using SPM to Correct Regressed SQL Statements
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2017/07/01/oracle/backup-restore/scheduler-for-rman-back/" rel="next" title="利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份">
+                  利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"be5caffa11709656ac57e39dd8010af8"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

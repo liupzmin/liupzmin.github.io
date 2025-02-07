@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="当程序运行时，函数的局部变量是在线程的栈上进行分配，虽然线程共享进程的虚拟地址空间，但因为每个线程有自己的线程栈，所以栈中的数据是互相隔离的，互不侵扰；而全局变量在heap上进行分配，heap在各个线程间是共享的，所以在对共享的资源进行读写时，需要有同步机制来确保线程安全；然而有一种多线程下的编程方式，可以使得全局变量或静态变量只对单个线程可见，而对其它线程不可见，这就是Thread Local">
+<meta property="og:type" content="article">
+<meta property="og:title" content="初识Thread Local Storage">
+<meta property="og:url" content="http://liupzmin.com/2019/09/30/concurrence/tls-summary/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="当程序运行时，函数的局部变量是在线程的栈上进行分配，虽然线程共享进程的虚拟地址空间，但因为每个线程有自己的线程栈，所以栈中的数据是互相隔离的，互不侵扰；而全局变量在heap上进行分配，heap在各个线程间是共享的，所以在对共享的资源进行读写时，需要有同步机制来确保线程安全；然而有一种多线程下的编程方式，可以使得全局变量或静态变量只对单个线程可见，而对其它线程不可见，这就是Thread Local">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-09-30T12:42:35.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="concurrence">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://liupzmin.com/2019/09/30/concurrence/tls-summary/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2019/09/30/concurrence/tls-summary/","path":"2019/09/30/concurrence/tls-summary/","title":"初识Thread Local Storage"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>初识Thread Local Storage | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Thread-Local-Storage"><span class="nav-number">1.</span> <span class="nav-text">Thread Local Storage</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TLS%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">TLS简单使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#C%E8%AF%AD%E8%A8%80%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.1.</span> <span class="nav-text">C语言实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#python%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.2.</span> <span class="nav-text">python实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TLS%E7%9A%84%E8%AF%AF%E5%8C%BA"><span class="nav-number">3.</span> <span class="nav-text">TLS的误区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TLS%E9%80%82%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">4.</span> <span class="nav-text">TLS适用场景</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2019/09/30/concurrence/tls-summary/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="初识Thread Local Storage | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          初识Thread Local Storage<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9jb25jdXJyZW5jZS90bHMtc3VtbWFyeS5tZA==" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-30 20:42:35" itemprop="dateCreated datePublished" datetime="2019-09-30T20:42:35+08:00">2019-09-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/concurrence/" itemprop="url" rel="index"><span itemprop="name">concurrence</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>当程序运行时，函数的局部变量是在线程的栈上进行分配，虽然线程共享进程的虚拟地址空间，但因为每个线程有自己的线程栈，所以栈中的数据是互相隔离的，互不侵扰；而全局变量在<code>heap</code>上进行分配，<code>heap</code>在各个线程间是共享的，所以在对共享的资源进行读写时，需要有同步机制来确保线程安全；然而有一种多线程下的编程方式，可以使得全局变量或静态变量只对单个线程可见，而对其它线程不可见，这就是<code>Thread Local Storage</code>，又叫<code>线程本地存储</code>或<code>线程局部存储</code></p>
+</blockquote>
+<h2 id="Thread-Local-Storage"><a href="#Thread-Local-Storage" class="headerlink" title="Thread Local Storage"></a>Thread Local Storage</h2><p><code>维基百科</code>上对Thread Local Storage的解释如下:</p>
+<blockquote>
+<p>Thread-local storage (TLS) is a computer programming method that uses static or global memory local to a thread.</p>
+</blockquote>
+<p>翻译下来就是：<code>线程本地存储(TLS)，对于线程来讲是一种对本地化使用静态或全局内存的计算机编程方法。</code></p>
+<p>线程局部存储(TLS)是一个后来者, 产生于多线程概念之后.而在软件发展的早期, 全局变量经常用在库函数中, 用于存储全局信息, 比如errno, 多线程程序产生之后, 全局变量errno就成为所有线程都共享的一个变量, 而实际上, 每个线程都想维护一份自己的errno, 隔离于其他线程.这个时候, 没人愿意去修改库函数的接口. 于是线程局部存储就诞生了, 它主要是为了避免多个线程同时访存同一全局变量或者静态变量时所导致的冲突，尤其是多个线程同时需要修改这一变量时，而这些变量逻辑上又可以在各个线程中独立，也就是说线程并不共享这些变量。</p>
+<p> 为了解决这个问题，我们可以通过TLS机制，为每一个使用该全局变量的线程都提供一个变量值的副本，每一个线程均可以独立地改变自己的副本，而不会和其它线程的副本冲突。从线程的角度看，就好像每一个线程都完全拥有该变量。而从全局变量的角度上来看，就好像一个全局变量被克隆成了多份副本，而每一份副本都可以被一个线程独立地改变。</p>
+<h2 id="TLS简单使用"><a href="#TLS简单使用" class="headerlink" title="TLS简单使用"></a>TLS简单使用</h2><h3 id="C语言实现"><a href="#C语言实现" class="headerlink" title="C语言实现"></a>C语言实现</h3><p>编写如下一段程序：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> _MULTI_THREADED</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;pthread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">__thread <span class="type">int</span> TLS_data1;</span><br><span class="line">__thread <span class="type">int</span> TLS_data2;</span><br><span class="line"></span><br><span class="line"><span class="comment">//int TLS_data1;</span></span><br><span class="line"><span class="comment">//int TLS_data2;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span>                 NUMTHREADS   4</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> *<span class="title function_">theThread</span><span class="params">(<span class="type">void</span> *a)</span> &#123;</span><br><span class="line">    <span class="type">int</span> arg = *(<span class="type">int</span> *)a;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Thread %lu before change: arg:%d TLS data=%d %d\n&quot;</span>,</span><br><span class="line">           pthread_self(), arg,  TLS_data1, TLS_data2);</span><br><span class="line">    TLS_data1 = arg;</span><br><span class="line">    TLS_data2 = arg +<span class="number">1</span>;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Thread %lu after change: arg:%d TLS data=%d %d\n&quot;</span>,</span><br><span class="line">           pthread_self(), arg,  TLS_data1, TLS_data2);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> **argv)</span> &#123;</span><br><span class="line">    <span class="type">pthread_t</span> thread[NUMTHREADS];</span><br><span class="line">    <span class="type">int</span> rc = <span class="number">0</span>;</span><br><span class="line">    <span class="type">int</span> i;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> ar[NUMTHREADS];</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Enter Testcase - %s\n&quot;</span>, argv[<span class="number">0</span>]);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Create/start threads\n&quot;</span>);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; NUMTHREADS; i++) &#123;</span><br><span class="line">        <span class="comment">/* Create per-thread TLS data and pass it to the thread */</span></span><br><span class="line">        ar[i] = i;</span><br><span class="line">        rc = pthread_create(&amp;thread[i], <span class="literal">NULL</span>, theThread, &amp;ar[i]);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Wait for the threads to complete, and release their resources\n&quot;</span>);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; NUMTHREADS; i++) &#123;</span><br><span class="line">        rc = pthread_join(thread[i], <span class="literal">NULL</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;Main completed\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该段程序使用<code>__thread</code>声明了两个变量<code>TLS_data1</code>和<code>TLS_data2</code>为线程局部存储，然后分别在4个线程中修改他们的值，观察运行结果：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Create/start threads</span><br><span class="line">Thread 139919563978496 before change: arg:0 TLS data=0 0</span><br><span class="line">Thread 139919563978496 after change: arg:0 TLS data=0 1</span><br><span class="line">Thread 139919547193088 before change: arg:2 TLS data=0 0</span><br><span class="line">Thread 139919547193088 after change: arg:2 TLS data=2 3</span><br><span class="line">Wait for the threads to complete, and release their resources</span><br><span class="line">Thread 139919538800384 before change: arg:3 TLS data=0 0</span><br><span class="line">Thread 139919538800384 after change: arg:3 TLS data=3 4</span><br><span class="line">Thread 139919555585792 before change: arg:1 TLS data=0 0</span><br><span class="line">Thread 139919555585792 after change: arg:1 TLS data=1 2</span><br><span class="line">Main completed</span><br></pre></td></tr></table></figure>
+<p>可以看到每个线程可以从容的修改他们。并且相互之间没有造成干扰，那么我们去掉<code>__thread</code>而使用普通的全局变量的话，就会使这段程序变得线程不安全：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Create/start threads</span><br><span class="line">Thread 140450580477696 before change: arg:0 TLS data=0 0</span><br><span class="line">Thread 140450580477696 after change: arg:0 TLS data=0 1</span><br><span class="line">Thread 140450572084992 before change: arg:1 TLS data=0 1</span><br><span class="line">Thread 140450572084992 after change: arg:1 TLS data=1 2</span><br><span class="line">Thread 140450563692288 before change: arg:2 TLS data=1 2</span><br><span class="line">Thread 140450563692288 after change: arg:2 TLS data=2 3</span><br><span class="line">Wait for the threads to complete, and release their resources</span><br><span class="line">Thread 140450555299584 before change: arg:3 TLS data=2 3</span><br><span class="line">Thread 140450555299584 after change: arg:3 TLS data=3 4</span><br><span class="line">Main completed</span><br></pre></td></tr></table></figure>
+
+<p>可以试着删除<code>__thread</code>关键字，再编译运行观察，你会看到一个错乱的运行结果。</p>
+<h3 id="python实现"><a href="#python实现" class="headerlink" title="python实现"></a>python实现</h3><p>把上面的例子用python来实现：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"></span><br><span class="line">local = threading.local()</span><br><span class="line">local.TLS_data1 = <span class="number">0</span></span><br><span class="line">local.TLS_data2 = <span class="number">0</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">func</span>(<span class="params">info</span>):</span><br><span class="line">    myname = threading.currentThread().getName()</span><br><span class="line">    local.TLS_data1 = info</span><br><span class="line">    local.TLS_data2 = info + <span class="number">1</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;Thread &#123;0&#125; after change TLS data: &#123;1&#125;, &#123;2&#125;&#x27;</span>.<span class="built_in">format</span>(myname, local.TLS_data1, local.TLS_data2))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">t = [<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> t:</span><br><span class="line">    t[i] = threading.Thread(target=func, args=[i])</span><br><span class="line">    t[i].start()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i, v <span class="keyword">in</span> <span class="built_in">enumerate</span>(t):</span><br><span class="line">    v.join()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;Thread &#123;0&#125; TLS data: &#123;1&#125;, &#123;2&#125;&#x27;</span>.<span class="built_in">format</span>(<span class="string">&quot;main&quot;</span>, local.TLS_data1, local.TLS_data2))</span><br></pre></td></tr></table></figure>
+
+<p>执行结果：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Thread Thread-1 after change TLS data: 0, 1</span><br><span class="line">Thread Thread-2 after change TLS data: 1, 2</span><br><span class="line">Thread Thread-3 after change TLS data: 2, 3</span><br><span class="line">Thread Thread-4 after change TLS data: 3, 4</span><br><span class="line">Thread main TLS data: 0, 0</span><br></pre></td></tr></table></figure>
+
+<h2 id="TLS的误区"><a href="#TLS的误区" class="headerlink" title="TLS的误区"></a>TLS的误区</h2><p>网上有很多文章误将TLS当成是编写线程安全代码的银弹，其实哪里是这样，这都取决于<code>global variable</code>在你的线程之间是不是<code>shared</code>，如果你的本意就是共享，那么TLS反而使你南辕北辙，你仍然需要<code>mutex</code>之类的锁去同步你的操作，那么TLS的本质到底是什么？</p>
+<p>我认为TLS的本质就是填补了全局变量和局部变量之间的空白，它不像全局变量那样在多个线程中可见，也不像局部变量那样仅仅生存在在函数的作用域之内，它的可见度，大于局部变量，又小于全局变量。</p>
+<h2 id="TLS适用场景"><a href="#TLS适用场景" class="headerlink" title="TLS适用场景"></a>TLS适用场景</h2><p>综上所述，线程本地存储并不是解决多线程变量共享的并发问题，而是限制变量仅在当前线程中可见，可想而知这样带来的好处之一就是线程内各个方法之间不用再通过传参就可以共享变量；另外一个可想而知的使用场景就是可以实现每个线程需要单独拥有一个实例的情况。</p>
+<p>还有一个也是<span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvVGhyZWFkLWxvY2FsX3N0b3JhZ2U=">wiki<i class="fa fa-external-link-alt"></i></span>上提到的，就是对一个<code>global variable</code>进行累加的情况，为了避免<code>race condition</code>的传统做法是使用<code>mutex</code>，但也可以使用TLS先在每个线程本地累加，然后再讲每个线程的累加结果同步到一个真正的<code>global variable</code>之上。</p>
+<p>当然，我认为TLS的适用场景肯定远不止这些，只是我个人平时工作当中，编码并不是很多，其中多线程编程便又少了一些，而在多线程编程中适用TLS的情况更是为零，本篇文章仅当做学习过程中的记录，以后有更深层次的思考会随时补充，也希望大家可以共同探讨。</p>
+<p><strong>参考文章：</strong></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvVGhyZWFkLWxvY2FsX3N0b3JhZ2U=">Thread-local storage<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL2p1Lm91dG9mbWVtb3J5LmNuL2VudHJ5LzY2MjM4">线程局部存储漫谈<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9jaGFvLXRpYy5naXRodWIuaW8vYmxvZy8yMDE4LzEyLzI1L3Rscw==">A Deep dive into (implicit) Thread Local Storage<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/concurrence/" rel="tag"># concurrence</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/09/24/docker/manage-docker-as-a-non-root-user/" rel="prev" title="使用普通用户管理docker">
+                  <i class="fa fa-chevron-left"></i> 使用普通用户管理docker
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/10/09/theory/three-body-problem/" rel="next" title="《三体》问题">
+                  《三体》问题 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"049f1577eccd011142bfab789980858a"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

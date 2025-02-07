@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="出于好奇，我想弄明白  Containerd 是如何处理容器 stdio 的，因为我在 k8s 环境中使用 Containerd 作为容器运行时，且观察到容器中的标准 io 为如下形式： 12345&#x2F;proc&#x2F;1&#x2F;fd # ls -ltotal 0lrwx------    1 root     root            64 Oct 10 02:25 0 -&gt; &#x2F;dev&#x2F;nulll-">
+<meta property="og:type" content="article">
+<meta property="og:title" content="我想 Debug 容器运行时">
+<meta property="og:url" content="http://liupzmin.com/2023/10/14/golang/debug-containerd/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="出于好奇，我想弄明白  Containerd 是如何处理容器 stdio 的，因为我在 k8s 环境中使用 Containerd 作为容器运行时，且观察到容器中的标准 io 为如下形式： 12345&#x2F;proc&#x2F;1&#x2F;fd # ls -ltotal 0lrwx------    1 root     root            64 Oct 10 02:25 0 -&gt; &#x2F;dev&#x2F;nulll-">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiniu.liupzmin.com/container.png">
+<meta property="article:published_time" content="2023-10-14T02:08:00.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="kubernetes">
+<meta property="article:tag" content="golang">
+<meta property="article:tag" content="containerd">
+<meta property="article:tag" content="k8s">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiniu.liupzmin.com/container.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2023/10/14/golang/debug-containerd/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2023/10/14/golang/debug-containerd/","path":"2023/10/14/golang/debug-containerd/","title":"我想 Debug 容器运行时"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>我想 Debug 容器运行时 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Containerd-%E7%9A%84%E7%94%9F%E6%80%81%E9%93%BE%E4%BD%8D%E7%BD%AE"><span class="nav-number">1.</span> <span class="nav-text">Containerd 的生态链位置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Debug-%E5%89%8D%E7%9A%84%E5%87%86%E5%A4%87"><span class="nav-number">2.</span> <span class="nav-text">Debug 前的准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%80%E5%A7%8B-Debug"><span class="nav-number">3.</span> <span class="nav-text">开始 Debug</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%BA%9B%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">4.</span> <span class="nav-text">一些注意事项</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2023/10/14/golang/debug-containerd/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="我想 Debug 容器运行时 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          我想 Debug 容器运行时<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9nb2xhbmcvZGVidWctY29udGFpbmVyZC5tZA==" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-10-14 10:08:00" itemprop="dateCreated datePublished" datetime="2023-10-14T10:08:00+08:00">2023-10-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/golang/" itemprop="url" rel="index"><span itemprop="name">golang</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>出于好奇，我想弄明白  <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2NvbnRhaW5lcmQvY29udGFpbmVyZA==">Containerd<i class="fa fa-external-link-alt"></i></span> 是如何处理容器 stdio 的，因为我在 k8s 环境中使用 <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2NvbnRhaW5lcmQvY29udGFpbmVyZA==">Containerd<i class="fa fa-external-link-alt"></i></span> 作为容器运行时，且观察到容器中的标准 io 为如下形式：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">/proc/1/fd # ls -l</span><br><span class="line">total 0</span><br><span class="line">lrwx------    1 root     root            64 Oct 10 02:25 0 -&gt; /dev/null</span><br><span class="line">l-wx------    1 root     root            64 Oct 10 02:25 1 -&gt; pipe:[45731]</span><br><span class="line">l-wx------    1 root     root            64 Oct 10 02:25 2 -&gt; pipe:[45732]</span><br></pre></td></tr></table></figure>
+
+<p>这是个非常简单的容器，只是往标准输出打印一些内容。从容器进程打开的文件描述符中，我们看到其标准输入被丢弃（通过重定向到 <strong>&#x2F;dev&#x2F;null</strong> ），而标准输出和标准错误都被重定向到 <strong>Linux 管道</strong>。</p>
+<p>是的，我对 Containerd 如何做到这一点有着浓厚的兴趣，这驱使我产生了 Debug 容器运行时的念头。</p>
+<p>这篇短文仅仅介绍我如何达到 Debug 的目的，并不会介绍 Containerd 如何设置标准 io，这部分内容我会放在接下来想写的《终端闲思录》里面。</p>
+<h2 id="Containerd-的生态链位置"><a href="#Containerd-的生态链位置" class="headerlink" title="Containerd 的生态链位置"></a>Containerd 的生态链位置</h2><p>首先应该明确一下 Containerd 在整个容器调用链里的位置，我借用一幅容器技术架构图来说明：</p>
+<p><img data-src="https://qiniu.liupzmin.com/container.png" alt="图 1-1 容器技术架构"></p>
+<p>从图中可知，Containerd 通过 CRI 接口上承 k8s，通过 OCI 接口下接 runc，真正创建容器和启动容器的是底层的 runc，所有的 CRI 容器运行时均依赖于 runc 。</p>
+<p>你可能已经被 OCI 和 CRI 绕晕了，简言之，这是容器圈里的两大标准：</p>
+<ul>
+<li><strong>Open Container Initiative (OCI):</strong> a set of standards for containers, describing the image format, runtime, and distribution.</li>
+<li><strong>Container Runtime Interface (CRI) in Kubernetes:</strong> An API that allows you to use different container runtimes in Kubernetes.</li>
+</ul>
+<p>只要记住 OCI 是容器标准，包扩容器创建，镜像格式等等，而 CRI 是属于 k8s 的接口，每个对接 k8s 的容器运行时都要实现这一套接口才能被 kubelet 调用。</p>
+<h2 id="Debug-前的准备"><a href="#Debug-前的准备" class="headerlink" title="Debug 前的准备"></a>Debug 前的准备</h2><p>我 Debug 的对象就是实现了 CRI 的 Containerd，但我却面临两个问题：</p>
+<ol>
+<li>Containerd 需要 root 权限运行，而我并不想在 root 用户下再配置一次 ide 。</li>
+<li>虽然可以在 root 下使用 delve 直接调试二进制文件，但我并不清楚 kubelet 调用 Containerd 时传递的参数，而我 Debug 的初衷就是想弄清楚 kubelet 传递的参数内容。</li>
+</ol>
+<p><strong>所以，我决定 Debug 一个运行中的 Containerd！</strong></p>
+<p>这很容易做到，使用 <code>dlv attach pid</code>就可以 Debug Containerd 进程。万事俱备，只欠一套 k8s 环境。所幸，我们有 minikube ！</p>
+<p>minikube 是在一个虚拟机中运行所有相关组件的，所以有两个问题需要解决：</p>
+<ol>
+<li>在 minikube 的虚拟机中准备 delve 工具。</li>
+<li>准备一个可调试的 Containerd 服务。</li>
+</ol>
+<p>第一点很好解决，minikube 虚拟机和 Host 之间是通过一个网桥通信的，使用<code>minikube ssh</code>命令登录到 minikube 虚拟机中，scp 宿主机的工具到 minikube 中就可以了。</p>
+<p>通过软件仓库安装的 Containerd 都是经过编译优化的二进制文件，里面缺乏调试信息，因此我们需要编译一份带有调试信息的二进制文件，观察 Containerd 的 makefile 可以发现如下内容：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ifndef</span> GODEBUG</span><br><span class="line">	EXTRA_LDFLAGS += -s -w</span><br><span class="line">	DEBUG_GO_GCFLAGS :=</span><br><span class="line">	DEBUG_TAGS :=</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">	DEBUG_GO_GCFLAGS := -gcflags=all=<span class="string">&quot;-N -l&quot;</span></span><br><span class="line">	DEBUG_TAGS := static_build</span><br><span class="line"><span class="keyword">endif</span></span><br></pre></td></tr></table></figure>
+
+<p>如果环境变量没有设置 GODEBUG ，那么就启用编译优化，否则增加调试信息，所以我们在 make 之前，执行一下<code>export GODEBUG=1</code>即可编译出可调试的二进制文件了。编译完成后，使用 scp 拷贝到 minikube 中，重新启动 Containerd 即可。</p>
+<p>delve 读取的本地文件系统中项目的内容用于显示单步中的代码，所以，还需要将编译时所用的源码 copy 到 minikube 中，并保持原有路径！</p>
+<h2 id="开始-Debug"><a href="#开始-Debug" class="headerlink" title="开始 Debug"></a>开始 Debug</h2><p>上述准备工作完成后，就可以进入 minikube 虚拟机进行 debug 了：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">richard@Richard-Manjaro:~ » minikube ssh</span><br><span class="line">docker@minikube:~$ sudo -i</span><br><span class="line">root@minikube:~<span class="comment"># ps -ef|grep containerd|grep -v shim</span></span><br><span class="line">root         504       1  3 06:47 ?        00:00:02 /usr/bin/containerd -l debug</span><br><span class="line">root         873       1  3 06:48 ?        00:00:02 /var/lib/minikube/binaries/v1.27.4/kubelet --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --config=/var/lib/kubelet/config.yaml --container-runtime-endpoint=unix:///run/containerd/containerd.sock --hostname-override=minikube --kubeconfig=/etc/kubernetes/kubelet.conf --node-ip=192.168.49.2</span><br><span class="line">root@minikube:~<span class="comment"># dlv attach 504</span></span><br><span class="line">Type <span class="string">&#x27;help&#x27;</span> <span class="keyword">for</span> list of commands.</span><br><span class="line">(dlv) bp</span><br><span class="line">Breakpoint runtime-fatal-throw (enabled) at 0x559126263aa4,0x559126263b84 <span class="keyword">for</span> (multiple <span class="built_in">functions</span>)() &lt;multiple locations&gt;:0 (0)</span><br><span class="line">Breakpoint unrecovered-panic (enabled) at 0x559126263f04 <span class="keyword">for</span> runtime.fatalpanic() /usr/lib/go/src/runtime/panic.go:1188 (0)</span><br><span class="line">	<span class="built_in">print</span> runtime.curg._panic.arg</span><br><span class="line">(dlv) b pkg/cri/server/container_create.go:222</span><br><span class="line">Breakpoint 1 <span class="built_in">set</span> at 0x559127d44f4d <span class="keyword">for</span> github.com/containerd/containerd/pkg/cri/server.(*criService).CreateContainer() /home/richard/opensource/containerd/pkg/cri/server/container_create.go:222</span><br><span class="line">(dlv) b services/tasks/local.go:167</span><br><span class="line">Breakpoint 2 <span class="built_in">set</span> at 0x55912734f072 <span class="keyword">for</span> github.com/containerd/containerd/services/tasks.(*<span class="built_in">local</span>).Create() /home/richard/opensource/containerd/services/tasks/local.go:167</span><br><span class="line">(dlv) bp</span><br><span class="line">Breakpoint runtime-fatal-throw (enabled) at 0x559126263aa4,0x559126263b84 <span class="keyword">for</span> (multiple <span class="built_in">functions</span>)() &lt;multiple locations&gt;:0 (0)</span><br><span class="line">Breakpoint unrecovered-panic (enabled) at 0x559126263f04 <span class="keyword">for</span> runtime.fatalpanic() /usr/lib/go/src/runtime/panic.go:1188 (0)</span><br><span class="line">	<span class="built_in">print</span> runtime.curg._panic.arg</span><br><span class="line">Breakpoint 1 (enabled) at 0x559127d44f4d <span class="keyword">for</span> github.com/containerd/containerd/pkg/cri/server.(*criService).CreateContainer() /home/richard/opensource/containerd/pkg/cri/server/container_create.go:222 (0)</span><br><span class="line">Breakpoint 2 (enabled) at 0x55912734f072 <span class="keyword">for</span> github.com/containerd/containerd/services/tasks.(*<span class="built_in">local</span>).Create() /home/richard/opensource/containerd/services/tasks/local.go:167 (0)</span><br><span class="line">(dlv) c</span><br><span class="line">&gt; github.com/containerd/containerd/services/tasks.(*<span class="built_in">local</span>).Create() /home/richard/opensource/containerd/services/tasks/local.go:167 (hits goroutine(2264):1 total:1) (PC: 0x55912734f072)</span><br><span class="line">   162:		monitor   runtime.TaskMonitor</span><br><span class="line">   163:		v2Runtime runtime.PlatformRuntime</span><br><span class="line">   164:	&#125;</span><br><span class="line">   165:	</span><br><span class="line">   166:	func (l *<span class="built_in">local</span>) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.CallOption) (*api.CreateTaskResponse, error) &#123;</span><br><span class="line">=&gt; 167:		container, err := l.getContainer(ctx, r.ContainerID)</span><br><span class="line">   168:		<span class="keyword">if</span> err != nil &#123;</span><br><span class="line">   169:			<span class="built_in">return</span> nil, errdefs.ToGRPC(err)</span><br><span class="line">   170:		&#125;</span><br><span class="line">   171:		checkpointPath, err := getRestorePath(container.Runtime.Name, r.Options)</span><br><span class="line">   172:		<span class="keyword">if</span> err != nil &#123;</span><br><span class="line">(dlv) </span><br></pre></td></tr></table></figure>
+
+<p>进入虚拟机后，切换到 root 执行 delve 指令 <code>dlv attach 504</code>，我在此设置了两个断点：</p>
+<ol>
+<li>pkg&#x2F;cri&#x2F;server&#x2F;container_create.go:222 这是 Containerd 的 CRI 实现里创建容器的接口函数，此函数隶属于一个 grpc server，当我们使用 kubectl 创建工作负载时，会触发此断点。</li>
+<li>services&#x2F;tasks&#x2F;local.go:167 这是 Containerd 将 CRI 请求转化为任务事件的创建入口。</li>
+</ol>
+<p>使用 kubectl 提交一个负载就可以单步调试啦 ！O(∩_∩)O~</p>
+<h2 id="一些注意事项"><a href="#一些注意事项" class="headerlink" title="一些注意事项"></a>一些注意事项</h2><ol>
+<li><p>由图 1-1 可知，k8s 使用 CRI 与容器运行时交互，所以确保 minikube 的运行时使用 Containerd，而不是 docker。docker 虽然也会使用 Containerd，但这种情况下  k8s 不会走 Containerd 的 CRI 接口，相反走的是 docker-shim 的接口，而后者已在 k8s 1.24 中被抛弃。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">richard@Richard-Manjaro:~/playground/k8s » ikube get nodes -o wide</span><br><span class="line">NAME       STATUS     ROLES           AGE     VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME</span><br><span class="line">minikube   NotReady   control-plane   5d23h   v1.27.4   192.168.49.2   &lt;none&gt;        Ubuntu 22.04.2 LTS   5.15.133-1-MANJARO   containerd://1.7.6</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果想通过 Containerd 的日志进行简单的 debug，那么开启 debug 日志即可，方法为在执行文件后追加 —log-level&#x3D;debug</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">docker@minikube:~$ cat /usr/lib/systemd/system/containerd.service </span><br><span class="line">......</span><br><span class="line"></span><br><span class="line">[Unit]</span><br><span class="line">Description=containerd container runtime</span><br><span class="line">Documentation=https://containerd.io</span><br><span class="line">After=network.target local-fs.target</span><br><span class="line"></span><br><span class="line">[Service]</span><br><span class="line">ExecStartPre=-/sbin/modprobe overlay</span><br><span class="line"></span><br><span class="line">ExecStart=/usr/bin/containerd -l debug</span><br><span class="line">......</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>一定要在你的玩具环境中调试，任何公共环境都不应被用来 debug ！</p>
+</li>
+</ol>
+<p><em><strong>参考文献</strong></em></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cudHV0b3JpYWx3b3Jrcy5jb20vZGlmZmVyZW5jZS1kb2NrZXItY29udGFpbmVyZC1ydW5jLWNyaW8tb2NpLw==">The differences between Docker, containerd, CRI-O and runc<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/docker/" rel="tag"># docker</a>
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+              <a href="/tags/golang/" rel="tag"># golang</a>
+              <a href="/tags/containerd/" rel="tag"># containerd</a>
+              <a href="/tags/k8s/" rel="tag"># k8s</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/10/05/theory/lua/" rel="prev" title="神奇的 lua">
+                  <i class="fa fa-chevron-left"></i> 神奇的 lua
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/11/22/theory/terminal-fun-fact/" rel="next" title="终端闲思录（1）- 世界是我的表象">
+                  终端闲思录（1）- 世界是我的表象 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"39ed5b4246491603b760a90ce0450df0"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份RMAN backup in Oracle 11gR2 RAC is exactly same like RMAN backup in Oracle 11gR2 single node.The only difference is: Typically, in case of Oracle single node">
+<meta property="og:type" content="article">
+<meta property="og:title" content="利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份">
+<meta property="og:url" content="http://liupzmin.com/2017/07/01/oracle/backup-restore/scheduler-for-rman-back/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份RMAN backup in Oracle 11gR2 RAC is exactly same like RMAN backup in Oracle 11gR2 single node.The only difference is: Typically, in case of Oracle single node">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2017-07-01T03:04:00.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.643Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="oracle backup">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://liupzmin.com/2017/07/01/oracle/backup-restore/scheduler-for-rman-back/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2017/07/01/oracle/backup-restore/scheduler-for-rman-back/","path":"2017/07/01/oracle/backup-restore/scheduler-for-rman-back/","title":"利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%88%A9%E7%94%A8DBMS-SCHEDULER%E5%9C%A8Oracle-11gR2-RAC%E4%B8%8A%E6%89%A7%E8%A1%8Crman%E5%A4%87%E4%BB%BD"><span class="nav-number">1.</span> <span class="nav-text">利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2017/07/01/oracle/backup-restore/scheduler-for-rman-back/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9vcmFjbGUvYmFja3VwLXJlc3RvcmUvc2NoZWR1bGVyLWZvci1ybWFuLWJhY2subWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2017-07-01 11:04:00" itemprop="dateCreated datePublished" datetime="2017-07-01T11:04:00+08:00">2017-07-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/oracle-backup/" itemprop="url" rel="index"><span itemprop="name">oracle backup</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h1 id="利用DBMS-SCHEDULER在Oracle-11gR2-RAC上执行rman备份"><a href="#利用DBMS-SCHEDULER在Oracle-11gR2-RAC上执行rman备份" class="headerlink" title="利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份"></a>利用DBMS_SCHEDULER在Oracle 11gR2 RAC上执行rman备份</h1><p>RMAN backup in Oracle 11gR2 RAC is exactly same like RMAN backup in Oracle 11gR2 single node.<br>The only difference is: Typically, in case of Oracle single node database, we will schedule RMAN scripts with the help of CRON job and it will run according to our convenience, but in case of Oracle RAC if we schedule RMAN script and if unfortunately that RAC node goes down ( where we configured RMAN scripts ), then RMAN backup won’t run obviously.</p>
+<p>So, Same strategy will not be work in Oracle RAC node. For RMAN consistent backups use dbms_scheduler &amp; we need to place RMAN scripts in shared directory. ( Or in my case, I have created identical scripts on both cluster node’s )</p>
+<p><strong>注意：</strong>  <em>需要将脚本放在共享位置或者每个节点的相同位置</em></p>
+<blockquote>
+<p>看一下rman的备份脚本，此脚本将备份放在ASM中，将日志放在节点本地</p>
+</blockquote>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="comment">###############################################################</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   rman_backup_rac.sh FOR RAC                                <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   created by lp                                             <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   2017/03/22                                                <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   usage: rman_backup_rac.sh &lt;<span class="variable">$BACKUP_LEVEL</span>&gt;                 <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">          BACKUP_LEVEL:                                      <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">             F: full backup                                  <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">             0: level 0                                      <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">             1: level 1                                      <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="comment">###############################################################</span></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">!/bin/bash</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">User specific environment and startup programs</span></span><br><span class="line">export ORACLE_HOME=/u01/app/oracle/product/11.2.0/dbhome_1</span><br><span class="line">export RMAN_BAK_LOG_BASE=/home/oracle/DbBackup</span><br><span class="line">export RMAN_BAK_DATA_BASE=+data/NXRAC/backup</span><br><span class="line">export ORACLE_SID=`ps -ef|grep pmon|grep -v ASM|grep -v grep|awk -F&#x27;_&#x27; &#x27;&#123;print $NF&#125;&#x27;`</span><br><span class="line">export TIMESTAMP=`date +%Y%m%d%H%M`;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">the destination of rman backuppiece</span></span><br><span class="line">export RMAN_DATA=$&#123;RMAN_BAK_DATA_BASE&#125;/rman</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">the destination of rman backup logs</span></span><br><span class="line">export RMAN_LOG=$&#123;RMAN_BAK_LOG_BASE&#125;/logs</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">if [[ ! -z $1 ]] &amp;&amp; echo $1 |grep -Ew &quot;[01F]&quot; &gt;/dev/null 2&gt;&amp;1</span><br><span class="line">then</span><br><span class="line">                                export RMAN_LEVEL=$&#123;1&#125;</span><br><span class="line"></span><br><span class="line">                                # Check rman level</span><br><span class="line">                                if [ &quot;$RMAN_LEVEL&quot; == &quot;F&quot; ];</span><br><span class="line">                                        then  unset INCR_LVL</span><br><span class="line">                                        BACKUP_TYPE=full</span><br><span class="line">                                        else</span><br><span class="line">                                        INCR_LVL=&quot;INCREMENTAL LEVEL $&#123;RMAN_LEVEL&#125;&quot;</span><br><span class="line">                                        BACKUP_TYPE=lev$&#123;RMAN_LEVEL&#125;</span><br><span class="line">                                fi</span><br><span class="line">else</span><br><span class="line">                                echo &quot;$&#123;1&#125; wrong argument!&quot; &gt;$&#123;RMAN_LOG&#125;/wrong_argument_$&#123;TIMESTAMP&#125;.log</span><br><span class="line">                                exit 1</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">the prefix of rman backuppiece</span>                                 </span><br><span class="line">export RMAN_FILE=$&#123;RMAN_DATA&#125;/$&#123;BACKUP_TYPE&#125;_$&#123;TIMESTAMP&#125;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">the logfile of shell script including the rman logs contents</span></span><br><span class="line">export SSH_LOG=$&#123;RMAN_LOG&#125;/$&#123;BACKUP_TYPE&#125;_$&#123;TIMESTAMP&#125;.log</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">the size of backuppiece</span></span><br><span class="line">export MAXPIECESIZE=4G</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="comment">###################################################################</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">                                                                 <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">  the name of rman logs excluding the file expanded-name,        <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">  when the shell is complete,the content of this file will be    <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">  appended to the <span class="variable">$SSH_LOG</span> and the rman logfile will be deleted. <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">                                                                 <span class="comment">#</span></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="comment">###################################################################</span></span></span><br><span class="line">export RMAN_LOG_FILE=$&#123;RMAN_LOG&#125;/$&#123;BACKUP_TYPE&#125;_$&#123;TIMESTAMP&#125;_1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">Check RMAN Backup Path</span></span><br><span class="line"></span><br><span class="line">if ! test -d $&#123;RMAN_LOG&#125;</span><br><span class="line">then</span><br><span class="line">mkdir -p $&#123;RMAN_LOG&#125;</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">echo &quot;---------------------------------&quot; &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line">echo &quot;   &quot; &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line">echo &quot;Rman Begin  to Working .........&quot; &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line">echo &quot;Begin time at:&quot; `date` --`date +%Y%m%d%H%M` &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">Startup rman to backup</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash">ORACLE_HOME/bin/rman <span class="built_in">log</span>=<span class="variable">$&#123;RMAN_LOG_FILE&#125;</span>.<span class="built_in">log</span> &lt;&lt;<span class="string">EOF</span></span></span><br><span class="line">connect target /</span><br><span class="line">run &#123;</span><br><span class="line">CONFIGURE RETENTION POLICY TO RECOVERY WINDOW OF 7 DAYS;</span><br><span class="line">CONFIGURE BACKUP OPTIMIZATION ON;</span><br><span class="line">CONFIGURE CONTROLFILE AUTOBACKUP ON;</span><br><span class="line">CONFIGURE DEVICE TYPE DISK PARALLELISM 4 BACKUP TYPE TO BACKUPSET;</span><br><span class="line">CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO &#x27;$&#123;RMAN_DATA&#125;/control_auto_%F&#x27;;</span><br><span class="line">ALLOCATE CHANNEL &#x27;ch1&#x27; TYPE DISK maxpiecesize=$&#123;MAXPIECESIZE&#125; CONNECT &#x27;SYS/passwd@node1&#x27;;</span><br><span class="line">ALLOCATE CHANNEL &#x27;ch2&#x27; TYPE DISK maxpiecesize=$&#123;MAXPIECESIZE&#125; CONNECT &#x27;SYS/passwd@node1&#x27;;</span><br><span class="line">ALLOCATE CHANNEL &#x27;ch3&#x27; TYPE DISK maxpiecesize=$&#123;MAXPIECESIZE&#125; CONNECT &#x27;SYS/passwd@mode2&#x27;;</span><br><span class="line">ALLOCATE CHANNEL &#x27;ch4&#x27; TYPE DISK maxpiecesize=$&#123;MAXPIECESIZE&#125; CONNECT &#x27;SYS/passwd@node2&#x27;;</span><br><span class="line">CROSSCHECK ARCHIVELOG ALL;</span><br><span class="line">DELETE NOPROMPT OBSOLETE;</span><br><span class="line">DELETE NOPROMPT EXPIRED BACKUP;</span><br><span class="line">BACKUP AS COMPRESSED BACKUPSET</span><br><span class="line"><span class="meta prompt_">$</span><span class="language-bash"><span class="string">&#123;INCR_LVL&#125;</span></span></span><br><span class="line">DATABASE FORMAT &#x27;$&#123;RMAN_FILE&#125;_db_%U&#x27; TAG &#x27;$&#123;BACKUP_TYPE&#125;_$&#123;TIMESTAMP&#125;&#x27;;</span><br><span class="line">SQL &#x27;ALTER SYSTEM ARCHIVE LOG CURRENT&#x27;;</span><br><span class="line">BACKUP FILESPERSET 20 ARCHIVELOG ALL FORMAT &#x27;$&#123;RMAN_FILE&#125;_arc_%U&#x27; TAG &#x27;$&#123;ORACLE_SID&#125;_arc_$&#123;TIMESTAMP&#125;&#x27;</span><br><span class="line">DELETE  INPUT;  </span><br><span class="line">RELEASE CHANNEL ch1;</span><br><span class="line">RELEASE CHANNEL ch2;</span><br><span class="line">RELEASE CHANNEL ch3;</span><br><span class="line">RELEASE CHANNEL ch4;</span><br><span class="line">ALLOCATE CHANNEL ch00 TYPE DISK;</span><br><span class="line">BACKUP</span><br><span class="line">    FORMAT &#x27;$&#123;RMAN_DATA&#125;/cntrl_%U&#x27;</span><br><span class="line">    CURRENT CONTROLFILE;</span><br><span class="line">RELEASE CHANNEL ch00;</span><br><span class="line">&#125;</span><br><span class="line">exit;</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">RC=$?</span><br><span class="line"></span><br><span class="line">cat $&#123;RMAN_LOG_FILE&#125;.log &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line">echo &quot;Rman Stop working @ time:&quot;`date` `date +%Y%m%d%H%M` &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line"></span><br><span class="line">if [ $RC -ne &quot;0&quot; ]; then</span><br><span class="line">    echo &quot;------ error ------&quot; &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line">else</span><br><span class="line">    echo &quot;------ Success during RMAN backup peroid------&quot; &gt;&gt;$&#123;SSH_LOG&#125;</span><br><span class="line">    rm -rf $&#123;RMAN_LOG_FILE&#125;.log</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">exit</span><br></pre></td></tr></table></figure>
+
+<p><strong>DBMS_SCHEDULER:</strong></p>
+<p>Here we are using DBMS_SCHEDULER instead of DBMS_JOB, because DBMS_SCHEDULER is RAC aware.</p>
+<p><strong>Before jump into real DBMS_SCHEDULER configuration, we need to focus on an important thing, That:</strong></p>
+<p>Both RAC nodes local time zone must be identical with DBMS_SCHEDULER default time.</p>
+<p>On all RAC node, Ensure local time zone and set it accordingly.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node2 ]$ cat /etc/sysconfig/clock</span><br><span class="line">ZONE=&quot;Asia/Shanghai&quot;</span><br></pre></td></tr></table></figure>
+<p><strong>configure default time zone for DBMS_SCHEDULER</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">select</span> <span class="keyword">value</span> <span class="keyword">from</span> dba_scheduler_global_attribute <span class="keyword">where</span> attribute_name <span class="operator">=</span> <span class="string">&#x27;DEFAULT_TIMEZONE&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">VALUE</span></span><br><span class="line"><span class="comment">--------------------------------------------------------------------------------</span></span><br><span class="line">PRC</span><br><span class="line"></span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">exec</span> dbms_scheduler.set_scheduler_attribute (<span class="string">&#x27;DEFAULT_TIMEZONE&#x27;</span>, <span class="string">&#x27;Asia/Shanghai&#x27;</span>);</span><br><span class="line"></span><br><span class="line">PL<span class="operator">/</span><span class="keyword">SQL</span> <span class="keyword">procedure</span> successfully completed.</span><br><span class="line"></span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">select</span> <span class="keyword">value</span> <span class="keyword">from</span> dba_scheduler_global_attribute <span class="keyword">where</span> attribute_name <span class="operator">=</span> <span class="string">&#x27;DEFAULT_TIMEZONE&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">VALUE</span></span><br><span class="line"><span class="comment">--------------------------------------------------------------------------------</span></span><br><span class="line">Asia<span class="operator">/</span>Shanghai</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>Now we need to create credential so that are assigned to DBMS_SCHEDULER jobs so that they can authenticate with a local&#x2F;remote host operating system or a remote Oracle database.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">exec</span> dbms_scheduler.create_credential(credential_name <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;oracle&#x27;</span>, username <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;oracle&#x27;</span>, password <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;oracle&#x27;</span>);</span><br><span class="line"></span><br><span class="line">PL<span class="operator">/</span><span class="keyword">SQL</span> <span class="keyword">procedure</span> successfully completed.</span><br></pre></td></tr></table></figure>
+
+<p>Now its time to create DBMS_SCHEDULER job for RMAN incremental level 0 backup, Here in this procedure I am going to create <em>RMAN_INC0_BACKUP</em> job with required attributes.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.create_job(</span><br><span class="line">job_name            <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>,</span><br><span class="line">job_type            <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;EXECUTABLE&#x27;</span>,</span><br><span class="line">job_action          <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;/bin/sh&#x27;</span>,</span><br><span class="line">number_of_arguments <span class="operator">=</span><span class="operator">&gt;</span> <span class="number">2</span>,</span><br><span class="line">start_date          <span class="operator">=</span><span class="operator">&gt;</span> SYSTIMESTAMP,</span><br><span class="line">credential_name     <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;oracle&#x27;</span>,</span><br><span class="line">auto_drop           <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">FALSE</span>,</span><br><span class="line">enabled             <span class="operator">=</span><span class="operator">&gt;</span> <span class="literal">FALSE</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+<p>Set argument_position &amp; argument_value ( i.e. Path of the RMAN script ) for the same job:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.set_job_argument_value(</span><br><span class="line">job_name            <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>,</span><br><span class="line">argument_position   <span class="operator">=</span><span class="operator">&gt;</span>  <span class="number">1</span>,</span><br><span class="line">argument_value      <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;/home/oracle/rman.sh&#x27;</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.set_job_argument_value(</span><br><span class="line">job_name            <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>,</span><br><span class="line">argument_position   <span class="operator">=</span><span class="operator">&gt;</span>  <span class="number">2</span>,</span><br><span class="line">argument_value      <span class="operator">=</span><span class="operator">&gt;</span> <span class="number">0</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+<p>Set start_date for the same job, In my case <em>RMAN_INC0_BACKUP</em> job will execute every week on sunday @03am, so job start date and its first run timing would  according to my convenience.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.set_attribute(</span><br><span class="line">name      <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>,</span><br><span class="line">attribute <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;start_date&#x27;</span>,</span><br><span class="line"><span class="keyword">value</span>     <span class="operator">=</span><span class="operator">&gt;</span> trunc(sysdate)<span class="operator">+</span><span class="number">3</span><span class="operator">/</span><span class="number">24</span>);</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>Test your backup job manually in SQL prompt by instantiating <em>RMAN_INC0_BACKUP</em> job.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">exec</span> dbms_scheduler.run_job(<span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>);</span><br><span class="line">PL<span class="operator">/</span><span class="keyword">SQL</span> <span class="keyword">procedure</span> successfully completed.</span><br></pre></td></tr></table></figure>
+
+<p>Verify running RMAN backup status by issuing following SQL query, It will show you RMAN backup details with start time &amp; end time.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> SESSION_KEY, INPUT_TYPE, STATUS,</span><br><span class="line">to_char(START_TIME,<span class="string">&#x27;mm/dd/yy hh24:mi&#x27;</span>) start_time,</span><br><span class="line">to_char(END_TIME,<span class="string">&#x27;mm/dd/yy hh24:mi&#x27;</span>) end_time,</span><br><span class="line">elapsed_seconds<span class="operator">/</span><span class="number">3600</span> hrs</span><br><span class="line"><span class="keyword">from</span> V$RMAN_BACKUP_JOB_DETAILS</span><br><span class="line"><span class="keyword">order</span> <span class="keyword">by</span> session_key;</span><br></pre></td></tr></table></figure>
+
+<p>In case of any error while test run, you can make sure details of error by issuing the following query, OR You can also query to <em>dba_scheduler_job_run_details</em> dictionary view for more details.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> JOB_NAME,STATUS,STATE,ERROR#,CREDENTIAL_NAME <span class="keyword">from</span> dba_scheduler_job_run_details <span class="keyword">where</span> CREDENTIAL_NAME <span class="keyword">like</span> <span class="string">&#x27;RMAN%&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>After successfully completion of test run, Enable &amp; schedule it by following procedure by setting value to <em>repeat_interval</em> parameter, In my case <em>RMAN_INC0_BACKUP</em> job will execute every week on Sunday @03pm.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.set_attribute(</span><br><span class="line">name      <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>,</span><br><span class="line">attribute <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;repeat_interval&#x27;</span>,</span><br><span class="line"><span class="keyword">value</span>     <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;freq=daily;byday=sun;byhour=03&#x27;</span>);</span><br><span class="line">dbms_scheduler.enable( <span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span> );</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p>Ensure dbms_scheduler job details by issuing the following query OR you can also query to <em>dba_scheduler_jobs</em> and <em>dba_scheduler_job_args</em>.</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">select</span> job_name,enabled,owner, state <span class="keyword">from</span> dba_scheduler_jobs <span class="keyword">where</span> job_name <span class="keyword">in</span> (<span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>Keep your eye on behavior of dbms_scheduler job by issuing the following query:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">select</span> job_name,RUN_COUNT,LAST_START_DATE,NEXT_RUN_DATE <span class="keyword">from</span> dba_scheduler_jobs <span class="keyword">where</span> job_name <span class="keyword">in</span> (<span class="string">&#x27;RMAN_INC0_BACKUP&#x27;</span>);</span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">select</span> <span class="operator">*</span>  <span class="keyword">from</span> dba_scheduler_job_args <span class="keyword">where</span> job_name <span class="keyword">like</span> <span class="string">&#x27;RMAN%&#x27;</span>;</span><br></pre></td></tr></table></figure>
+<p>In accordance with the above method to create a level 1 backup job <em>RMAN_INC1_BACKUP</em>，The only difference is the <em>repeat_interval</em>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">begin</span></span><br><span class="line">dbms_scheduler.set_attribute(</span><br><span class="line">name      <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;RMAN_INC1_BACKUP&#x27;</span>,</span><br><span class="line">attribute <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;repeat_interval&#x27;</span>,</span><br><span class="line"><span class="keyword">value</span>     <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;freq=daily;byday=mon,tue,wed,thu,fri,sat;byhour=03&#x27;</span>);</span><br><span class="line">dbms_scheduler.enable( <span class="string">&#x27;RMAN_INC1_BACKUP&#x27;</span> );</span><br><span class="line"><span class="keyword">end</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Important Note:</strong><br>DBMS_SCHEDULER is smart enough to start backup on the node where the last backup was successfully executed.</p>
+<p><strong>参考：</strong></p>
+<p><span class="exturl" data-url="aHR0cHM6Ly9kYmF0cmlja3N3b3JsZC5jb20vaG93LXRvLWJhY2t1cC1vcmFjbGUtcmFjLTExZ3IyLWRhdGFiYXNlLXdpdGgtcm1hbi1iYWNrdXAtdXRpbGl0eS13aXRoLXRoZS1oZWxwLW9mLWRibXNfc2NoZWR1bGVyLXBhcnQtaS1ybWFuLWZ1bGwtZGF0YWJhc2UtYmFja3VwLw==">https://dbatricksworld.com/how-to-backup-oracle-rac-11gr2-database-with-rman-backup-utility-with-the-help-of-dbms_scheduler-part-i-rman-full-database-backup/<i class="fa fa-external-link-alt"></i></span></p>
+<p><span class="exturl" data-url="aHR0cDovL2RiYXRyaWNrc3dvcmxkLmNvbS9ob3ctdG8tYmFja3VwLW9yYWNsZS1yYWMtMTFncjItZGF0YWJhc2Utd2l0aC1ybWFuLWJhY2t1cC11dGlsaXR5LXdpdGgtdGhlLWhlbHAtb2YtZGJtc19zY2hlZHVsZXItcGFydC1paS1ybWFuLWluY3JlbWVudGFsLWRhdGFiYXNlLWJhY2t1cC8=">http://dbatricksworld.com/how-to-backup-oracle-rac-11gr2-database-with-rman-backup-utility-with-the-help-of-dbms_scheduler-part-ii-rman-incremental-database-backup/<i class="fa fa-external-link-alt"></i></span></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/oracle-backup/" rel="tag"># oracle backup</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2017/05/04/oracle/perf/SPM-in%20oracle11g-&-12c/" rel="prev" title="SQL Plan Management（SPM）in oracle 11g & 12c">
+                  <i class="fa fa-chevron-left"></i> SQL Plan Management（SPM）in oracle 11g & 12c
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2018/03/20/bigdata/logstash-consume-from-kafka-to-elasticsearch/" rel="next" title="利用logstash从kafka消费数据到elasticsearch">
+                  利用logstash从kafka消费数据到elasticsearch <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"c024ae97530df0db2eb505a811e71c9a"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

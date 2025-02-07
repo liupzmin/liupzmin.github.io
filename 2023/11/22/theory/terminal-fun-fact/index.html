@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="终端是我们习焉不察，日用而不知的一种工具，如果去问一个 Linux 爱好者：“Linux 中最神秘的东西是什么？” 我相信回答“终端”的人一定不在少数。黑洞洞的窗口，像音符一样跳动的命令与输出，适时闪烁的光标，无一不弥漫着古老而又神秘的气息！  1 日志联想促使我 dig 终端的原因是我所在的公司要上线一个新项目，要求采用 k8s 作为运行平台。那么，日志处理方面就需要一个合理的方案。 我注意到">
+<meta property="og:type" content="article">
+<meta property="og:title" content="终端闲思录（1）- 世界是我的表象">
+<meta property="og:url" content="http://liupzmin.com/2023/11/22/theory/terminal-fun-fact/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="终端是我们习焉不察，日用而不知的一种工具，如果去问一个 Linux 爱好者：“Linux 中最神秘的东西是什么？” 我相信回答“终端”的人一定不在少数。黑洞洞的窗口，像音符一样跳动的命令与输出，适时闪烁的光标，无一不弥漫着古老而又神秘的气息！  1 日志联想促使我 dig 终端的原因是我所在的公司要上线一个新项目，要求采用 k8s 作为运行平台。那么，日志处理方面就需要一个合理的方案。 我注意到">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiniu.liupzmin.com/ssh.jpg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/teletype.jpg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/DEC_VT100_mid.jpg">
+<meta property="og:image" content="https://qiniu.liupzmin.com/bsd-terminal-login.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/terminal-login-shell.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/terminal-io.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/pseudo.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/terminal-emulator.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/ssh-pseudo.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/file-fd-releationship.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/pipe.png">
+<meta property="article:published_time" content="2023-11-22T12:23:00.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.647Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="computer theory">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiniu.liupzmin.com/ssh.jpg">
+
+
+<link rel="canonical" href="http://liupzmin.com/2023/11/22/theory/terminal-fun-fact/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2023/11/22/theory/terminal-fun-fact/","path":"2023/11/22/theory/terminal-fun-fact/","title":"终端闲思录（1）- 世界是我的表象"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>终端闲思录（1）- 世界是我的表象 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%97%A5%E5%BF%97%E8%81%94%E6%83%B3"><span class="nav-number">1.</span> <span class="nav-text">1 日志联想</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%BB%88%E7%AB%AF%E8%BF%B7%E9%9B%BE"><span class="nav-number">2.</span> <span class="nav-text">2 终端迷雾</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%A4%A7%E8%A1%8C%E5%85%B6%E9%81%93%E7%9A%84%E4%BC%AA%E7%BB%88%E7%AB%AF"><span class="nav-number">3.</span> <span class="nav-text">3 大行其道的伪终端</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E6%A0%87%E5%87%86%E4%B8%89%E5%89%91%E5%AE%A2%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-number">4.</span> <span class="nav-text">4 标准三剑客的本质</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E6%A0%87%E5%87%86%E4%B8%89%E5%89%91%E5%AE%A2%E4%BB%8E%E5%93%AA%E9%87%8C%E6%9D%A5%EF%BC%9F"><span class="nav-number">5.</span> <span class="nav-text">5 标准三剑客从哪里来？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E5%85%B3%E4%BA%8E%E7%BB%88%E7%AB%AF%E7%9A%84%E5%93%B2%E5%AD%A6%E5%91%93%E8%AF%AD"><span class="nav-number">6.</span> <span class="nav-text">6 关于终端的哲学呓语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2023/11/22/theory/terminal-fun-fact/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="终端闲思录（1）- 世界是我的表象 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          终端闲思录（1）- 世界是我的表象<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy90aGVvcnkvdGVybWluYWwtZnVuLWZhY3QubWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-11-22 20:23:00" itemprop="dateCreated datePublished" datetime="2023-11-22T20:23:00+08:00">2023-11-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/terminal/" itemprop="url" rel="index"><span itemprop="name">terminal</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/terminal/computer-theory/" itemprop="url" rel="index"><span itemprop="name">computer theory</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p><strong>终端</strong>是我们习焉不察，日用而不知的一种工具，如果去问一个 Linux 爱好者：“Linux 中最神秘的东西是什么？” 我相信回答<strong>“终端”</strong>的人一定不在少数。<strong>黑洞洞的窗口，像音符一样跳动的命令与输出，适时闪烁的光标，无一不弥漫着古老而又神秘的气息！</strong></p>
+<p><img data-src="https://qiniu.liupzmin.com/ssh.jpg" alt="黑客帝国中的终端"></p>
+<h2 id="1-日志联想"><a href="#1-日志联想" class="headerlink" title="1 日志联想"></a>1 日志联想</h2><p>促使我 dig 终端的原因是我所在的公司要上线一个新项目，要求采用 k8s 作为运行平台。那么，日志处理方面就需要一个合理的方案。</p>
+<p>我注意到 k8s 官方给出了几个<span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL3poLWNuL2RvY3MvY29uY2VwdHMvY2x1c3Rlci1hZG1pbmlzdHJhdGlvbi9sb2dnaW5nLw==">可行方案<i class="fa fa-external-link-alt"></i></span>：</p>
+<ul>
+<li><span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL3poLWNuL2RvY3MvY29uY2VwdHMvY2x1c3Rlci1hZG1pbmlzdHJhdGlvbi9sb2dnaW5nLyN1c2luZy1hLW5vZGUtbG9nZ2luZy1hZ2VudA==">使用节点级日志代理<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL3poLWNuL2RvY3MvY29uY2VwdHMvY2x1c3Rlci1hZG1pbmlzdHJhdGlvbi9sb2dnaW5nLyNzaWRlY2FyLWNvbnRhaW5lci13aXRoLWxvZ2dpbmctYWdlbnQ=">使用边车容器运行日志代理<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL3poLWNuL2RvY3MvY29uY2VwdHMvY2x1c3Rlci1hZG1pbmlzdHJhdGlvbi9sb2dnaW5nLyMlRTUlODUlQjclRTYlOUMlODklRTYlOTclQTUlRTUlQkYlOTclRTQlQkIlQTMlRTclOTAlODYlRTUlOEElOUYlRTglODMlQkQlRTclOUElODQlRTglQkUlQjklRTglQkQlQTYlRTUlQUUlQjklRTUlOTklQTg=">具有日志代理功能的边车容器<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9rdWJlcm5ldGVzLmlvL3poLWNuL2RvY3MvY29uY2VwdHMvY2x1c3Rlci1hZG1pbmlzdHJhdGlvbi9sb2dnaW5nLyNleHBvc2luZy1sb2dzLWRpcmVjdGx5LWZyb20tdGhlLWFwcGxpY2F0aW9u">从应用中直接暴露日志目录<i class="fa fa-external-link-alt"></i></span></li>
+</ul>
+<p>其中，前两个方案都要求应用或者边车将日志写入标准输出和标准错误，相应的容器运行时负责将其转储为文件，最后由节点级的日志代理统一收集整理。后面两个方案其资源成本和开发成本都比较可观，并且将无法使用<code>kubectl logs</code>访问日志。</p>
+<p>很明显可以看出，k8s 是偏向于应用将日志写入标准输出和标准错误的，这让我想起一位架构师朋友曾经说：<strong>“我不想把日志打到控制台，因为控制台是同步的，这会影响性能。”</strong></p>
+<p>这段话即便不是错误的，至少也是不准确的。鉴于长久以来都对<strong>终端、控制台、标准输入与标准输出以及标准错误</strong>（Unix 世界竟然没有一个简单的概念来统称这三个文件描述符，为了方便称呼，后续我将在这三者同时出现的地方以<strong>标准三剑客</strong>来代替）等概念笼统对待，为破除这一刻板印象，并理顺 k8s 中处理日志的思路，搞清楚打印到标准输出与标准错误是否合理，我做了一些研究工作，清理了如下三个障碍：</p>
+<ol>
+<li>终端与标准三剑客的关系</li>
+<li>标准三剑客与缓冲</li>
+<li>k8s 是如何重定向标准三剑客的 ？</li>
+</ol>
+<p>这些问题真的那么重要吗？不妨假想一下：</p>
+<blockquote>
+<p>k8s 建议你将日志打印到标准输出和标准错误，而你是一个略微有点计算机文化积淀的人，你知道在 C 标准库里标准三剑客的 I&#x2F;O 缓冲各不相同，缓冲最大的也就是个行缓冲，你会狐疑着说：&quot;我都不确定我所用语言的缓冲设计，我能放心地往标准输出和标准错误写吗？你把那些优秀的高吞吐日志框架至于何地？&quot;</p>
+<p>这时，一位大腹便便的中年人慢悠悠踱到你面前，语重心长地说道：“少侠，稍安勿躁，谁说往标准输出和标准错误写就一定写往终端 ？就一定是行缓冲 ？就一定要用<strong>‘printf’</strong>、<strong>‘fmt.Print’</strong>、<strong>‘system.out.println’</strong> ？”</p>
+<p>一连串的反问让你内心掠过一丝不快，但望着他稀疏的额头和有些混浊却不失坚毅的眼睛，你最终只是微微张了张嘴，没能说出一个字。</p>
+<p>他肥胖的身躯坐了下来，用手捋着下巴上一撮小胡须，施施然道：“闻道有先后，不知道并不可怕，一知半解才可怕，我看你方才只是‘狐疑’着发问，并未理直气壮、斩钉截铁、目空一切，而且也不曾顶撞老夫，说明孺子可教，我就拣重点与你说说吧！”</p>
+<p>说罢，便开始了涛涛雄辩。</p>
+</blockquote>
+<p>言归正传，我将用三篇文章来把这三个问题讲清楚，这是系列第一篇，先让我们进入终端的神秘世界吧!</p>
+<h2 id="2-终端迷雾"><a href="#2-终端迷雾" class="headerlink" title="2 终端迷雾"></a>2 终端迷雾</h2><p>终端（terminal），源自拉丁语 <em>terminalis</em>，意为“与边界或结尾有关，最终的”，&quot;与计算机通信的设备&quot;之意首次记录于1954年，时间上距今不足百年，而计算机日新月异的发展速度使得很多事物快速出现又快速消亡，变成随时间层层累积的沉积岩，搞清楚其源流嬗变殊为不易，以至于后来的我们很难看清事情的原貌。我实在很想拥有钩沉索微的能力，去近距离感受每处痕迹背后的波澜壮阔，而不是如今只能通过抚摸巨岩的横截面，来想象那个时代的风云际会。</p>
+<p>终端是一种和计算机交互的硬件设备（早期是硬件，如今已是软件），用于处理输入和输出。最早的硬件终端是电传打印机（<strong>teleprinter</strong>、<strong>teletypewriter</strong>、<strong>teletype</strong>、<strong>TTY</strong> 指的都是电传打印机），显示内容需要打印到纸上，这也是为什么我们在编程中向终端打印使用 <strong>print</strong> 而不是 <strong>display</strong> 的原因，使用屏幕显示内容还要等到 CRT（阴极射线管）设备的出现。</p>
+<p><img data-src="https://qiniu.liupzmin.com/teletype.jpg" alt="图 2-1 二战时期的电传打印机"></p>
+<p>这些硬件终端与计算机通过串口直连，或者通过调制解调器远程连接，不过这种连接方式的距离和终端数量都很有限。如果把计算机比作一条章鱼，那么终端就是触手的顶端，从拉丁词源 <em>terminalis</em> “与边界或结尾有关，最终的”之意中，我们多少还能窥见这一层含义。</p>
+<p><img data-src="https://qiniu.liupzmin.com/DEC_VT100_mid.jpg" alt="图 2-2 图形终端 VT100"></p>
+<p>图 2-2 是 DEC 公司生产的图形终端 <strong>VT-100</strong> ，广泛流行的终端模拟器和 SSH 客户端软件 SecureCRT 中，可以设置模拟的终端类型，其中就有 VT-100 系列。从 SecureCRT 各种终端类型中，依然可以看出当年终端设备市场是怎样一个山头林立的状态，这些设备没有统一的标准，各自有各自的字符转义序列。所谓的字符转义序列是指向终端发送的特殊控制字符，终端会将这些特殊字符解释为相应的功能，比如调整终端的显示，vi 类软件特别需要标准化，再比如<code>Ctrl+C</code>是向会话中的前台进程发送<code>SIGINT</code>信号（终端如何得知哪一个是前台进程请参考 Unix&#x2F;Linux 手册进程组部分的内容），<code>Ctrl+D</code>会使得从终端读取输入的进程读取到一个<code>end-of-file</code>。</p>
+<p>现代意义上的终端已经几乎全部虚拟化、软件化了，Unix&#x2F;Linux 系统可以通过<code>Ctrl+Alt+Fn</code> 组合键切换虚拟终端，现代 Linux 系统通常在其中一个终端启动图形界面，我的 Manjaro 桌面就启动在 <code>F2</code> 上。Unix&#x2F;Linux 在功能键上启动的这些终端即是虚拟终端<code>/dev/ttyn</code>。</p>
+<p>另一个与终端有关的概念是 Console —— 控制台，控制台其实是一种终端，大多时候和计算机长在一起，不一定要有屏幕，摇杆、按钮也可称为控制台，只要是能控制计算机的都属于控制台。</p>
+<p>现代个人计算机已经没有控制台了，终端和控制台已经虚拟化，且大多时候混用这两概念也没有问题。但寻其本意依然都有处理计算机输入与输出的意思，又因终端和控制台经常和标准三剑客关联，有些软件不免就会混淆其中，例如 java 著名的日志框架 logback 有一个输出目的地 <strong>ConsoleAppender</strong> ，其实是用<em>System.out</em> 、 <em>System.err</em> 将内容写往标准输出和标准错误的，而标准输出和标准错误并不一定连接终端或控制台，标准三剑客的相关内容我会在后面详述，现在我们有必要看一下传统的终端登录过程，看看终端是如何被打开的。</p>
+<p><img data-src="https://qiniu.liupzmin.com/bsd-terminal-login.png" alt="图 2-3 终端登录"><img data-src="https://qiniu.liupzmin.com/terminal-login-shell.png" alt="图 2-4 终端与shell关联"></p>
+<p>SysV 系统中，init 进程是系统启动后用户空间拉起的第一个进程，也叫 1 号进程，现代 Linux 如果采用 Systemd 系统启动，其 1 号进程是 Systemd 进程。传统 Unix 在启动时 init 进程会扫描<code>/etc/ttys</code>中的内容，<code>/etc/ttys</code>中配置有连接到该计算机上的终端设备列表，init 进程会遍历每个设备，针对每个设备都 fork 一个进程来处理，图 2-3 展示了这个过程。</p>
+<p>fork 之后子进程会执行<code>getty</code>程序，getty 会打开终端，如果终端是通过调制解调器连接的，getty 会等待对方拨号，一旦设备打开成功，文件描述符<code>0，1，2</code>就被设置到终端上了，而<code>0，1，2</code>就是标准三剑客，如果不出意外（文件描述符未被重定向），后续对<code>0，1，2</code>的读写都是对终端的读写，在内核中由<strong>终端驱动</strong>提供服务。不难想见，终端驱动会吸收键盘的输入，会将输出打印到设备屏幕。</p>
+<p>getty 的最后一项使命是向终端打印<strong>“login:”</strong>，等待我们输入用户名，一旦我们输入用户名回车，getty 便功成身退，它会以类似如下方式调用<code>login</code>程序:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">execle(<span class="string">&quot;/bin/login&quot;</span>, <span class="string">&quot;login&quot;</span>, <span class="string">&quot;-p&quot;</span>, username, (<span class="type">char</span> *)<span class="number">0</span>, envp);</span><br></pre></td></tr></table></figure>
+
+<p>login 程序会向终端打印<strong>“Password:”</strong>来提示用户输入密码，当然终端的回显功能会被关掉。接下来 login 会做一系列的工作，比如鉴权、设置环境变量、设置 HOME 目录、开启会话、设置进程组等等，最后会调用 shell 程序：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">execl(<span class="string">&quot;/bin/sh&quot;</span>, <span class="string">&quot;-sh&quot;</span>, (<span class="type">char</span> *)<span class="number">0</span>);</span><br></pre></td></tr></table></figure>
+
+<p>如图 2-4 所示，execl 后进程变为 shell，但<code>0，1，2</code>文件描述符得以保留，毋庸置疑的是，此时三剑客指向终端，shell 进程的读写都依赖终端驱动程序处理。我们现在将终端驱动部分放大，看看其内部对输入输出的处理过程，如图 2-5 所示：</p>
+<p><img data-src="https://qiniu.liupzmin.com/terminal-io.png" alt="图 2-5 终端设备的输入输出序列"></p>
+<p>进程对于终端设备的读写由终端驱动处理，终端驱动维护着两个队列：<strong>输入队列和输出队列</strong>，键盘的输入会进入输入队列，最后被进程读取；进程的输出会进入输出队列，由终端显示。如果该终端设备的回显功能被打开，进入输入队列的内容会同时发送到输出队列，由终端设备显示在屏幕上，这就是你敲击键盘后终端中显示内容的原因，前文的 login 程序在收集密码时就会将回显功能关闭。</p>
+<p>我之所以讲“你敲击键盘后终端中显示内容”而不是“shell 中显示内容”，是为了强调一个事实：<strong>你能看到的所有内容都是你的输入和shell 的输出</strong>。你永远不会在 shell 里面，你只能给它提供输入，观察它的输出，当然是在终端上。</p>
+<p>而此刻，shell 向终端输出了<code>root@hostname:~ #</code>的提示符，终端驱动程序将其打印到可见终端，当然，这个终端有可能是<code>Ctrl+Alt+Fn</code> 组合键下显示器呈现的虚拟终端，也有可能是视窗界面下的终端模拟器，但基本不可能是最初的终端设备了。</p>
+<p>这当然是因为那些设备现在已经消失了，物理设备一经消亡，原本显示的重任就交给显卡来处理了，终端驱动想必会因此生出黍离一样的悲痛。而我们当然不会在乎终端驱动是否悲痛，我们只是对这种割裂感有所不适。</p>
+<p><code>Ctrl+Alt+Fn</code> 组合键大概是对早期硬件终端连接场景的模拟，毕竟在 PC 个人化以及 shell 作业控制广泛应用的今天，实在看不出它还有什么其它的意义。因为在这种场景下进入终端，我们只能看到显示设备（不能称之为终端，如显示器）以及 shell 的输出，终端一词就像无源之水、无根之木一样没了着落。</p>
+<p>请允许我用夸张的舞台腔背诵加缪《西西弗神话》中的段落：&quot;在一个突然被剥夺了幻觉和光明的宇宙中，人就感到自己是个局外人。这种放逐无可救药，因为人被剥夺了对故乡的回忆和对乐土的希望。这种人和生活的分离，演员和布景的分离，正是荒诞感。&quot;</p>
+<p>终端和 shell 的概念纠缠正是出于这种荒诞感！</p>
+<p>讲到这里，似乎不再需要刻意去辨析终端和 shell 的区别了，现象已经很明朗：连接到终端的最终程序是 shell，shell 以及由此 shell 启动的任何程序其三剑客都指向终端，它们的输出也会打印到终端。作为计算机行业的新新人类，失去了物理真实的触摸，极目所望，尽是 shell 及其子孙的输出，终端的概念早已淹没其中，混淆也就在所难免了。</p>
+<p>视窗界面下的终端模拟器似乎将这种荒诞缓和了一些，但也仅仅是一些，在一个单薄的窗口中，shell 的输出占据了绝大多数的领地，只有边框和工具栏在隐隐的提示人们：我是有形的！</p>
+<p>无论如何，由电传打印机沿袭下来的 <code>tty</code> 一词却在 Unix 中留下了深深的印记，tty 子系统、tty 驱动、虚拟终端 &#x2F;dev&#x2F;ttyn、伪终端 pty 等都有着<code>teletype</code>的影子。</p>
+<h2 id="3-大行其道的伪终端"><a href="#3-大行其道的伪终端" class="headerlink" title="3 大行其道的伪终端"></a>3 大行其道的伪终端</h2><p>第 2 节介绍的终端登录场景，进程打开的设备是<code>/dev/ttyn</code>，通常被称为虚拟终端，基本只有在<code>Ctrl+Alt+Fn</code> 组合键和虚拟机管理界面的控制台进入的终端属于此类。大多数场景用的都是伪终端，比如终端模拟器和网络 SSH 登录，本节我们就梳理一下这两种常见的终端场景。</p>
+<p>伪终端其实是 IPC（进程间通信）的一种，它有一对主从设备， 也叫伪终端对，分别连接着两个进程：</p>
+<p><img data-src="https://qiniu.liupzmin.com/pseudo.png" alt="图 3-1 使用伪终端的相关进程的典型结构"></p>
+<p>图 3-1 是使用伪终端相关进程的典型结构，伪终端主设备和从设备组成了一个双向管道，连接了两个进程。通常连接从设备的进程是 shell，所以，对 shell 来讲伪终端从设备表现的就像原来的终端设备，终端驱动也是和从设备相连，进程对终端的读写都发往从设备。</p>
+<p>与以往不同的是，进程眼中的终端设备在这里不以显示为直接目的，而是将输出发往另一个进程，输入也要从另一个进程读取，而这正是为终端模拟器和网络 SSH 登录设计的，我们先看一看终端模拟器的情况：</p>
+<p><img data-src="https://qiniu.liupzmin.com/terminal-emulator.png" alt="图 3-2 使用伪终端的终端模拟器"></p>
+<p>图 3-2 展示了一个打开了两个窗口的终端模拟器，终端模拟器是一个图形化的视窗程序，针对每一个窗口创建一个伪终端对，并 fork 出 shell 进程，将 shell 进程的标准三剑客连接到伪终端从设备，如此一来，shell 便从终端模拟器程序读取输入，输出发往终端模拟器，最后被渲染到窗口界面。这是连接本地终端的情况，下面再看一下 SSH 登录：</p>
+<p><img data-src="https://qiniu.liupzmin.com/ssh-pseudo.png" alt="图 3-3 使用伪终端的 SSH"></p>
+<p>SSH 是使用伪终端的另一个例子，它允许本地用户安全地通过网络连接到远程机器上登录 shell，图 3-3 展示了这种情况，ssh server 为每个登录请求创建伪终端对，并 fork 出 shell 进程连接到伪终端从设备。客户端的输入通过网络抵达 ssh server，ssh server 发往伪终端主设备，最终变为 shell 进程的标准输入；同样，由 shell 产生的输出经过伪终端主设备抵达 ssh server，再经 ssh server 发送到网络，最终被 ssh client 接收。现在请你思考一下：ssh client 会如何处理接收到的 shell 输出呢？</p>
+<p>从图中不难看出，ssh client 要将 shell 的输出送往终端显示，问题是你能猜出图中的<code>terminal</code>是什么设备吗？</p>
+<p>其实我们已经讲过了，此处的<code>terminal</code>可以看作图 3-2 的缩影，ssh client 连接的是本地伪终端对中的从设备，用户使用的可能是终端模拟器，模拟器 fork 的进程就是 ssh client，shell 的提示符<code>root@localhost:~ # </code>历经千山万水，终于呈现在你本地的终端模拟器上了。</p>
+<h2 id="4-标准三剑客的本质"><a href="#4-标准三剑客的本质" class="headerlink" title="4 标准三剑客的本质"></a>4 标准三剑客的本质</h2><p>Linux 会为打开的文件分配一个非负整数来表示该文件，文件的 I&#x2F;O 调用都要通过文件描述符来发起，文件描述符用来表示所有类型的已打开的文件，这包括管道（pipe）、FIFO、socket、普通文件和终端设备等。Linux 为这些类型的文件提供了统一的通用 I&#x2F;O 模型，即 open、close、read、write 等系统调用接口，因此，所谓的<strong>“Linux 一切皆文件”</strong>应该更多地从通用文件 I&#x2F;O 接口的角度来理解。</p>
+<p>我们所讨论的终端即是其中一种文件类型，标准三剑客表示的<strong>“0，1，2”</strong>三个文件描述符，背后的文件类型通常是终端设备，例外情况等我讲到复制文件描述符的时候再详细讨论，我们先明确一下文件描述符和文件的对应关系。</p>
+<p>打开文件，获得文件的描述符，似乎文件和文件描述符的一对一关系是不言而喻的，但是，<strong>多个文件描述符可以指向同一打开的文件，这些文件描述符可以在相同或不同的进程打开。</strong>如图 4-1 所示：</p>
+<p><img data-src="https://qiniu.liupzmin.com/file-fd-releationship.png" alt="图 4-1 文件描述符，打开的文件描述，文件inode之间的关系"></p>
+<p>上图展示了进程的文件描述符（file descriptor）、内核维护的系统所有打开的文件描述（open file description）以及文件 inode 之间的关系。简单介绍一下，左侧表格代表进程的文件描述符；中间表格称为 open file description table，是内核为所有打开的文件维护的一个系统级描述表；右侧表格代表 inode，可简单理解为硬盘上的文件。</p>
+<p>从中我们可以得到以下几点信息：</p>
+<ol>
+<li>在进程 A 中，<strong>文件描述符</strong> 1 和 20 都指向同一个<strong>打开文件描述</strong>，这可能是通过复制文件描述符形成的。</li>
+<li>进程 A 的文件描述符 2 和 进程 B 的文件描述符 2 都指向同一个<strong>打开文件描述</strong>，这种情形可能是进程 A 进行 fork 调用形成的，子进程会继承父进程所有打开的文件描述符。</li>
+<li>进程 A 的文件描述符 0 和进程 B 的文件描述符 3 分别指向不同的<strong>打开文件描述</strong>，但这些描述均指向相同的 inode，这是因为每个进程各自对同一文件发起了 open 调用，同一进程两次打开同一文件也会出现这种情况。</li>
+</ol>
+<p>关于第一点复制文件描述符稍后另行展开，我们先看第二点，父进程 fork 出子进程，子进程会继承父进程所有打开的文件描述符，如果子进程稍后调用 exec 执行了其它的程序，那些没有设置<code>O_CLOEXEC</code>的文件描述符都会在子进程中得到保留。</p>
+<p>shell 进程已经打开了<strong>“0，1，2”</strong>三个文件描述符，在此shell中执行的所有进程都会继承这三个文件描述符，如果没有特殊的变动，它们会和 shell 一样将<strong>“0，1，2”</strong>连接到终端。你是否有过这样的经历：在 shell 中执行了程序，程序进入了后台，回车后可见 shell 的提示符，说明你依然可以操作，但是进入后台的程序却时不时的输出一点内容到你的终端，如果你没遇到过，可以用下面的命令试一下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">for  ((;;)) do sleep 1; echo &quot;hello&quot;; done &amp;</span><br></pre></td></tr></table></figure>
+
+<p>如果你需要终止它，输入<code>fg</code>将进程拉到前台，<code>Ctrl+C</code>结束它，不要害怕<code>f</code>和<code>g</code>之间被<code>hello</code>充塞，世界只是你的表象，表象虽然乱了，但内在的输入队列和输出队列依然有序运行。</p>
+<p>之所以产生这种现象是因为没有为放到后台的进程处理标准输出和标准错误， shell fork 子进程出来解释该命令，子进程继承了 <strong>“0，1，2”</strong>文件描述符，<code>&amp;</code>标志将进程送往后台，但是并没有对标准三剑客进行调整，其对应的<strong>“0，1，2”</strong>描述符依然和终端相关联，所以当<code>echo &quot;hello&quot;</code>向标准输出打印的时候，内容依然会显示在终端上。不过不用担心后台进程会干扰标准输入，shell 会确保只有前台进程才能从终端进行读取（参考进程组的内容）。</p>
+<p>程序并不经常产生这种行为，大多数情况下我们需要在 shell 中通过重定向语法<strong>“&gt;”</strong>来处理标准三剑客。有些支持 daemon 的程序会提供诸如<code>-d</code>或<code>--detach</code>的选项在处理好标准三剑客之后启动到后台，一种典型的处理是将标准三剑客指向<strong>“&#x2F;dev&#x2F;null”</strong>，因为 daemon 程序通常并不需要使用终端；而 systemd 管理下的 service 通常会将标准输出和标准错误重定向到 Unix 域套接字，这些输出内容作为日志受到 journald 进程的管理。</p>
+<p>完成这种重定向的就是 dup 家族的 <strong>dup</strong>、<strong>dup2</strong>、<strong>dup3</strong> 三个系统调用。使用最多的是 dup2：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">dup2</span><span class="params">(<span class="type">int</span> oldfd, <span class="type">int</span> newfd)</span>;</span><br><span class="line"><span class="comment">//Returns (new) file descriptor on success, or –1 on error</span></span><br></pre></td></tr></table></figure>
+
+<p>dup2() 系统调用会为 oldfd 参数指定的文件描述符创建副本，副本的编号由 newfd 参数指定，所以<code>dup(1, 20)</code>就会产生图 4-1 中所示进程 A 的情况。shell 的重定向语法和管道就是使用 dup 实现的。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">./myscript &gt; results.log 2&gt;&amp;1</span></span><br></pre></td></tr></table></figure>
+
+<p>上面这条重定向命令被广泛使用，Bourne shell 的重定向语法<strong>“2&gt;&amp;1”</strong>，意在通知 shell 把标准错误重定向到标准输出，这条语法的效果大致使用如下方式实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">fd = open(<span class="string">&quot;results.log&quot;</span>, O_RDWR);</span><br><span class="line"><span class="keyword">if</span> (dup2(fd, STDOUT_FILENO) != STDOUT_FILENO)</span><br><span class="line">	<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"><span class="keyword">if</span> (dup2(STDOUT_FILENO, STDERR_FILENO) != STDERR_FILENO)</span><br><span class="line">	<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"><span class="comment">// 文件描述符复制完毕，fd 可以关闭</span></span><br><span class="line">close(fd);</span><br></pre></td></tr></table></figure>
+
+<p>这一刻，<strong>STDOUT_FILENO</strong> 和 <strong>STDERR_FILENO</strong> ，也就是文件描述符<strong>“1，2”</strong>与终端脱离关系，写往标准输出和标准错误的内容全部进入 results.log 文件，不会再显示在终端上。</p>
+<blockquote>
+<p>所以，<strong>标准三剑客的本质仅仅是文件描述符</strong>，各种语言中那些能打印到终端的 I&#x2F;O 函数（如<strong>‘printf’</strong>、<strong>‘fmt.Print’</strong>、<strong>‘system.out.println’</strong>），其底层使用的就是<strong>“0，1，2”</strong>三个文件描述符，函数最终输出到哪里要看<strong>“0，1，2”</strong>指向哪里。</p>
+</blockquote>
+<p>还记得<strong>“Linux 一切皆文件”</strong>指得是通用文件 I&#x2F;O 接口吗？文件描述符可以指向任意类型的文件，我们再来看一个管道的例子：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls | wc -l</span><br></pre></td></tr></table></figure>
+
+<p>要执行这条命令，shell 将 fork-exec 两个进程出来，并且创建管道，将 ls 的标准输出重定向到管道的写入端，将 wc 标准输入重定向到管道的读取端，如下图所示：</p>
+<p><img data-src="https://qiniu.liupzmin.com/pipe.png" alt="图 4-2 使用管道连接两个进程"></p>
+<p>ls 和 wc 两个进程根本不知道管道的存在，它们一如既往地从标准输入读取，写入标准输出，这其中的工作是由 shell 来完成的，大概类似如下这样：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 创建管道</span></span><br><span class="line"><span class="type">int</span> pfd[<span class="number">2</span>];</span><br><span class="line">pipe(pfd);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在第一个进程中复制文件描述符，重定向标准输出到管道写端</span></span><br><span class="line"><span class="keyword">if</span> (dup2(pfd[<span class="number">1</span>], STDOUT_FILENO) == <span class="number">-1</span>)</span><br><span class="line">	<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"><span class="keyword">if</span> (close(pfd[<span class="number">1</span>]) == <span class="number">-1</span>)</span><br><span class="line">	<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在第二个进程中复制文件描述符，重定向标准输入到管道读端</span></span><br><span class="line"><span class="keyword">if</span> (dup2(pfd[<span class="number">0</span>], STDIN_FILENO) == <span class="number">-1</span>)</span><br><span class="line">	<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"><span class="keyword">if</span> (close(pfd[<span class="number">0</span>]) == <span class="number">-1</span>)</span><br><span class="line">	<span class="keyword">return</span> <span class="number">-1</span>;</span><br></pre></td></tr></table></figure>
+
+<p>大多数处理文件描述符的工作都会放在 fork 之后，exec 之前。exec 之前都属于 shell 的代码范围，exec 之后就是另一个程序了。</p>
+<p>现在可以解答开篇的第一个问题了——终端与标准三剑客的关系。<strong>标准三剑客的本质仅仅是文件描述符，描述符的指向可以是任意类型的文件</strong>，标准三剑客与终端只是在交互场景下的特定结合，并不存在必然的联系，万不能混为一谈。</p>
+<h2 id="5-标准三剑客从哪里来？"><a href="#5-标准三剑客从哪里来？" class="headerlink" title="5 标准三剑客从哪里来？"></a>5 标准三剑客从哪里来？</h2><p>接下来，我们很容易产生新的疑问：我编写的程序应该如何处理标准三剑客呢？或者说该不该关注标准三剑客呢？如果要关注，什么情况下需要关注呢？</p>
+<p>要讲清楚这个新问题需要先概括一下程序的类型，Linux 大概有两种类型的程序：</p>
+<ol>
+<li>普通程序</li>
+<li>daemon 程序</li>
+</ol>
+<p>daemon 程序人所共知，是运行在后台的程序，反之运行在后台的程序不一定是 daemon，在 Linux 上想成为 daemon 可是有一套繁琐流程的，你要关闭除标准三剑客之外的其它文件描述符、将信号重置到默认状态、开启新的会话、调用两次  fork 以脱离控制终端、将标准三剑客重定向到<code>/dev/null</code>等等，<span class="exturl" data-url="aHR0cHM6Ly93d3cuZnJlZWRlc2t0b3Aub3JnL3NvZnR3YXJlL3N5c3RlbWQvbWFuL2xhdGVzdC9kYWVtb24uaHRtbCM=">SysV Daemons<i class="fa fa-external-link-alt"></i></span> 描述了传统 SysV daemon 的制作过程。</p>
+<p>不是 daemon 的程序都属于普通程序（启动的二进制程序是主程序，即不会退出），我猜测除了系统级的程序员以外很少人会去写 daemon 了，好在世界不断变化，Systemd 简化了这些工作，大多数工作都被 Systemd 处理了，你的普通程序也能 daemon 化，但是要配合好 Systemd 你还是有些额外工作要完成，这不是本文重点，此处略去不谈。</p>
+<p>SysV daemon 将标准三剑客重定向到<code>/dev/null</code>，此举意味着一个自觉的 daemon 应该考虑自己的标准输出（既然是 daemon，标准输入自然是不需要的）。如果有日志输出，应该将内容写到文件，你要非往标准输出打，就将标准输出重定向到文件或者其它地方，这些工作需要你自己完成。</p>
+<p>Systemd 会主动将标准输入重定向到<code>/dev/null</code>，标准输出和标准错误重定向到<code>systemd-journald.service</code>，你的普通程序也可以被 Systemd 管理而不用担心标准三剑客的问题。</p>
+<p>不过复杂有复杂的好处，简单有简单的取舍，SysV Daemons 除了在 SysV 下管理之外，你还可以在交互式 shell 下直接运行使程序进入后台，而普通程序想进入后台，除了使用 SysVinit 和 Systemd 管理之外，只能用<code>nohup</code>、<code>setsid</code>、<code>disown</code>这些命令来达到长期后台运行的目。</p>
+<p>经过第 4 节的论述，我们会得出这样的结论：<strong>程序自身以及 fork 该程序的父进程都有机会去修改标准三剑客的指向</strong>。所以，我们还想捋清楚一点：如果什么都不做，在各种常见情况下启动的程序其标准三剑客的默认继承是怎样的。</p>
+<p>SysVinit 和 Systemd 的 1 号进程无控制终端，其标准三剑客连接到<code>/dev/null</code>；交互式 shell 有控制终端，其标准三剑客连接到 shell 所在终端。明确这两点是因为各种服务管理系统的 init 进程和 shell 是我们运行程序的父进程，不做任何处理的话，子进程会继承父进程的标准三剑客。根据程序类型、运行方式、服务管理系统的不同，大致可分成以下 6 种情况：</p>
+<ol>
+<li><p>SysVinit + 普通程序</p>
+<p>普通进程如果被 SysVinit 管理，将继承 init 进程的设置，即标准三剑客连接到<code>/dev/null</code>，这种情况下如果你打印东西到标准输出，所有内容都会被丢进黑洞。拯救方法就是使用 shell 提供的重定向功能将标准输出和标准错误重定向到文件，因为 init 是 fork 一个 shell 来执行 init.d 中的脚本的。</p>
+<p>顺带一提，init 是为每个 init.d 的脚本都 fork 一个 shell 进程来解释执行的，脚本中的命令又要被 shell fork 执行，其性能上的负担可见一斑，这就是其被 Systemd 取代的原因。</p>
+</li>
+<li><p>SysVinit + SysV daemon</p>
+<p>这种情况前文已述，继承的肯定是标准三剑客连接到<code>/dev/null</code>，但 SysV daemon 通常都会自行设置。</p>
+</li>
+<li><p>shell + SysV daemon</p>
+<p>交互式 shell 下执行 daemon 程序，不会继承 shell 的设置，daemon 的目的就是丢弃控制终端，重建会话。</p>
+</li>
+<li><p>shell + 普通程序</p>
+<p>交互式 shell 下执行普通程序，会继承 shell 的设置，标准三剑客连接到 shell 所在的控制终端。</p>
+</li>
+<li><p>Systemd + 普通程序</p>
+<p>这种情况前文已述，Systemd 会主动将标准输入重定向到<code>/dev/null</code>，标准输出和标准错误重定向到<code>systemd-journald.service</code>，相当于systemd.service 中设置 type&#x3D;simple 或者 type&#x3D;exec，需要启动的程序本身是主进程。</p>
+<p>值得一提的是，Systemd 管理下的一些传统支持 daemon 的程序都要加上特定的参数，使程序启动到前台，比如 sshd：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExecStart=/usr/bin/sshd -D</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>-D      When this option is specified, sshd will not detach and does not become a daemon.</p>
+</blockquote>
+</li>
+<li><p>Systemd + SysV daemon</p>
+<p>这是新瓶装旧酒，用 Systemd 来管理传统的 daemon，在 service 文件里需要配置为：<code>type=forking</code>，但 Systemd 明确表示不鼓励这样使用，也就是说在程序设计上务必向 Systemd 的规则靠拢。</p>
+<p>标准三剑客就自不待言了，我的地盘我做主。</p>
+</li>
+</ol>
+<p><strong>后台运行的本质是脱离控制终端，运行在新的会话下，从而忽略终端的<code>SIGHUP</code>信号，以此获得永生！</strong>所以你会发现，标准三剑客是程序后台化的一个绊脚石，系统的不同部分在不同层次上给出了各自的解决方案。</p>
+<h2 id="6-关于终端的哲学呓语"><a href="#6-关于终端的哲学呓语" class="headerlink" title="6 关于终端的哲学呓语"></a>6 关于终端的哲学呓语</h2><p>最后终于要谈到文章那个唬人的副标题了——<strong>世界是我的表象</strong>。这句话出自叔本华的哲学名著《作为意志和表象的世界》，没错，我要用我肤浅的不能再肤浅的哲学知识做一些哲学上的附会，如果你对哲学没有兴趣，阅读至此就可以离开了，你并不会因此错过什么。</p>
+<p>我们的认知能力是一副天然的有色眼镜，我们看到的世界都是有色眼镜呈现给我们的，在叔本华哲学里有个很重要的概念：摩耶之幕。简单讲，就是一张超级巨大的，囊括天地的，但普通人察觉不到的帷幕。这个概念来自古印度的宗教经典，讲出了一个耸人听闻的真理：你以为山河大地、日月星辰都是真实存在的吗？那你就错了，你被骗了！其实我们看到的全部宇宙都只是婆楼那神施展出来的幻术，全是假的，一旦婆楼那神收回神通，宇宙就消失了。</p>
+<p>其背后的真实世界是我们靠理性永远认识不到的。真实的世界，或者说物体在真实世界中的样子，康德谓之物自体，叔本华谓之意志，柏拉图会说那是理念。</p>
+<p>为了把问题简化，你可以想象一下自己的所有感官都不存在，只剩下一双眼睛，只存在视觉能力，然后你一辈子都戴着一副红色的眼镜，镜片是半球形的凸面镜，所以你看到的万事万物不但都是红色的，还都是变形的。变形当然是有规律的，在怎样的角度，怎样的距离，会发生怎样的变形，你逐渐都能研究清楚，形成一套科学认知体系。当我站在你面前，如果你采取的是平视的角度，会看到一个红色的枣核形胖子，俯视的话，看到的是红色的墩子形胖子，仰视的话，看到的是一个红色的梨形胖子。我真的长成这样吗？真的会变形吗？当然不是，但你永远看不到我真实的样子，更重要的是，你永远都不该妄想能看到我真实的样子。你戴的眼镜决定了你的视觉模式，这是改变不了的。在你眼里，我永远都是一个红色的、会变形的胖子。</p>
+<p>真实的我，还包括真实的其他东西，康德称之为“物自体”，属于本体世界，而你看到的我，包括你看到的其他东西，都是物自体通过你的有色眼镜呈现给你的视觉图像，康德称之为“现象”，也可以叫“表象”。</p>
+<p>如果将计算机比作一个世界，终端呈现的就是世界的表象。如果终端中的字符有生命，他们能感官的一切都是表象，就连普通人对计算机的认知也是通过终端或者显示器的呈现，也同样是计算机世界的表象，而内行当然知道这些丰富表象的本质仅仅是高低电平的错落。</p>
+<p>现实世界只是现象世界，叔本华认为我们被“意志”支配，欲无止境，人生充满痛苦，所以聪明人都应该舍现象而求本体，舍刹那而求永恒。而完美且永恒的世界就是本体世界，就是理念的世界。</p>
+<p>康德认为时间和空间都是我们的主管感受，当你戴着时间和空间的眼镜，你看到的万事万物都会表现为时间上的相继和空间上的相距，这是认知能力带给我们的关系和限制，我们无法摆脱，也就是无法进入理念的世界。</p>
+<p>但叔本华认为，我们可以短暂的进入到理念的世界，那是一种短暂的迷狂状态，霎那间仿佛时间和空间都消失了，你忘记了一切，现实生活里的各种柴米油盐都不复存在了，等回过神来的时候，突然会涌起一种深深的失落，叔本华称之为“审美直观”和“自失”。</p>
+<p>这是美学里的概念，是的，叔本华认为人是可以通过审美进入自失状态的，这种迷狂的，自失的状态就是理念世界。</p>
+<p>任何人只要在现实生活里窥见了理念世界，都只想留在那里，再也不愿意回来。遗憾的是我们只能短暂的进入理念世界，而通过对文学艺术的审美，就可以使人进入这种状态。你可能会问：我为什么要进入这种状态？朴实的回答是你由此获得了审美享受，叔本华会说你摆脱了现实的世界的悲剧，进入了理念世界，获得了自由！</p>
+<p>那么，文学艺术作品为何能产生审美直观呢?</p>
+<p>所谓的理念，也叫理型、理想、理想型（此处并不是我们日常语言中的“理想”），简单讲就是抽象的、一般性的概念，在哲学术语里通常称为“共相”。比如我们在现实世界里看到这朵花和那朵花，看到成千上万朵花，每一朵花都是具体的、特殊的，这叫“殊相”。但我们会从无数具体的殊相的花里抽取共同特征，形成一个“花”的概念，这就是共相。我们用“花”这个共相来整合这朵花和那朵花的殊相。诗人在迷狂状态下可以写出好诗，画家在迷狂状态下可以画出好画，因为他们创作出来的作品是直接对理念的写照，写出了抽象，写出了共性。那么，在我们欣赏这些艺术杰作的时候，同样能进入迷狂状态，直接看到理念。</p>
+<p>没错，那个既完美又永恒的世界是一个精神世界！</p>
+<p>我早年一直想弄明白文学艺术的意义，为什么提到文明，我们总会首先联想到文学艺术，为什么不能是科学技术呢？你看它不像科学来帮助我们发现真理，改善生活，乃至改变人类进程；也不像社会学和政治学关心我们真正的生活秩序问题；更不像哲学在思想上指导人类前行。那文学艺术的意义到底是什么呢？就连《三体》中地球被降维打击时，为了让文明可以展现在二维花卷上，主人公也是将一些诸如《诗经》、《清明上河图》、《蒙娜丽莎》、《星空》等文学艺术作品呈现出来，为什么就不能展现半导体电路板、火箭设计图纸呢？</p>
+<p>前面的长篇大论就是我在哲学上找到的答案，也是我最想分享给你的。我确实有过叔本华所谓的自失状态，我早年读《草样年华》，近些年读《三体》都曾浓烈的感受到茫然的自失，后来我的兴趣逐渐转向了历史和哲学，这种体会也只有在研究计算机技术的时候才能多少体会到一点了，而这才是我真正想要讲的内容。</p>
+<p>康德说我们永远无法搞清楚物自体的世界，所以只应研究表象世界，不要研究物自体世界；叔本华认为我们虽然无法搞清物自体，但可以认识到，推测它的一些特征，也就是所谓的意志。文学艺术需要写出物自体的特征，也就是理念，才能将人带入审美直观，但计算机的世界不同于文学艺术，它不需要通过艺术手段抽象世界的共性以达到理念的世界，它就是世界，一个将表象和实质都呈现给你的世界，但你需要付出一点理性才能将表象和实质联系起来。</p>
+<p>我们处在现实世界之中，只能通过文学艺术达到审美直观，而我们在计算机的世界之外，“我们”创造了这个世界，可以认为计算机世界是对真实世界的拙劣模仿，设计者扮演了类似上帝的角色。在这个拙劣的世界里，我们既能看到表象，又能认识到物自体，我们完全可以把自己想象成计算机世界的表象，然后在现实世界运用理性认识到表象背后的物自体，就像是在看一幕戏剧，从开始到结尾，你既看得出角色的悲欢，又能体会到上帝创造万物时的理念，你无形中靠近了上帝，在遐想中脱离了计算机世界的时空束缚，达到了一种自失状态。</p>
+<p>这无关荣耀，只关乎自由！</p>
+<p><em><strong>参考文献</strong></em></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNTkwMDQwMy8=">UNIX环境高级编程<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNTgwOTMzMC8=">Linux&#x2F;UNIX系统编程手册<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvQ29tcHV0ZXJfdGVybWluYWw=">Computer terminal<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly8wcG9pbnRlci5kZS9ibG9nL3Byb2plY3RzL3NlcmlhbC1jb25zb2xlLmh0bWw=">systemd for Administrators<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly91bml4LnN0YWNrZXhjaGFuZ2UuY29tL3F1ZXN0aW9ucy80MTI2L3doYXQtaXMtdGhlLWV4YWN0LWRpZmZlcmVuY2UtYmV0d2Vlbi1hLXRlcm1pbmFsLWEtc2hlbGwtYS10dHktYW5kLWEtY29uLzQxMzIjNDEzMg==">what-is-the-exact-difference-between-a-terminal-a-shell-a-tty-and-a-con<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvVGVsZXByaW50ZXI=">Teleprinter<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuZnJlZWRlc2t0b3Aub3JnL3NvZnR3YXJlL3N5c3RlbWQvbWFuL2xhdGVzdC9kYWVtb24uaHRtbCM=">Daemons<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuZnJlZWRlc2t0b3Aub3JnL3NvZnR3YXJlL3N5c3RlbWQvbWFuL2xhdGVzdC9zeXN0ZW1kLnNlcnZpY2UuaHRtbCM=">systemd.service<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zNDk0MTUxMi8=">《人间词话》的哲学基础<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/computer-theory/" rel="tag"># computer theory</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/10/14/golang/debug-containerd/" rel="prev" title="我想 Debug 容器运行时">
+                  <i class="fa fa-chevron-left"></i> 我想 Debug 容器运行时
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/12/17/theory/terminal-buffer-io/" rel="next" title="终端闲思录（2）- 终端与缓冲的关系">
+                  终端闲思录（2）- 终端与缓冲的关系 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"b2eb92ffb0a568d58169a78b8fdec4c0"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="CPU是一个舞台，操作系统内核是位技艺精湛的指挥家，形形色色的进程就是舞者，它们在内核的指挥下轮番上台表演，演奏一场生命的赞歌！  1调度是件很神奇的事，一直以来我都对它无比着迷，并不断地钻营个中奥妙。几年下来，略有心得，于是思索着记录下来，以备将来优哉游哉忘乎所以后回来检索之用。 然而吸引我的并不是调度算法，而是调度的时机和原理。因此这篇文章只讨论调度时机和 Linux 内核的调度原理，与调度">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度">
+<meta property="og:url" content="http://liupzmin.com/2022/05/27/theory/schedule/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="CPU是一个舞台，操作系统内核是位技艺精湛的指挥家，形形色色的进程就是舞者，它们在内核的指挥下轮番上台表演，演奏一场生命的赞歌！  1调度是件很神奇的事，一直以来我都对它无比着迷，并不断地钻营个中奥妙。几年下来，略有心得，于是思索着记录下来，以备将来优哉游哉忘乎所以后回来检索之用。 然而吸引我的并不是调度算法，而是调度的时机和原理。因此这篇文章只讨论调度时机和 Linux 内核的调度原理，与调度">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiniu.liupzmin.com/stack_layout_fork.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/exec-stream.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/thread_info.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/many-to-one.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/one-to-one.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/many-to-many.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/go-cooperative.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/catching-a-signal.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/user-mode-frame.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/go-preempt.png">
+<meta property="article:published_time" content="2022-05-27T07:01:51.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.643Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="os">
+<meta property="article:tag" content="groutine">
+<meta property="article:tag" content="进程">
+<meta property="article:tag" content="线程">
+<meta property="article:tag" content="go">
+<meta property="article:tag" content="抢占式调度">
+<meta property="article:tag" content="上下文切换">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiniu.liupzmin.com/stack_layout_fork.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2022/05/27/theory/schedule/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2022/05/27/theory/schedule/","path":"2022/05/27/theory/schedule/","title":"在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1"><span class="nav-number">1.</span> <span class="nav-text">1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2"><span class="nav-number">2.</span> <span class="nav-text">2</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3"><span class="nav-number">3.</span> <span class="nav-text">3</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4"><span class="nav-number">4.</span> <span class="nav-text">4</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5"><span class="nav-number">5.</span> <span class="nav-text">5</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6"><span class="nav-number">6.</span> <span class="nav-text">6</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7"><span class="nav-number">7.</span> <span class="nav-text">7</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8"><span class="nav-number">8.</span> <span class="nav-text">8</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9"><span class="nav-number">9.</span> <span class="nav-text">9</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2022/05/27/theory/schedule/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy90aGVvcnkvc2NoZWR1bGUubWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-05-27 15:01:51" itemprop="dateCreated datePublished" datetime="2022-05-27T15:01:51+08:00">2022-05-27</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CPU/" itemprop="url" rel="index"><span itemprop="name">CPU</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CPU/computer-theory/" itemprop="url" rel="index"><span itemprop="name">computer theory</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>CPU是一个舞台，操作系统内核是位技艺精湛的指挥家，形形色色的进程就是舞者，它们在内核的指挥下轮番上台表演，演奏一场生命的赞歌！</p>
+</blockquote>
+<h2 id="1"><a href="#1" class="headerlink" title="1"></a>1</h2><p>调度是件很神奇的事，一直以来我都对它无比着迷，并不断地钻营个中奥妙。几年下来，略有心得，于是思索着记录下来，以备将来优哉游哉忘乎所以后回来检索之用。</p>
+<p>然而吸引我的并不是调度算法，而是调度的时机和原理。因此这篇文章只讨论调度时机和 Linux 内核的调度原理，与调度算法无涉，本文将调度算法当成一个黑盒，优先了解调度行为本身。</p>
+<p>计算机操作系统进入多道程序后，需要支持多个程序并发运行，这就需要操作系统必须有能力管理多个程序的运行，必要的时候进行程序切换，使得多个程序轮流获得CPU的使用权。当操作系统需要协调多个程序运行时，就有必要做点什么来保证各个程序可以无冲突并发运行（并发和并行的区别，此处不予讨论）。我们不妨做个不严谨的类比，如果需要使用文字来描述每个任务，那么把所有的任务写在一个文档里显然不是明智之举，即便是计算机新手，也懂得为每个任务单独建一个文档分别管理；当任务变得复杂，发展出很多支线时，一个文档很快又会捉襟见肘，不利于管理了。此时，聪明的做法就是为这个任务创建一个文件夹，每个文件夹中有若干文档，这些文档描述了任务的主线和若干支线，如果有必要它们可以共享文件夹中的图片、音视频等多媒体。</p>
+<p>我想你一眼就能看出来，上面的描述是在说进程和线程。不过我类比的重点并不是进、线程本身，而意在说明：<strong>要管理多个任务，就必然会采取某种结构来分门别类，分而治之！</strong>也就是说，操作系统内核会使用一个结构体来描述进程、线程及其相关的一切。那可以称这个结构体为进程或者线程吗？答案当然是否定的！谈调度自然绕不开进程和线程，因此我们要直面一个难题：你永远无法轻易地说清楚进程是什么！</p>
+<h2 id="2"><a href="#2" class="headerlink" title="2"></a>2</h2><p>《操作系统导论》将进程定义为：<strong>操作系统为正在运行的程序提供的抽象</strong>！认为进程只是一个正在运行的程序，并且声明机器状态（程序在运行时可以读取或更新的内容）为进程的一部分，机器状态包括内存和寄存器。</p>
+<p>无独有偶，《深入理解计算机系统》对进程的定义是：<strong>进程是操作系统对一个正在运行的程序的一种抽象。</strong>这和《操作系统导论》中给出的定义如出一辙，但是它紧接着还给出了线程的定义：<strong>进程往往不只有单一的执行流，进程实际上可以由多个称为线程的执行单元组成，每个线程都运行在进程的上下文中，并共享同样的代码和全局数据。</strong></p>
+<p>《深入理解Linux内核》补充说：<strong>可以把进程看作充分描述程序已经执行到何种程度的数据结构的汇集。</strong>这直接印证了我们之前的类比，从内核的观点看，进程的目的就是担当分配系统资源（CPU时间、内存等）的实体。这本书更偏爱于将进程描述成拥有多个相对独立的执行流，程序运行的本质就是CPU不断的执行一系列的指令序列，所以看起来就像是不断行进的流。</p>
+<p>传统的Unix进程只拥有一个执行流，即便是现代主流语言的编程模式，如果你不采用多线程编程的话，进程也只有一个执行流，我们习惯称之为主线程；一旦使用了多线程的编程范式，进程就会拥有多个独立的执行流，Linux 内核就会为每个执行流分配单独的数据结构来管理资源的使用及其机器状态。实际上，Linux内核中的数据结构并不区分进程和线程，统一都使用<code>task_struct</code>这个结构体来描述一个执行流，程序的调度也是基于这个结构来进行的，而同属于一个进程的线程结构会共享某些资源，比如代码段、虚拟地址空间、打开的文件描述符、信号、堆等，只有堆栈是每个线程私有的。因此，当我们谈论进程时更多的是从资源的角度去思考，而谈到线程时，更多的是从执行流的角度去考虑。</p>
+<p>综上，可以给出我心中对于进程的定义：<strong>进程是若干个活动的执行流以及各类相关资源的总称，这些资源包括了内核结构、地址空间（内存），寄存器等，其中进程的地址空间包括了多种类型的资源，代码段、数据段、堆、线程堆栈、文件映射等等；有些资源是线程共享的，比如堆、代码段，有些是线程私有的，比如堆栈。这些资源和若干独立执行流共同组成了进程这个抽象概念！</strong></p>
+<p>我们即将要探讨的就是：<strong>内核是如何将一个执行流从 CPU 上换下，代之以另一个执行流的！</strong></p>
+<h2 id="3"><a href="#3" class="headerlink" title="3"></a>3</h2><blockquote>
+<p>这一章节中出现新进程和新建进程两个词语，未免混淆特此说明如下：</p>
+<p>新进程：上下文切换时，被选中替换当前进程者</p>
+<p>新建进程：使用fork、clone等创建的新进程或新线程</p>
+</blockquote>
+<p>需要明确的一件事情就是内核调度的粒度，你定然听过<strong>“线程是调度的基本单位”</strong>这样的说法，这种说法固然没有错，但具体每个操作系统的实现却多有不同。以 Linux 为例，其内核角度并不区分进程和线程，用于标识调度单位的结构一律都是<code>task_struct</code>，因此后续的行文不会刻意区分进程和线程。</p>
+<p>为了控制进程的执行，内核必须有能力挂起正在 CPU 上运行的进程，并恢复以前挂起的某个进程的执行。这种行为被称为进程切换、任务切换、上下文切换。这是从 CPU 的角度来看，如果站在内核的角度，那么这种行为就是在进行进程调度。</p>
+<p>进行任务切换或者调度的根本原因在于 CPU 和寄存器是共享的，大家必须轮流使用！</p>
+<p>有意思的是，执行任务切换的并不是一个进程或者内核线程，而是一个函数<code>schedule()</code>。内核中有很多精心定义的点来执行<code>schedule()</code>，我们先来观察<code>schedule()</code>如何执行进程切换，至于调度的时机稍后进行讨论。</p>
+<p>进程切换只会也只应发生在内核态，这本身就是内核的职责，需要申明的一点是：<strong>执行流进入内核态后，用户态的硬件上下文已经保存在该进程对应的内核态堆栈上了，当该进程从内核态返回用户态时即可恢复原貌，从之前的终止处继续执行。</strong></p>
+<p>进程切换由两步组成：</p>
+<ol>
+<li>切换进程地址空间</li>
+<li>切换内核态堆栈和硬件上下文</li>
+</ol>
+<p><code>schedule</code> 会调用 <code>context_switch</code> 执行上下文切换，我们以 Linux 内核 <strong>5.10</strong> 版本为例，假设此时已经由调度算法挑选出了下一个即将运行的进程<code>next</code>，执行流进入<code>context_switch</code>的代码执行上下文切换：</p>
+<p><strong>kernel&#x2F;sched&#x2F;core.c</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * context_switch - switch to the new MM and the new thread&#x27;s register state.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> __always_inline <span class="keyword">struct</span> rq *</span><br><span class="line"><span class="title function_">context_switch</span><span class="params">(<span class="keyword">struct</span> rq *rq, <span class="keyword">struct</span> task_struct *prev,</span></span><br><span class="line"><span class="params">	       <span class="keyword">struct</span> task_struct *next, <span class="keyword">struct</span> rq_flags *rf)</span></span><br><span class="line">&#123;</span><br><span class="line">	prepare_task_switch(rq, prev, next);</span><br><span class="line">	arch_start_context_switch(prev);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!next-&gt;mm) &#123;                                <span class="comment">// to kernel</span></span><br><span class="line">		enter_lazy_tlb(prev-&gt;active_mm, next);</span><br><span class="line"></span><br><span class="line">		next-&gt;active_mm = prev-&gt;active_mm;</span><br><span class="line">		<span class="keyword">if</span> (prev-&gt;mm)                           <span class="comment">// from user</span></span><br><span class="line">			mmgrab(prev-&gt;active_mm);</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			prev-&gt;active_mm = <span class="literal">NULL</span>;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;                                        <span class="comment">// to user</span></span><br><span class="line">		membarrier_switch_mm(rq, prev-&gt;active_mm, next-&gt;mm);</span><br><span class="line">		switch_mm_irqs_off(prev-&gt;active_mm, next-&gt;mm, next);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (!prev-&gt;mm) &#123;                        <span class="comment">// from kernel</span></span><br><span class="line">			<span class="comment">/* will mmdrop() in finish_task_switch(). */</span></span><br><span class="line">			rq-&gt;prev_mm = prev-&gt;active_mm;</span><br><span class="line">			prev-&gt;active_mm = <span class="literal">NULL</span>;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rq-&gt;clock_update_flags &amp;= ~(RQCF_ACT_SKIP|RQCF_REQ_SKIP);</span><br><span class="line"></span><br><span class="line">	prepare_lock_switch(rq, next, rf);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Here we just switch the register state and the stack. */</span></span><br><span class="line">	switch_to(prev, next, prev);</span><br><span class="line">	barrier();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> finish_task_switch(prev);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>context_switch</code>的前半部分完成进程地址空间切换，<code>switch_to</code> 完成硬件上下文切换，此处主要关注<code>switch_to</code>如何完成上下文切换，毕竟我们只对执行流的变更感兴趣。</p>
+<p><code>switch_to</code> 是个预定义的宏，因其是和硬件体系结构密切相关的，所以主要部分需用汇编语言实现，我们看一下它的内容：</p>
+<p><strong>arch&#x2F;x86&#x2F;include&#x2F;asm&#x2F;switch_to.h</strong></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> switch_to(prev, next, last)					\</span></span><br><span class="line"><span class="meta">do &#123;									\</span></span><br><span class="line"><span class="meta">	((last) = __switch_to_asm((prev), (next)));			\</span></span><br><span class="line"><span class="meta">&#125; while (0)</span></span><br></pre></td></tr></table></figure>
+
+<p><code>__switch_to_asm</code> 即是由汇编实现的程序主体：</p>
+<p><strong>arch&#x2F;x86&#x2F;entry&#x2F;entry_64.S</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> * %rdi: prev task</span><br><span class="line"> * %rsi: next task</span><br><span class="line"> */</span><br><span class="line">.pushsection .text, &quot;ax&quot;</span><br><span class="line">SYM_FUNC_START(__switch_to_asm)</span><br><span class="line">	/*</span><br><span class="line">	 * Save callee-saved registers</span><br><span class="line">	 * This must match the order in inactive_task_frame</span><br><span class="line">	 */</span><br><span class="line">	pushq	%rbp</span><br><span class="line">	pushq	%rbx</span><br><span class="line">	pushq	%r12</span><br><span class="line">	pushq	%r13</span><br><span class="line">	pushq	%r14</span><br><span class="line">	pushq	%r15</span><br><span class="line"></span><br><span class="line">	/* switch stack */</span><br><span class="line">	movq	%rsp, TASK_threadsp(%rdi)</span><br><span class="line">	movq	TASK_threadsp(%rsi), %rsp</span><br><span class="line"></span><br><span class="line">#ifdef CONFIG_STACKPROTECTOR</span><br><span class="line">	movq	TASK_stack_canary(%rsi), %rbx</span><br><span class="line">	movq	%rbx, PER_CPU_VAR(fixed_percpu_data) + stack_canary_offset</span><br><span class="line">#endif</span><br><span class="line"></span><br><span class="line">#ifdef CONFIG_RETPOLINE</span><br><span class="line">	/*</span><br><span class="line">	 * When switching from a shallower to a deeper call stack</span><br><span class="line">	 * the RSB may either underflow or use entries populated</span><br><span class="line">	 * with userspace addresses. On CPUs where those concerns</span><br><span class="line">	 * exist, overwrite the RSB with entries which capture</span><br><span class="line">	 * speculative execution to prevent attack.</span><br><span class="line">	 */</span><br><span class="line">	FILL_RETURN_BUFFER %r12, RSB_CLEAR_LOOPS, X86_FEATURE_RSB_CTXSW</span><br><span class="line">#endif</span><br><span class="line"></span><br><span class="line">	/* restore callee-saved registers */</span><br><span class="line">	popq	%r15</span><br><span class="line">	popq	%r14</span><br><span class="line">	popq	%r13</span><br><span class="line">	popq	%r12</span><br><span class="line">	popq	%rbx</span><br><span class="line">	popq	%rbp</span><br><span class="line"></span><br><span class="line">	jmp	__switch_to</span><br><span class="line">SYM_FUNC_END(__switch_to_asm)</span><br></pre></td></tr></table></figure>
+
+<p>首先遵循被调用者原则保存6个寄存器的值，保存的方式就是压入即将被替换进程<code>prev</code>的内核栈，直到此时执行流依然使用<code>prev</code>的内核栈，不过接下来就开始切换内核栈了：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">/* switch stack */</span><br><span class="line">movq	%rsp, TASK_threadsp(%rdi)</span><br><span class="line">movq	TASK_threadsp(%rsi), %rsp</span><br></pre></td></tr></table></figure>
+
+<p>依照内核函数的调用惯例，<code>%rdi</code>和<code>%rsi</code>两个寄存器分别存放调用时传入的第一和第二个参数：<code>__switch_to_asm((prev), (next)))</code>。</p>
+<p><code>movq	%rsp, TASK_threadsp(%rdi)</code> 的结果是将当前内核栈的栈顶指针寄存器内容保存至<code>prev</code>进程（也就是当前进程）的<code>thread-&gt;sp</code>中，<code>thread</code> 是进程描述符<code>task_struct</code> 中一个类型为<code>thread_struct</code>的字段，里面会保存大部分 CPU 寄存器（但不包括 rax、rbx 等通用寄存器，它们的值保存至内核堆栈中）。而<code>movq	TASK_threadsp(%rsi), %rsp</code>这一句将被选中进程<code>next</code>中之前被保存的栈顶指针恢复至<code>rsp</code>寄存器，执行完这一条之后执行流的内核堆栈就切换到新进程了。</p>
+<p>严格来讲，从上面一条指令之后就是新进程的执行流了，可以说<strong>改变内核堆栈就意味着改变当前进程。</strong>这归因于和内核堆栈一起存放的一个名为<code>thread_info</code>的结构，内核都是通过它来寻找当前进程的描述符（参考《深入理解Linux内核》88页-<strong>标识一个进程</strong>）。</p>
+<p>接下来，从新进程的内核堆栈中弹出之前保存的6个寄存器的值，然后 <code>jmp</code> 到 <code>__switch_to</code> 函数，<code>__switch_to</code> 函数依然做一些保存老进程上下文和加载新进程上下文的工作，此处不再深入展开，我们仅将注意力集中到<code>jmp</code>这条指令上。</p>
+<p>如果你熟悉 <strong>2.6</strong> 版本的内核，读过《深入理解Linux内核》，你就会奇怪：为何此处切换了新进程的<code>rsp</code>，却没有<code>rip</code>的切换呢？2.6 版本是会将新进程 thread 字段中的<code>ip</code>推入内核堆栈作为返回地址（该指令地址就位于<code>switch_to</code>中），这样在 <code>__switch_to</code> 中<code>ret</code>时就会跳转到<code>thread-&gt;ip</code>指向的代码指令了，这也是为什么用<code>jmp</code> 不用 <code>call</code>的原因（<code>call</code> 会将<code>ip</code> 压栈，而<code>jmp</code>只是简单的跳转，不会压栈）。当我读到此处时，禁不住废书而叹，惊讶其设计的巧妙，但同时也生出疑问：既然新进程保存的地址就在附近，为何非要到<code>thread-&gt;ip</code>中绕一圈呢？直接把该地址推入内核堆栈效果不也一样吗？可能是内核的设计者也意识到这一点，在 2.6 版本 64 位内核直到最新的<code>5.x</code>版本就放弃了这种做法，不再去刻意的保存和恢复进程的<code>rip</code> 了，因为新进程的起点总是在<code>switch_to</code>函数中。</p>
+<p>所以，此处在<code>__switch_to</code> 返回时会跳到开始的<code>switch_to</code>处：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> switch_to(prev, next, last)					\</span></span><br><span class="line"><span class="meta">do &#123;									\</span></span><br><span class="line"><span class="meta">	((last) = __switch_to_asm((prev), (next)));			\</span></span><br><span class="line"><span class="meta">&#125; while (0)</span></span><br></pre></td></tr></table></figure>
+
+<p>栈帧一层层解开，会返回到 <code>context_switch</code> 函数调用，继而回到<code>schedule()</code>。可见，任何一个进入内核态调用<code>schedule()</code>执行任务切换的进程，最终都会等到<code>schedule()</code>调用的返回。我们稍后会讲到 <code>Go</code> 运行时的协程调度，其<code>schedule</code>函数是不会返回的，所以它看起来并不像一个函数，这是区别于操作系统调度函数一个重要的点。</p>
+<p>分析到此处，我们可能会以手舞之，以足蹈之，感觉终于在指令级别“看到”进程切换的本质了！不过还没到欢欣鼓舞的时候，我们似乎忘掉了一种情形：如果被选中的新进程是新创建的，从来没有被运行过，该又如何呢？<code>__switch_to</code>中<code>ret</code>时执行流又将流向何方呢？毕竟新进程是没有执行过<code>schedule()</code>的。</p>
+<p>依然是内核堆栈救了我们！</p>
+<p>要意识到的一点是：新建进程的内核堆栈并不是空的，它 copy 自父进程并经过精心的构造。</p>
+<p>以 <code>clone</code>系统调用为例，<code>copy_thread</code>用发出<code>clone()</code>系统调用时的CPU寄存器的值（此时都在父进程的内核堆栈中）来初始化子进程或者线程的内核堆栈。不过<code>copy_thread</code>会把<code>rax</code>寄存器对应字段的值（这是fork和clone系统调用在子进程或线程中的返回值）强行置为0，这就是为何我们使用fork时要通过返回值来判断此时执行的是子进程还是父进程。既然说到这里，就聊一下clone系统调用的封装接口吧！线程创建的接口是由标准库 glibc 中的包装函数实现的，它处理了返回值的问题，如果是主线程则返回到调用处，如果是新建线程则跳转到任务函数调用处，这是 glibc 封装函数通过推入新线程的堆栈实现的。我们可以观察一下glibc 的 clone 封装代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">/* The userland implementation is:</span><br><span class="line">   int clone (int (*fn)(void *arg), void *child_stack, int flags, void *arg),</span><br><span class="line">   the kernel entry is:</span><br><span class="line">   int clone (long flags, void *child_stack).</span><br><span class="line">   The parameters are passed in register and on the stack from userland:</span><br><span class="line">   rdi: fn</span><br><span class="line">   rsi: child_stack</span><br><span class="line">   rdx:	flags</span><br><span class="line">   rcx: arg</span><br><span class="line">   r8d:	TID field in parent</span><br><span class="line">   r9d: thread pointer</span><br><span class="line">%esp+8:	TID field in child</span><br><span class="line">   The kernel expects:</span><br><span class="line">   rax: system call number</span><br><span class="line">   rdi: flags</span><br><span class="line">   rsi: child_stack</span><br><span class="line">   rdx: TID field in parent</span><br><span class="line">   r10: TID field in child</span><br><span class="line">   r8:	thread pointer  */</span><br><span class="line"></span><br><span class="line">        .text</span><br><span class="line">ENTRY (__clone)</span><br><span class="line">	/* Sanity check arguments.  */</span><br><span class="line">	movq	$-EINVAL,%rax</span><br><span class="line">	testq	%rdi,%rdi		/* no NULL function pointers */</span><br><span class="line">	jz	SYSCALL_ERROR_LABEL</span><br><span class="line">	testq	%rsi,%rsi		/* no NULL stack pointers */</span><br><span class="line">	jz	SYSCALL_ERROR_LABEL</span><br><span class="line"></span><br><span class="line">	/* Insert the argument onto the new stack.  */</span><br><span class="line">	subq	$16,%rsi</span><br><span class="line">	movq	%rcx,8(%rsi)</span><br><span class="line"></span><br><span class="line">	/* Save the function pointer.  It will be popped off in the</span><br><span class="line">	   child in the ebx frobbing below.  </span><br><span class="line">	   这里把线程要运行的函数fn压入新建线程的用户态堆栈中*/</span><br><span class="line">	movq	%rdi,0(%rsi)</span><br><span class="line"></span><br><span class="line">	/* Do the system call.  */</span><br><span class="line">	movq	%rdx, %rdi</span><br><span class="line">	movq	%r8, %rdx</span><br><span class="line">	movq	%r9, %r8</span><br><span class="line">	mov	8(%rsp), %R10_LP</span><br><span class="line">	movl	$SYS_ify(clone),%eax</span><br><span class="line"></span><br><span class="line">	/* End FDE now, because in the child the unwind info will be</span><br><span class="line">	   wrong.  */</span><br><span class="line">	cfi_endproc;</span><br><span class="line">	syscall</span><br><span class="line"></span><br><span class="line">	/* 比较返回值 */</span><br><span class="line">	testq	%rax,%rax</span><br><span class="line">	jl	SYSCALL_ERROR_LABEL</span><br><span class="line">	/* 等于零则跳转到 L，否则直接返回 */</span><br><span class="line">	jz	L(thread_start)</span><br><span class="line"></span><br><span class="line">	ret</span><br><span class="line"></span><br><span class="line">L(thread_start):</span><br><span class="line">	cfi_startproc;</span><br><span class="line">	/* Clearing frame pointer is insufficient, use CFI.  */</span><br><span class="line">	cfi_undefined (rip);</span><br><span class="line">	/* Clear the frame pointer.  The ABI suggests this be done, to mark</span><br><span class="line">	   the outermost frame obviously.  */</span><br><span class="line">	xorl	%ebp, %ebp</span><br><span class="line"></span><br><span class="line">	/* Set up arguments for the function call.  */</span><br><span class="line">	popq	%rax		/* Function to call. 弹出函数地址 */</span><br><span class="line">	popq	%rdi		/* Argument.  */</span><br><span class="line">	call	*%rax       /* 开始调用执行 */</span><br><span class="line">	/* Call exit with return value from function call. */</span><br><span class="line">	movq	%rax, %rdi</span><br><span class="line">	movl	$SYS_ify(exit), %eax</span><br><span class="line">	syscall</span><br><span class="line">	cfi_endproc;</span><br></pre></td></tr></table></figure>
+
+<p> 开头的注释部分很好地揭示了用户态代码和内核态代码对于传参的不同要求，即寄存器的使用规则。关键点是<code>movq	%rdi,0(%rsi)</code>这一句，它将线程要执行的<code>fn</code>地址推入了新进程的堆栈，并在<code>L(thread_start):</code>部分通过下面三条指令启动新线程执行流：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">popq	%rax		/* Function to call. 弹出函数地址 */</span><br><span class="line">popq	%rdi		/* Argument.  */</span><br><span class="line">call	*%rax       /* 开始调用执行 */</span><br></pre></td></tr></table></figure>
+
+<p>Go 并不使用标准的 C 库，其 runtime 重写了所有的系统调用封装函数，从 Go 的 clone 实现来看，也是相似的逻辑。不过，Go 使用 plan9 汇编，在阅读上会有一些不便：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line">// int32 clone(int32 flags, void *stk, M *mp, G *gp, void (*fn)(void));</span><br><span class="line">TEXT runtime·clone(SB),NOSPLIT,$0</span><br><span class="line">	MOVL	flags+0(FP), DI</span><br><span class="line">	MOVQ	stk+8(FP), SI</span><br><span class="line">	MOVQ	$0, DX</span><br><span class="line">	MOVQ	$0, R10</span><br><span class="line">	MOVQ    $0, R8</span><br><span class="line">	// Copy mp, gp, fn off parent stack for use by child.</span><br><span class="line">	// Careful: Linux system call clobbers CX and R11.</span><br><span class="line">	MOVQ	mp+16(FP), R13</span><br><span class="line">	MOVQ	gp+24(FP), R9</span><br><span class="line">	MOVQ	fn+32(FP), R12 // fn 被放入R12寄存器</span><br><span class="line">	CMPQ	R13, $0    // m</span><br><span class="line">	JEQ	nog1</span><br><span class="line">	CMPQ	R9, $0    // g</span><br><span class="line">	JEQ	nog1</span><br><span class="line">	LEAQ	m_tls(R13), R8</span><br><span class="line">#ifdef GOOS_android</span><br><span class="line">	// Android stores the TLS offset in runtime·tls_g.</span><br><span class="line">	SUBQ	runtime·tls_g(SB), R8</span><br><span class="line">#else</span><br><span class="line">	ADDQ	$8, R8	// ELF wants to use -8(FS)</span><br><span class="line">#endif</span><br><span class="line">	ORQ 	$0x00080000, DI //add flag CLONE_SETTLS(0x00080000) to call clone</span><br><span class="line">nog1:</span><br><span class="line">	MOVL	$SYS_clone, AX  // 放入系统调用号，准备进入系统调用</span><br><span class="line">	SYSCALL</span><br><span class="line">	// 系统调用返回</span><br><span class="line">	// In parent, return. 父进程则返回</span><br><span class="line">	CMPQ	AX, $0</span><br><span class="line">	JEQ	3(PC) // 若返回值为0，则跳跃3条指令</span><br><span class="line">	MOVL	AX, ret+40(FP)</span><br><span class="line">	RET</span><br><span class="line"></span><br><span class="line">	// In child, on new stack.</span><br><span class="line">	// 如果是子进程则切换堆栈</span><br><span class="line">	MOVQ	SI, SP</span><br><span class="line"></span><br><span class="line">	// If g or m are nil, skip Go-related setup.</span><br><span class="line">	CMPQ	R13, $0    // m</span><br><span class="line">	JEQ	nog2</span><br><span class="line">	CMPQ	R9, $0    // g</span><br><span class="line">	JEQ	nog2</span><br><span class="line"></span><br><span class="line">	// Initialize m-&gt;procid to Linux tid</span><br><span class="line">	MOVL	$SYS_gettid, AX</span><br><span class="line">	SYSCALL</span><br><span class="line">	MOVQ	AX, m_procid(R13)</span><br><span class="line"></span><br><span class="line">	// In child, set up new stack</span><br><span class="line">	get_tls(CX)</span><br><span class="line">	MOVQ	R13, g_m(R9)</span><br><span class="line">	MOVQ	R9, g(CX)</span><br><span class="line">	MOVQ	R9, R14 // set g register</span><br><span class="line">	CALL	runtime·stackcheck(SB)</span><br><span class="line"></span><br><span class="line">nog2:</span><br><span class="line">	// Call fn. This is the PC of an ABI0 function.</span><br><span class="line">	// 调用 fn</span><br><span class="line">	CALL	R12</span><br><span class="line"></span><br><span class="line">	// It shouldn&#x27;t return. If it does, exit that thread.</span><br><span class="line">	MOVL	$111, DI</span><br><span class="line">	MOVL	$SYS_exit, AX</span><br><span class="line">	SYSCALL</span><br><span class="line">	JMP	-3(PC)	// keep exiting</span><br></pre></td></tr></table></figure>
+
+<p>回到操作系统内核新建进程的话题上来，前面讲过，在内核 3.0 到最新的 5.x 版本不再去刻意的保存和恢复进程的<code>rip</code> 了，因为新进程（被选中的进程）的起点总是在<code>switch_to</code>函数中。那么在新建进程初次运行的问题上，新旧版本虽然看上去不同，但殊途同归，最终都会把执行流引向<code>ret_from_fork()</code>，我们先看看 2.6 版本 32 位内核的操作：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">#define switch_to(prev,next,last) do &#123;					\</span><br><span class="line">	unsigned long esi,edi;						\</span><br><span class="line">	asm volatile(&quot;pushfl\n\t&quot;		/* Save flags */	\</span><br><span class="line">		     &quot;pushl %%ebp\n\t&quot;					\</span><br><span class="line">		     &quot;movl %%esp,%0\n\t&quot;	/* save ESP */		\</span><br><span class="line">		     &quot;movl %5,%%esp\n\t&quot;	/* restore ESP */	\</span><br><span class="line">		     &quot;movl $1f,%1\n\t&quot;		/* save EIP */		\</span><br><span class="line">		     &quot;pushl %6\n\t&quot;		/* restore EIP */	\</span><br><span class="line">		     &quot;jmp __switch_to\n&quot;				\</span><br><span class="line">		     &quot;1:\t&quot;						\</span><br><span class="line">		     &quot;popl %%ebp\n\t&quot;					\</span><br><span class="line">		     &quot;popfl&quot;						\</span><br><span class="line">		     :&quot;=m&quot; (prev-&gt;thread.esp),&quot;=m&quot; (prev-&gt;thread.eip),	\</span><br><span class="line">		      &quot;=a&quot; (last),&quot;=S&quot; (esi),&quot;=D&quot; (edi)			\</span><br><span class="line">		     :&quot;m&quot; (next-&gt;thread.esp),&quot;m&quot; (next-&gt;thread.eip),	\</span><br><span class="line">		      &quot;2&quot; (prev), &quot;d&quot; (next));				\</span><br><span class="line">&#125; while (0)</span><br></pre></td></tr></table></figure>
+
+<p>从注释可以看出，在切换了内核堆栈之后，开始保存旧进程的<code>EIP</code>恢复新进程的<code>EIP</code>，恢复新进程的<code>EIP</code>是通过<code>pushl %6</code>来完成的，这句话的意思是将<code>next-&gt;thread.eip</code>的值压入内核堆栈，以便后面的C函数<code>__switch_to</code>返回时跳转。这是比较巧妙的一个地方，对于一个曾经被调度过的进程，其<code>thread.eip</code>中保存的就是<code>1:</code>标号处的指令，这是通过<code>movl $1f,%1</code>指令实现的（此处即上文提到的跳转地址本身就位于<code>switch_to</code>函数中）。问题是对于一个未曾运行过的新进程来说，是没有执行过<code>switch_to</code>代码的，所以此处<code>pushl %6</code>入栈的并不是标号<code>1:</code>处的代码，而是在创建进程时设置的<code>ret_from_fork()</code>，当<code>__switch_to</code>执行到<code>ret</code> 时，从内核堆栈弹出要跳转的地址，这个地址就是<code>ret_from_fork()</code>，新建进程的旅程便由此开始！</p>
+<p>64 位的 2.6 内核版本稍微有些区别，但结果都是一样的，这里不再赘述，感兴趣的可以参考<span class="exturl" data-url="aHR0cDovL3d3dy5tYWl6dXJlLm9yZy9wcm9qZWN0cy9ldm9sdXRpb25feDg2X2NvbnRleHRfc3dpdGNoX2xpbnV4Lw==">Evolution of the x86 context switch in Linux<i class="fa fa-external-link-alt"></i></span> 这篇文章，其详细描述了从内核1.0版本到4.14版本上下文切换部分的设计变更。</p>
+<p>回到我们开始讨论的 5.10 版本的<code>__switch_to_asm</code>，当被选中的新进程是一个新建进程时，<code>jmp	__switch_to</code>返回后会跳转到哪里呢？答案当然是<code>ret_from_fork()</code>，新进程没有调用过<code>schedule()</code>，故不会回到其调用栈，此时只需搞清楚新进程的内核栈内容就能明白执行流的走向了，新建进程时执行完<code>copy_thread()</code>之后，进程的内核堆栈示意图如下：</p>
+<p><img data-src="https://qiniu.liupzmin.com/stack_layout_fork.png" alt="图 3-1 新进程的内核堆栈"></p>
+<p>​	如图 3-1 所示，弹出6个寄存器之后，就只剩<code>ret_from_fork()</code>的地址了。</p>
+<h2 id="4"><a href="#4" class="headerlink" title="4"></a>4</h2><p>虽然<code>ret_from_fork()</code>是新建进程的开始，但在真正返回到用户空间之前仍然横着一道关卡，那就是检查是否需要进行再调度。这是有可能的，如果有一个优先级更高的进程需要运行，那么时钟中断处理程序兴许已经在<code>thread_info</code>中做好了标记，等待着<code>schedule()</code>被调用。在真正回到用户空间之前，<code>ret_from_fork()</code>会检查这些标记，如果有必要，就调用<code>schedule()</code>。所以，我们就可以发问了，<code>schedule()</code>返回之后，执行流会去向哪里？</p>
+<p>于<code>ret_from_fork()</code>而言很简单，如果它真的调用了<code>schedule()</code>，当调度函数返回时，进程会以一个“老程序”的身份初次进入用户空间。因此问题的本质是何时会调用<code>schedule()</code>，换句话说，内核的调度时机有哪些？</p>
+<p>Linux 调度时机主要有：</p>
+<ol>
+<li>进程状态转换时刻：进程终止、进程睡眠；</li>
+<li>当前进程的时间片用完；</li>
+<li>进程主动调用</li>
+<li>进程从中断、异常及系统调用返回到用户态时。</li>
+</ol>
+<p>时机1，进程要调用sleep()或exit()等函数进行状态转换时，这些系统调用会主动调用调度函数进行进程调度。</p>
+<p>时机2，由于进程的时间片是由时钟中断来更新的，因此，这种情况和时机4是密不可分的。</p>
+<p>时机3，当进程某些资源无法获取，或者设备驱动程序执行长而重复的任务时，进程主动调用调度函数主动放弃CPU，比如锁、缺页等场景。</p>
+<p>时机4，调度的绝大多数占比应属于此种情况，CPU 会在每次执行完一条指令之后检查是否有中断产生，如有则进入中断处理程序。当从中断、异常及系统调用返回到用户态时都会检查调度标志，如果检测为真则进入调度函数。</p>
+<p>《操作系统导论》中说道：一旦时钟开始运行，操作系统就感到安全了，因为控制权最终会还给它，因此操作系统可以自由运行用户程序。</p>
+<p>可见，在中断返回之前进行调度是一个绝妙的方法。因此，我们可以说：<code>schedule()</code>返回之后的去向并不唯一，有可能是中断、异常和系统调用返回用户空间之前，也有可能是在系统调用进行之中。这也是为何进程切换只会发生在内核态。</p>
+<p>我用一幅图来描绘一下，进程的执行流在用户态和内核态之间变换以及进程切换的场景，让我们以指令的视角在进程的用户态和内核态之间，在进程与进程之间进行一场穿梭之旅。</p>
+<p><img data-src="https://qiniu.liupzmin.com/exec-stream.png" alt="图 4-1 进程执行流"></p>
+<p>图 4-1 描述了3个进程在两颗CPU上的执行情况，注意这并不是以进程的视角来展现的，<strong>各种颜色的执行流仅表示进程处于用户态，灰色的执行流代表内核态</strong>，不同的是内核态的前半部分代表当前进程，后半部分则是经过进程切换后代表下一个进程。图中进程B切换为进程A，当执行流进入内核态执行切换时，切换之前内核代表进程B执行，切换之后内核代表新进程A执行。</p>
+<blockquote>
+<p>图 4-1 仅仅展示了进程切换的场景，并不是指进程的执行流进入内核态后一定会发生进程切换</p>
+</blockquote>
+<p>要理解“代表”的含义，就需要解释一下<code>thread_info</code>这个数据结构，我们前面曾提到过它，但未加以详述，此处有必要略作说明。</p>
+<p><code>thread_info</code>被称为线程描述符（不应纠结于概念，把线程理解为一个执行流即可），这个结构包含了指向进程描述符<code>task_struct</code>的指针，因此，内核若想确定当前运行的进程，只需要找到<code>thread_info</code>即可。但问题是如何确定其位置呢？内核的处理方法依然非常巧妙——将<code>thread_info</code>和进程内核堆栈一起存放！放一幅图即可一目了然：</p>
+<p><img data-src="https://qiniu.liupzmin.com/thread_info.png" alt="图 4-2 thread_info 结构和内核堆栈存放在两个连续的页框中"></p>
+<p>图 4-2 所示，这是一块 8k 大小的内存，内核堆栈由高地址向低地址增长，thread_info 存放在最底部，其大小通常是 52 字节，因此，内核堆栈能扩展到8140字节。这个大小看上去很小，至少远远小于进程的用户态堆栈的默认大小（Linux 上用户态堆栈的大小为8M）。这是因为内核控制路径用到的堆栈很少，只需几千字节足矣！</p>
+<p>《深入理解Linux内核》说道，<em><strong>从效率的观点来看，<code>thread_info</code>结构与内核态堆栈之间的紧密结合提供的主要好处是：内核很容易从<code>esp</code>寄存器（栈顶指针寄存器）的值获得当前在CPU上正在运行进程的<code>thread_info</code>结构的地址。</strong></em>假设<code>thread_info</code>和内核堆栈的结合体大小就是 8K，那么内核屏蔽掉 esp 的低 13 位有效位就可以获得<code>thread_info</code>结构的基地址。由此可知：<strong>切换了内核堆栈就等于切换了当前进程。</strong></p>
+<p>还可以从资源使用统计上来理解“代表”的含义。<strong>当进程进入内核态时，其对CPU的时间的消耗则记录在进程的sys、hiq、siq 等指标上，由此可以想见一个内核的流氓特征：与我无关的中断处理对于CPU的消耗都算在了我的头上！</strong></p>
+<p>之所以强调“代表”，是为了说明进程是相对执行流而言的，而不是相对程序而言。这里的程序指的是躺在硬盘上的二进制数据，或者说用户态的指令集，其实用户态的指令集囊括了磁盘上的二进制数据。换句话说，如果程序是完全静态链接的，程序的二进制就完全包括了用户态指令集，反之，用户态指令集是大于二进制数据中的指令集的，这是由动态链接决定的。</p>
+<p>我曾在论坛上与人争论过一个问题：向 redis 发出一个删除大量key的命令，redis 的主线程是否可以说被阻塞了？</p>
+<p>很多人的观点是主线程要释放内存会进入系统调用，因释放内存耗时较长故主线程被阻塞。而我的观点是：在删除大量key时，redis 主线程并没有阻塞，阻塞的是发出指令的客户端以及排队发送指令的其它客户端！经过上面的论证，我们知道内核态的执行流一部分代表当前进程，一部分代表切换后的新进程，所以，在被调度之前，不管是用户态还是内核态，都表示这个进程仍在CPU上运行。不能说 redis 线程发起系统调用后陷入了内核，这个线程就被阻塞了，这是不正确的。此时CPU上的执行流依然属于 redis 主线程，其对资源的消耗仍会被记录在该线程名下。redis 主线程一直在努力干活，没有被阻塞，只是这个线程进入到内核态后干的时间比较长，阻塞了发出指令的客户端，同样也阻塞了后续发指令的客户端，而这是由 redis 处理网络请求是单线程模型决定的！</p>
+<p>线程是操作系统为用户提供的最轻便的并发模型，它的轻便来自于和进程的对比，二者在资源的使用上不可同日而语。即便如此，线程的资源占用仍然相当可观。从资源的有限性出发，不可能为了并发而创建任意数量的线程。除去堆栈资源累加产生的内存占用之外，过多的线程数量也会加重内核调度的负担，这种负担体现在过多指令浪费在进程切换上，而没有为真正的程序逻辑所用。</p>
+<p>对高并发的执着追求，诞生了编程语言世界里五花八门的协程，或者说用户态线程，概念并不重要，重要的是，它们只能在用户态做文章。像Python、Java、C++、Go、Rust 等语言都提供了基于协程的并发模型，这里面由于 Go 是相对比较新生的语言，没有任何历史包袱，从而提供了完美的用户态线程，且将此并发模型内置于语言自身。这样做的好处是，开发并发程序变得异常简单，一个简简单单的<code>go</code>关键字就可以创建一个独立的任务，即<strong>一个独立的执行流</strong>，如果换做其它语言，想要创建一个独立的执行流只有线程或者进程这种由操作系统提供的原生方式（当然，很多语言也有对应的协程库，因本人未做过详细研究，故只考虑原生的并发模型）；然而，为了并发体系的自洽，Go 为其用户屏蔽了操作系统提供的线程模型，虽然用起来简单了，但理解上却多了些许障碍。</p>
+<h2 id="5"><a href="#5" class="headerlink" title="5"></a>5</h2><p>《操作系统概念》4.3节简单讨论了<strong>线程模型</strong>，书中说有两种不同的方法来提供线程支持，<strong>用户层的用户线程</strong>和<strong>内核层的内核线程</strong>，大致有如下三种模型</p>
+<ol>
+<li><p>多对一模型</p>
+<p><img data-src="https://qiniu.liupzmin.com/many-to-one.png" alt="图 5-1 多对一模型"></p>
+<p>这种模型将用户态的多个线程映射到一个内核线程上，这种方式最大缺点就是任何一个用户线程发生阻塞调用时，整个内核线程就会被调离 CPU ，致使其它的用户线程失去执行机会。</p>
+</li>
+<li><p>一对一模型</p>
+<p><img data-src="https://qiniu.liupzmin.com/one-to-one.png" alt="图 5-2 一对一模型"></p>
+<p>一对一模型将每个用户线程映射到一个内核线程，如果一个线程阻塞在系统调用上时，剩余的仍然可以运行。这种模型唯一的缺点是创建一个用户线程就需要创建对应的内核线程，可以想见的是，创建内核线程的时间开销和资源开销是相当可观的，换句话说，成本决定了能开启线程的数量。Liunx和windows都实现了一对一的模型。</p>
+</li>
+<li><p>多对多模型</p>
+<p><img data-src="https://qiniu.liupzmin.com/many-to-many.png" alt="图 5-3 多对多模型"></p>
+<p>对多对模型多路复用多个用户级线程到多个内核级线程，通常来说用户线程要比内核线程多的多，这种模型没有上述两种模型的缺点，当一个用户线程发出导致内核线程阻塞的系统调用时，其余的用户线程依然可以被其它内核线程调度。同时，因为用户线程无比轻量，时间和资源成本较少，因此可以开启任意数量的用户线程用于并发，当然量变会引起质变，数量过于庞大的用户线程也会加重资源的消耗，因此会出现了各种各样的协程池用于刹车。Go 语言的并发模型就实现了这种 <strong>M:N</strong> 的并发模型，稍后我们会讲到，现在先让我来批判一下《操作系统概念》中的概念模糊问题。</p>
+</li>
+</ol>
+<p>不知道你是否被上面的<strong>用户线程</strong>、<strong>内核线程</strong>、<strong>映射</strong>等概念搅的一头雾水呢？按照其语义，用户线程和内核线程就像是对立的两方，会有某个东西将它们联系起来构成<strong>“映射”</strong>，或许是内核，又或许是C库，但书中没讲，我能够理解《操作系统概念》是讲操作系统的设计与实现原理，会兼顾大部分操作系统，讲解的也是较为抽象的部分，不过现代绝大部分人只接触过Linux，而Linux内核提供的并发模型就只有一对一这一种，所里书里的内容如今看上去多少有些不合时宜。在 Linux 内核当中甚至并不区分进程和线程，它们统一都由<code>task_struct</code>这一种数据结构表示，并且基于其进行调度，也就是说，在内核看来每个<code>task_struct</code>只有一个执行流，至于在用户态这个大的执行流干些什么，内核并不关心。</p>
+<p>要正确理解书中所表达的意图，就需要先把概念捋清楚，我以 Linux 为例来进行说明。</p>
+<p>首先，需要把这里的<strong>内核线程</strong>拿掉，换成<strong>操作系统线程</strong>，即 Linux 内核提供的线程。我之所以不用内核线程是因为内核线程这个概念在 Linux 中也有对应的存在（参见《深入linux内核架构》2.4.2 内核线程），内核线程是一种只运行在内核地址空间的线程。所有的内核线程共享内核地址空间（对于 32 位系统来说，就是 3-4GB 的虚拟地址空间），所以也共享同一份内核页表，并且没有用户地址空间，这也是为什么叫内核线程，而不叫内核进程的原因。</p>
+<p>其次，将用户线程换成协程来表达，这里之所以用协程，完全是因为操作系统线程实在是太耀眼，太深入人心了，以至于人们都忘记了它原本抽象的含义，当需要表达在用户态实现的这个实体时，就有了“用户线程”、“协程”、“go程”等五花八门的名字，特别是“用户线程”，听起来让人如堕五里雾中。</p>
+<p>前面讲过，进程是一堆资源和若干执行流的总称，Linux 中的<code>task_struct</code>记录了分配的资源和执行流的状态，是一个勉强能够被称之为进程或者线程的实体，协程也有记录资源和执行流状态的对应实体，从这些“实体”的意义上讲，也可以称协程和操作系统线程之间存在对应关系。现在让我们重新理解一下<strong>“对多对模型多路复用多个用户级线程到多个内核级线程”</strong>这句话，可以换一种表达：<strong>对多对模型指的是在多个Linux操作系统线程之内运行多个协程</strong>。我这里使用了<strong>“之内”</strong>而不是<strong>“之上”</strong>，是想着重表达操作系统进&#x2F;线程是一个罐罐儿，用户态的所有花样都是在罐罐儿里玩，并没有超出操作系统进&#x2F;线程的活动范围。一言以蔽之，<strong>用户态程序永远无法逃脱进程地址空间和执行流的手掌心！</strong></p>
+<p>或许，我们可以换个角度，抛开这些定义，站在 CPU 的角度去理解问题。所谓线程就是内核维护的一个数据结构，内核依靠这个结构来控制 CPU 上运行的代码，指令无论在用户态还是内核态，都是这个线程，所有的资源消耗都计入此线程，即便是与此线程无关的中断所消耗的资源也被记在该线程名下。协程就是用户空间代码维护的一个数据结构，用户空间代码可以通过控制 ip、sp 等寄存器来控制用户空间执行流的走向，就可以实现在不同的协程间切换，并把执行流的状态记录在对应的数据结构上，重要的是协程代码本身就属于操作系统用户态执行流中的指令。</p>
+<p>协程和操作系统线程 M:N 的这种模型，现实中实现并不多，Go 绝对是最耀眼的那一颗！</p>
+<h2 id="6"><a href="#6" class="headerlink" title="6"></a>6</h2><p>go runtime 中也有和操作系统内核类似的<code>schedule()</code>，它会在最终调用用汇编代码写成的<code>runtime·gogo(buf *gobuf)</code>，正如<a href="https://liupzmin.com/2022/04/26/theory/stack-insight-03/">《溯源 goroutine 堆栈》</a> 中提到的，它会将新的 goroutine 恢复执行，最后的指令<code>JMP	BX</code>意味着<code>schedule()</code>函数不会返回，<code>schedule()</code>总是会在合适的点被调用，直到选择出可以运行的 goroutine。如果一个 goroutine 自然终止，执行流也会回到事先埋好的点<code>runtime·goexit</code>，而 goexit 最终会调用schedule()。在通往<code>schedule()</code>的调用路径中总会有 <code>runtime·mcall</code>的身影，ip、sp 等寄存器的内容就是在此处被保存，并最终在<code>schedule()</code>中被恢复。</p>
+<p>经过上面这些铺垫，我们可以从指令的视角在宏观上来理解一下 go 的协程运作过程：</p>
+<p><img data-src="https://qiniu.liupzmin.com/go-cooperative.png" alt="图 6-1 go协作式调度"></p>
+<p>仍然以前面展示进程切换时的图作为基础，为了配合 Go 的实际情况，将图中的进程换成线程来讲。现在想象一下，线程 A、B、C 是 go 程序底层的操作系统线程（GMP中的M），g1、g2、g3 为 go 程序在用户空间实现的协程，或者说叫 goroutine。值得注意的是，内核并不知道 goroutine 的存在，它仍然按照自己一贯的行为方式对 A、B、C 三个线程进行调度。</p>
+<p>当A线程的时间片用完，或者发出阻塞的系统调用时，就会被内核调度出 CPU，继而把 C 线程调度到 CPU 上来执行。图中显示 A线程被换下 CPU0 的时候，B 线程仍然在 CPU1 上，这意味着其余的 goroutine 依然会得到执行的机会。再看被调度到 CPU0 上的 C 线程，它也是 go 程序底层的线程，这意味着在一个拥有双核的机器上，goroutine 总是有机会运行的，即便有些 goroutine 因为系统调用等某些原因导致其所在的操作系统线程被换下。go 总会保证有两个<strong>“活的”</strong>的线程一直待在 CPU 上轮番寻找 goroutine 来执行，除非操作系统内核看不下去，换其它的程序线程来执行，但 go 总会保证有两个准备好的线程可以随时被内核调度。</p>
+<p>再来切一下近景，把 B 线程放大。在内核看来，黄色部分只代表 B 线程的用户态执行流，但就在这个黄色用户态执行流的内部正在轮番上演形形色色的任务，g1、g2、g3 三个 goroutine 正轮流在CPU上执行，绿色执行流代表 go 的 runtime，正是 runtime 居中调度，指挥得当，才让以 goroutine 为单位的任务都获得执行的机会。内核对这些一无所知，CPU也只会觉得奇怪：这个线程的用户态代码怎么老是频繁的切换堆栈？（见<a href="https://liupzmin.com/2022/04/26/theory/stack-insight-03/">《溯源 goroutine 堆栈》</a> 中对 go 协程堆栈的描述)</p>
+<p>这种并发模型的优势显而易见，让我们来直观地感受一下。操作系统线程每次上下文切换需要大约 1000ns 的时间，而硬件有望在每纳秒的时间里执行 12 条指令，也就是说，当任务必须等待时，操作系统就会花费 12k 条指令去做线程切换，却不能将这些指令用在有意义的业务上。而 go 在用户态进行协程切换，极大地缓和了这种浪费，go 进行一次协程切换大概需要 200ns 或者 2.4k 条指令。简言之，<strong>go 用尽可能少的 os 级的线程调度来做更多的事情，方式就是在用户空间调度</strong>，这是语言级别的一种能力，可不严谨的说，go 的调度比 os 级调度便宜 5 倍，甚至更多！</p>
+<p>操作系统内核之所以可以大胆地把 CPU 的使用权交给用户态程序，是因为时钟中断总会让控制权重归内核。那么，完全运行在用户态的 runtime 是如何获得控制权来调度 goroutine 的呢？go1.14 之前确实没办法做到，控制权的转移完全依靠 goroutine 的主动放弃，通过 <code>runtime.Gosched</code> 调用主动让出执行机会，或者当发生执行栈分段时，检查自身的抢占标记，决定是否继续执行；其中第二种情况是通过编译器编译时在函数调用之前插入指令来实现的，也就是说只有在 goroutine 发生函数调用时，runtime 才会获得短暂的执行权来实施调度。不难想见的是，下面这种无函数调用的代码会导致 goroutine 永远霸占 CPU，runtime 根本得不到执行的机会：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 此程序在 Go 1.14 之前的版本不会输出 OK</span></span><br><span class="line"><span class="keyword">package</span> main</span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;runtime&quot;</span></span><br><span class="line">	<span class="string">&quot;time&quot;</span></span><br><span class="line">)</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	runtime.GOMAXPROCS(<span class="number">1</span>)</span><br><span class="line">	<span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		<span class="keyword">for</span> &#123;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;()</span><br><span class="line">	time.Sleep(time.Millisecond)</span><br><span class="line">	<span class="built_in">println</span>(<span class="string">&quot;OK&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>换句话说，这种调度方式属于协作式调度，完全依赖执行方的主动弃权；为此，go1.14 基于操作系统信号实现了异步抢占，之所以叫异步，是因为从发送信号到信号被处理这个过程是异步的，并不同步。我这里不准备讲信号的安装、信号的发送逻辑，仅就信号的处理捡扼要处略作说明，感兴趣的朋友可以参考<span class="exturl" data-url="aHR0cHM6Ly93d3cubHVvemhpeXVuLmNvbS9hcmNoaXZlcy80ODU=">从源码剖析Go语言基于信号抢占式调度<i class="fa fa-external-link-alt"></i></span>这篇文章。</p>
+<p>既然 go 的异步抢占处理是基于操作系统信号的，那么在进入go 的处理之前，先来看看操作系统是如何处理信号的吧！</p>
+<h2 id="7"><a href="#7" class="headerlink" title="7"></a>7</h2><p>请允许我略过对信号繁琐的介绍，直接从进&#x2F;线程注意到一个信号到来开始。</p>
+<p>每个进程从内核态返回用户态之前都会检查<code>TIF_SIGPENDING</code>标志的值，也就是说，每当内核处理完一个中断或异常后，在返回用户态之前都会检查是否存在挂起信号；为了处理信号，内核会调用<code>do_signal()</code>函数，我们假设这个信号安装了专门的处理程序，<code>do_signal()</code>函数必须强迫该处理程序的执行，这是通过<code>handle_signal()</code>进行的。</p>
+<p>难点在于，信号处理程序属于用户空间代码，内核不能直接执行用户代码，要执行用户态的信号处理程序，内核必须返回用户态，而一旦返回用户态，内核栈上的内容就会被清空（内核态堆栈包含了被中断进程的硬件上下文），当信号处理程序执行完毕时，又该如何回到正常的执行流程上呢？另外的复杂性是信号处理函数可以执行系统调用，依然要到内核态逛一圈再回到用户态，并且是回到信号处理程序，而不是回到进程原本的正常执行流。</p>
+<p>Linux 采用的解决方案是把保存在内核态堆栈中的硬件上下文拷贝到当前进程的用户态堆栈中（稍后会看到go的信号处理抢占程序是如何利用这一点的）。用户态的堆栈也会被修改，使得信号处理函数执行完毕之后，自动调用<code>sigreturn()</code>系统调用把硬件上下文拷贝回内核态堆栈中，并恢复用户态堆栈中原来的内容。</p>
+<p><img data-src="https://qiniu.liupzmin.com/catching-a-signal.png" alt="图 7-1 捕获信号"></p>
+<p>图 7-1 说明了进程处理信号时的执行流，当中断或者异常发生的时候，进程陷入内核。在要返回用户态之前，执行了<code>do_signal()</code>函数，并开始处理信号（调用<code>handle_signal()</code>），在用户态堆栈上建立栈帧（调用<code>setup_frame()</code>或<code>setup_rt_frame</code>）。</p>
+<p>因为进入内核态时，用户态的寄存器值已被保存到内核态的堆栈上了，所以内核很容易拿到用户态堆栈的地址，并加以修改。建立的栈帧如下图所示：</p>
+<p><img data-src="https://qiniu.liupzmin.com/user-mode-frame.png" alt="图 7-2 用户态栈帧"></p>
+<p>其中<code>sc</code>中保存了进程的硬件上下文，这是从当前进程的内核堆栈上 copy 来的。<code>precode</code>位于栈顶，是信号处理函数的返回地址，将会发出<code>sigreturn()</code>系统调用。</p>
+<p>当栈帧构造完成之后，内核需要修改保存在内核态堆栈上用户态寄存器程序计数器的值，让它指向信号处理程序，这样返回用户态之后就会跳转到信号处理程序处执行了：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">regs-&gt;esp = (<span class="type">unsigned</span> <span class="type">long</span>) frame;</span><br><span class="line">regs-&gt;eip = (<span class="type">unsigned</span> <span class="type">long</span>) ka-&gt;sa.sa_handler; </span><br><span class="line">regs-&gt;eax = (<span class="type">unsigned</span> <span class="type">long</span>) sig;</span><br><span class="line">regs-&gt;edx = regs-&gt;ecx = <span class="number">0</span>;</span><br><span class="line">regs-&gt;xds = regs-&gt;xes = regs-&gt;xss = __USER_DS; </span><br><span class="line">regs-&gt;xcs = __USER_CS;</span><br></pre></td></tr></table></figure>
+
+<p>这段代码来自《深入理解Linux内核》，大概是 2.6 版本的代码，我找了一下 5.10 版本的内核，其中设置用户栈和寄存器的函数是<code>setup_signal_stack_si</code>，我摘录其中修改内核栈中用户态硬件上下文的内容如下:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">PT_REGS_SP(regs) = (<span class="type">unsigned</span> <span class="type">long</span>) frame;</span><br><span class="line">PT_REGS_DI(regs) = sig;</span><br><span class="line"><span class="comment">/* In case the signal handler was declared without prototypes */</span></span><br><span class="line">PT_REGS_AX(regs) = <span class="number">0</span>;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * This also works for non SA_SIGINFO handlers because they expect the</span></span><br><span class="line"><span class="comment"> * next argument after the signal number on the stack.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">PT_REGS_SI(regs) = (<span class="type">unsigned</span> <span class="type">long</span>) &amp;frame-&gt;info;</span><br><span class="line">PT_REGS_DX(regs) = (<span class="type">unsigned</span> <span class="type">long</span>) &amp;frame-&gt;uc;</span><br><span class="line">PT_REGS_IP(regs) = (<span class="type">unsigned</span> <span class="type">long</span>) ksig-&gt;ka.sa.sa_handler;</span><br></pre></td></tr></table></figure>
+
+<p>除了设置堆栈、程序计数器之外也设置了 rdi、rsi、rds 这几个寄存器，这是 x86_64 架构下 C 语言的函数调惯例，三个寄存器分别用于存放函数调用时前三个参数。记住这一点，后面介绍 Go 时会用到。</p>
+<p>之后，再经过一系列检查，<code>handle_signal()</code>返回到<code>do_signal()</code>，<code>do_signal()</code>返回到用户态，因为程序计数器指向信号处理程序的第一条指令，而栈顶指向已推进用户态堆栈的第一个内存单元。因此，信号处理程序被执行。</p>
+<p>信号处理程序结束时，返回栈顶地址，该地址指向栈帧的<code>precode</code>字段所引用的<code>vsyscall</code>页中的代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">_ _kernel_sigreturn:</span><br><span class="line">popl %eax</span><br><span class="line">movl $__NR_sigreturn, %eax int $0x80</span><br></pre></td></tr></table></figure>
+
+<p>它发出一个系统调用，再次陷入内核，调用<code>restore_ sigcontext( ) </code>函数，将 sc 中记录的硬件上下文恢复到内核态堆栈，并从用户态堆栈删除之前建立的栈帧，之后返回用户态，程序的执行流开始回到中断之处继续执行。</p>
+<p>稍后我们会看到，内核从 sc 恢复的内容是被 go 的 runtime 修改过的！</p>
+<p>有这些内容做铺垫，就可以聊一聊 go 的信号抢占了！</p>
+<h2 id="8"><a href="#8" class="headerlink" title="8"></a>8</h2><p>go 在 M 上通过<code>initsig()</code>来初始化信号，对于需要安装处理程序的信号，会通过<code>setsig</code>来设置对应的动作，真正执行抢占动作的是<code>doSigPreempt</code>，此时的调用栈为：</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sigtramp--&gt;sigtrampgo--&gt;sighandler--&gt;doSigPreempt</span><br></pre></td></tr></table></figure>
+
+<p><code>doSigPreempt</code>有个<code>*sigctxt</code>类型的参数，它表示的是我们上一节介绍过的内核保存在用户态堆栈的<strong>内核态堆栈内容</strong>（比较拗口，需要多读几遍），其中存放的是当前进程用户态的硬件上下文。这个参数是从<code>sigtramp</code>一路传下来的，我们看一下<code>sigtramp</code>的代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">// Called using C ABI.</span><br><span class="line">TEXT runtime·sigtramp(SB),NOSPLIT,$0</span><br><span class="line">	// Transition from C ABI to Go ABI.</span><br><span class="line">	PUSH_REGS_HOST_TO_ABI0()</span><br><span class="line"></span><br><span class="line">	// Call into the Go signal handler</span><br><span class="line">	NOP	SP		// disable vet stack checking</span><br><span class="line">    ADJSP   $24</span><br><span class="line">	MOVQ	DI, 0(SP)	// sig</span><br><span class="line">	MOVQ	SI, 8(SP)	// info</span><br><span class="line">	MOVQ	DX, 16(SP)	// ctx</span><br><span class="line">	CALL	·sigtrampgo(SB)</span><br><span class="line">	ADJSP	$-24</span><br><span class="line"></span><br><span class="line">    POP_REGS_HOST_TO_ABI0()</span><br><span class="line">	RET</span><br></pre></td></tr></table></figure>
+
+<p><code>sigtramp</code>实际上是真正的信号处理函数，进程从内核态收到信号回到用户态调用的处理函数就是它，注释中表明这个函数以 C 语言的调用惯例被调用，Go 在这里通过<code>PUSH_REGS_HOST_TO_ABI0</code>保存 go 自己调用惯例用的寄存器后，转换成自己的调用规范，等函数调用完毕之后，再通过<code>POP_REGS_HOST_TO_ABI0</code>恢复这些寄存器的值。</p>
+<p>还记得上一节介绍 5.10版本的内核修改用户态寄存器时设置的 rdi、rsi、rdx 的值吗？这三个寄存器的值就是内核模仿调用<code>sigtramp</code>时传入的参数，现在 go 需要以自己的调用规约将其放置到堆栈上，来表示 sig、info、ctx 这三个参数（go1.17 改变了调用规约，已经由堆栈传递参数改为寄存器传递了，不知道为何此处仍然使用堆栈传递，我此处引用的代码是版本 1.18.1）。</p>
+<p>当调用到<code>doSigPreempt</code>时，会将<code>ctx</code>这个参数传入，其中包含了进程用户态硬件上下文，希望你还记得这一点。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// doSigPreempt handles a preemption signal on gp.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">doSigPreempt</span><span class="params">(gp *g, ctxt *sigctxt)</span></span> &#123;</span><br><span class="line">	<span class="comment">// Check if this G wants to be preempted and is safe to</span></span><br><span class="line">	<span class="comment">// preempt.</span></span><br><span class="line">	<span class="keyword">if</span> wantAsyncPreempt(gp) &#123;</span><br><span class="line">		<span class="keyword">if</span> ok, newpc := isAsyncSafePoint(gp, ctxt.sigpc(), ctxt.sigsp(), ctxt.siglr()); ok &#123;</span><br><span class="line">			<span class="comment">// Adjust the PC and inject a call to asyncPreempt.</span></span><br><span class="line">			ctxt.pushCall(abi.FuncPCABI0(asyncPreempt), newpc)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Acknowledge the preemption.</span></span><br><span class="line">	atomic.Xadd(&amp;gp.m.preemptGen, <span class="number">1</span>)</span><br><span class="line">	atomic.Store(&amp;gp.m.signalPending, <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> GOOS == <span class="string">&quot;darwin&quot;</span> || GOOS == <span class="string">&quot;ios&quot;</span> &#123;</span><br><span class="line">		atomic.Xadd(&amp;pendingPreemptSignals, <span class="number">-1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>信号处理程序一旦被执行，舞台就交到了 go runtime 手里，<code>ctxt</code>的类型为<code>*sigctxt</code>，指向的是用户态堆栈中存放内核态堆栈内容的地址。然后信号处理程序通过<code>isAsyncSafePoint</code>来判断抢占位置是否安全，并返回安全的抢占地址。如果确认抢占没有问题，接着会调用<code>pushCall</code>方法来修改<code>ctxt</code>中的用户态硬件上下文，用于稍后再一次从内核态返回用户态时模拟出一个用户态程序调用<code>asyncPreempt</code>的假象：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *sigctxt)</span></span> pushCall(targetPC, resumePC <span class="type">uintptr</span>) &#123;</span><br><span class="line">	<span class="comment">// Make it look like we called target at resumePC.</span></span><br><span class="line">	sp := <span class="type">uintptr</span>(c.rsp())</span><br><span class="line">	sp -= goarch.PtrSize</span><br><span class="line">	*(*<span class="type">uintptr</span>)(unsafe.Pointer(sp)) = resumePC</span><br><span class="line">	c.set_rsp(<span class="type">uint64</span>(sp))</span><br><span class="line">	c.set_rip(<span class="type">uint64</span>(targetPC))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>pushCall</code>干了两件事：</p>
+<ol>
+<li>修改程序计数器的指向为<code>asyncPreempt</code>函数的地址。 </li>
+<li>修改栈顶指针，将当前 goroutine 的原本中断地址放入堆栈。</li>
+</ol>
+<p>细心的你可能会问：内核在跳转信号处理程序之前不是已经拓展了堆栈，往里面塞了一个<code>frame</code>么？go runtime 在这里基于原始的栈顶再往里塞一个返回地址，不会引起冲突么？</p>
+<p>确实不会引起冲突，因为在 X86-64 调用规范中有一个重要标准——红色区域（Red zone）。它指出：在 rsp 指向的栈顶之后的128 字节被保留，不能被信号和中断处理程序使用，因此我们可以在 Linux 的源码中看到如下处理：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rt_sigframe</span> __<span class="title">user</span> *<span class="title">frame</span>;</span></span><br><span class="line">......</span><br><span class="line">frame = (<span class="keyword">struct</span> rt_sigframe __user *)</span><br><span class="line">	round_down(stack_top - <span class="keyword">sizeof</span>(<span class="keyword">struct</span> rt_sigframe), <span class="number">16</span>);</span><br><span class="line"><span class="comment">/* Subtract 128 for a red zone and 8 for proper alignment */</span></span><br><span class="line">frame = (<span class="keyword">struct</span> rt_sigframe __user *) ((<span class="type">unsigned</span> <span class="type">long</span>) frame - <span class="number">128</span> - <span class="number">8</span>);</span><br></pre></td></tr></table></figure>
+
+<p>内核在构造这个<code>frame</code>的时候留出了 128 字节的空隙，go runtime 见缝插针，将当前 goroutine 被中断时的下一条指令地址放入堆栈。这一套移花接木的功夫打完，信号处理函数执行完毕返回内核态，内核重新恢复原内核态堆栈上的内容，此时的内容是被 go runtime 修改后的。之后，执行流从内核态返回用户态，内核态堆栈被弹出，相关寄存器被恢复，程序计数器指向<code>asyncPreempt</code>，开始运行用户态代码。下面是<code>asyncPreempt</code>的汇编代码，我省略了大部分寄存器的保存和恢复指令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">TEXT ·asyncPreempt(SB),NOSPLIT|NOFRAME,$0-0</span><br><span class="line">	PUSHQ BP</span><br><span class="line">	MOVQ SP, BP</span><br><span class="line">	// Save flags before clobbering them</span><br><span class="line">	PUSHFQ</span><br><span class="line">	// obj doesn&#x27;t understand ADD/SUB on SP, but does understand ADJSP</span><br><span class="line">	ADJSP $368</span><br><span class="line">	// But vet doesn&#x27;t know ADJSP, so suppress vet stack checking</span><br><span class="line">	NOP SP</span><br><span class="line">	MOVQ AX, 0(SP)</span><br><span class="line">	......</span><br><span class="line">	MOVUPS X15, 352(SP)</span><br><span class="line">	CALL ·asyncPreempt2(SB)</span><br><span class="line">	MOVUPS 352(SP), X15</span><br><span class="line">	MOVUPS 336(SP), X14</span><br><span class="line">    ......</span><br><span class="line">	ADJSP $-368</span><br><span class="line">	POPFQ</span><br><span class="line">	POPQ BP</span><br><span class="line">	RET</span><br></pre></td></tr></table></figure>
+
+<p><code>asyncPreempt</code>保存执行现场后，调用了<code>asyncPreempt2</code>，这里要提一下，<code>CALL ·asyncPreempt2(SB)</code> 指令先将下一条指令的地址入栈再进行跳转，这样栈顶的地址就是<code>asyncPreempt2</code>返回时的地址。</p>
+<p><code>asyncPreempt2</code>会调用<code>mcall</code>函数，最终会执行调度函数<code>schedule()</code>，还记得吗？<code>schedule()</code>不会返回，执行完<code>runtime·gogo(buf *gobuf)</code>后，新的 goroutine 就在 CPU 上运行了，所以我们要看一下<code>mcall</code>函数保存的现场：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">// func mcall(fn func(*g))</span><br><span class="line">// Switch to m-&gt;g0&#x27;s stack, call fn(g).</span><br><span class="line">// Fn must never return. It should gogo(&amp;g-&gt;sched)</span><br><span class="line">// to keep running g.</span><br><span class="line">TEXT runtime·mcall&lt;ABIInternal&gt;(SB), NOSPLIT, $0-8</span><br><span class="line">	MOVQ	AX, DX	// DX = fn</span><br><span class="line"></span><br><span class="line">	// save state in g-&gt;sched</span><br><span class="line">	MOVQ	0(SP), BX	// caller&#x27;s PC</span><br><span class="line">	MOVQ	BX, (g_sched+gobuf_pc)(R14)</span><br><span class="line">	LEAQ	fn+0(FP), BX	// caller&#x27;s SP</span><br><span class="line">	MOVQ	BX, (g_sched+gobuf_sp)(R14)</span><br><span class="line">	MOVQ	BP, (g_sched+gobuf_bp)(R14)</span><br><span class="line"></span><br><span class="line">	// switch to m-&gt;g0 &amp; its stack, call fn</span><br><span class="line">	MOVQ	g_m(R14), BX</span><br><span class="line">	MOVQ	m_g0(BX), SI	// SI = g.m.g0</span><br><span class="line">	CMPQ	SI, R14	// if g == m-&gt;g0 call badmcall</span><br><span class="line">	JNE	goodm</span><br><span class="line">	JMP	runtime·badmcall(SB)</span><br><span class="line">goodm:</span><br><span class="line">	MOVQ	R14, AX		// AX (and arg 0) = g</span><br><span class="line">	MOVQ	SI, R14		// g = g.m.g0</span><br><span class="line">	get_tls(CX)		// Set G in TLS</span><br><span class="line">	MOVQ	R14, g(CX)</span><br><span class="line">	MOVQ	(g_sched+gobuf_sp)(R14), SP	// sp = g0.sched.sp</span><br><span class="line">	PUSHQ	AX	// open up space for fn&#x27;s arg spill slot</span><br><span class="line">	MOVQ	0(DX), R12</span><br><span class="line">	CALL	R12		// fn(g)</span><br><span class="line">	POPQ	AX</span><br><span class="line">	JMP	runtime·badmcall2(SB)</span><br><span class="line">	RET</span><br></pre></td></tr></table></figure>
+
+<p>这两句是保存程序计数器的值到<code>g-&gt;sched</code>:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">MOVQ	0(SP), BX	// caller&#x27;s PC</span><br><span class="line">MOVQ	BX, (g_sched+gobuf_pc)(R14)</span><br></pre></td></tr></table></figure>
+
+<p>可见，保存的地址是栈顶的内容，而此时栈顶内容是<strong>函数<code>asyncPreempt</code>中<code>CALL ·asyncPreempt2(SB)</code>的下一条指令</strong>，即<code>MOVUPS 352(SP), X15</code>；也就是说，当该 goroutine 再次被调度时，会从<code>asyncPreempt2</code>中继续执行，然后返回到<code>asyncPreempt</code>，<code>asyncPreempt</code>返回时从堆栈弹出将要跳转的地址，而这个地址就是 go 见缝插针塞进来的地址，这看起来就像是 goroutine 调用<code>asyncPreempt</code>一般。执行流走到这里，才真正意义上完成了 goroutine 的恢复执行。</p>
+<p>由此观之，<code>asyncPreempt</code>更像是 Linux 内核中的<code>schedule()</code>：<strong>调度发生在函数执行过程中，而函数执行完毕要等到下一次被调度的时候才会发生。</strong> 而 go 借助信号机制所实现的抢占，无非就是依靠信号处理程序这一次控制权埋点，以便在执行流最终从内核态返回时执行<code>asyncPreempt</code>代码，从而再一次收获 CPU 的控制权。</p>
+<p>是时候再从指令的视角在宏观上来理解 go 的信号抢占流程了：</p>
+<p><img data-src="https://qiniu.liupzmin.com/go-preempt.png" alt="图 8-1 go 异步抢占"></p>
+<p>图 8-1 显示了通过异步抢占执行流从 g1 切换到 g2 的过程：</p>
+<ol>
+<li>g1被时钟中断，从内核返回时发现有抢占信号。</li>
+<li>执行流从内核态返回到用户态，执行信号处理程序（第一个绿色的 go runtime 执行流）。</li>
+<li>信号处理程序执行完毕返回内核，内核做一些恢复后，再次返回到用户态。</li>
+<li>从内核态返回后的执行流被 go runtime 窃取，转而执行调度（第二个绿色的 go runtime 执行流）。</li>
+<li>g2 被选择，换上 CPU 执行。</li>
+</ol>
+<h2 id="9"><a href="#9" class="headerlink" title="9"></a>9</h2><p>文章写到这里，基本上把我想讲的已经讲完了，也算基本上完成了自己“观其大略，本其脉络”的目标，我曾在<a href="https://liupzmin.com/2021/06/27/theory/stack-insight-01-md/">《从CPU的视角说起》</a> 一文中说道：<strong>我目前所寻求的信息，意在建立计算机系统的世界观与 Go 语言的世界观，是在陷入具体细节之前为自己提供一个大致的轮廓，让自己对计算机运行的脉络有一个关键性的认识。</strong> 即便如此，里面也不可避免的出现很多具体而微的内容。我略过了很多环节，并不是因为它们不重要，是因为它们是细节，是更丰富的东西，也是我尚未探索的东西。</p>
+<p>苏轼有自己的一套读书方法叫做“八面受敌”，他在写给侄女婿王庠的《又答王庠书》中作了详细介绍：“但卑意欲少年为学者，每一书皆作数过尽之。书富如入海，百货皆有，人之精力，不能兼收尽取，但得其所欲求者尔。故愿学者每次作一意求之。如欲求古今兴亡治乱、圣贤作用、但作此意求之，勿生余念。又别作一次，求事迹故实典章文物之类，亦如之。他皆仿此。此虽迂钝，而他日学成，八面受敌，与涉猎者不可同日而语也。”</p>
+<p>这段话可谓深得我心，“人之精力，不能兼收尽取，但得其所欲求者尔”、“故愿学者每次作一意求之”，我欲寻求堆栈的本源，翻尽家中藏书，完成了《学渣三部曲》，又执着于调度，翻阅同样的书，才有了这一篇万字长文，此虽迂钝，而他日学成，八面受敌，与涉猎者不可同日而语也。</p>
+<p>最后再聊一聊“程序”，第4节曾讨论过“程序”一词的含义，平时我们习惯将开发最终交付的制品称为“程序”，或有“我写了某某程序”之类云云，“程序”若是躺在计算机硬盘中的二进制文件，那当它被调入内存醒来时，一定会哀叹自己生命的不完整，因为每当它想“耳听之而为声，目遇之而成色”的时候，面前总会横着一道“系统调用”的鸿沟，以至于它永远无法亲自触摸“大自然”的无尽藏。换句话说，我们到底创造了什么？一条流动的进程中，有多少是属于我们这样平凡之人的？刨去内核指令，刨去运行时、库以及不可胜数的框架代码，我相信已所剩无几！</p>
+<p>我之所以无法骄傲，是因为站在巨人的肩上！</p>
+<p><em><strong>参考文献</strong></em></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zMzQ2MzkzMC8=">操作系统导论<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNjkxMjc2Ny8=">深入理解计算机系统<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yMjg3NTA2Lw==">深入理解LINUX内核<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC80ODQzNTY3Lw==">深入 Linux 内核架构<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zMDI5NzkxOS8=">操作系统概念<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ibG9nLnBhY2thZ2VjbG91ZC5pby90aGUtZGVmaW5pdGl2ZS1ndWlkZS10by1saW51eC1zeXN0ZW0tY2FsbHMv">The Definitive Guide to Linux System Calls<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly96Ym95YS5naXRodWIuaW8vcG9zdC9nb19zY2hlZHVsZXIv">深入golang runtime的调度<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cubHVvemhpeXVuLmNvbS9hcmNoaXZlcy80ODU=">从源码剖析Go语言基于信号抢占式调度<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cDovL2xhc3R3ZWVrLmlvL25vdGVzL2xpbnV4L2Zvcmsv">Misc on Linux fork, switch_to, and scheduling<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cubWFpenVyZS5vcmcvcHJvamVjdHMvZXZvbHV0aW9uX3g4Nl9jb250ZXh0X3N3aXRjaF9saW51eC8=">Evolution of the x86 context switch in Linux<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9nb2xhbmcuZGVzaWduL3VuZGVyLXRoZS1ob29kL3poLWNuL3BhcnQycnVudGltZS9jaDA2c2NoZWQvcHJlZW1wdGlvbi8=">Go 语言原本<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuYXJkYW5sYWJzLmNvbS9ibG9nLzIwMTgvMDgvc2NoZWR1bGluZy1pbi1nby1wYXJ0Mi5odG1s">Scheduling In Go : Part II - Go Scheduler<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/os/" rel="tag"># os</a>
+              <a href="/tags/groutine/" rel="tag"># groutine</a>
+              <a href="/tags/%E8%BF%9B%E7%A8%8B/" rel="tag"># 进程</a>
+              <a href="/tags/%E7%BA%BF%E7%A8%8B/" rel="tag"># 线程</a>
+              <a href="/tags/go/" rel="tag"># go</a>
+              <a href="/tags/%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/" rel="tag"># 抢占式调度</a>
+              <a href="/tags/%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2/" rel="tag"># 上下文切换</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/04/26/theory/stack-insight-03/" rel="prev" title="Stack 顿悟三部曲（3）：溯源 goroutine 堆栈">
+                  <i class="fa fa-chevron-left"></i> Stack 顿悟三部曲（3）：溯源 goroutine 堆栈
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/04/01/network/running-grpc-service-in-production/" rel="next" title="在生产环境中运行 grpc 服务所面临的挑战">
+                  在生产环境中运行 grpc 服务所面临的挑战 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"5dcbc1da636b91e7aeaa182da515319f"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

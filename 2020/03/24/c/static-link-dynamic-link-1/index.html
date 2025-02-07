@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="大学时用 Turbo C 2.0 学 C 语言，只记得是蓝底黄字的丑陋界面，不清楚编译完的程序有何用处，也不知道编译和链接这些基本概念。现在想来只学到了 C 的语法，几年下来也忘得精光。本篇以 Linux 下 GCC 为例，简单描述编译链接的过程。  GCC  隐藏的细节我们首先使用 GCC 来编译并运行一个经典的hello world程序： 1234567#include &lt;stdio.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="重学C语言：编译和链接那些事儿（一）—— 编译过程">
+<meta property="og:url" content="http://liupzmin.com/2020/03/24/c/static-link-dynamic-link-1/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="大学时用 Turbo C 2.0 学 C 语言，只记得是蓝底黄字的丑陋界面，不清楚编译完的程序有何用处，也不知道编译和链接这些基本概念。现在想来只学到了 C 的语法，几年下来也忘得精光。本篇以 Linux 下 GCC 为例，简单描述编译链接的过程。  GCC  隐藏的细节我们首先使用 GCC 来编译并运行一个经典的hello world程序： 1234567#include &lt;stdio.">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qiniu.liupzmin.com/compile.png">
+<meta property="article:published_time" content="2020-03-24T05:29:02.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="C">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qiniu.liupzmin.com/compile.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2020/03/24/c/static-link-dynamic-link-1/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2020/03/24/c/static-link-dynamic-link-1/","path":"2020/03/24/c/static-link-dynamic-link-1/","title":"重学C语言：编译和链接那些事儿（一）—— 编译过程"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>重学C语言：编译和链接那些事儿（一）—— 编译过程 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#GCC-%E9%9A%90%E8%97%8F%E7%9A%84%E7%BB%86%E8%8A%82"><span class="nav-number">1.</span> <span class="nav-text">GCC  隐藏的细节</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%84%E7%BC%96%E8%AF%91"><span class="nav-number">1.1.</span> <span class="nav-text">预编译</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%96%E8%AF%91"><span class="nav-number">1.2.</span> <span class="nav-text">编译</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B1%87%E7%BC%96"><span class="nav-number">1.3.</span> <span class="nav-text">汇编</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5"><span class="nav-number">1.4.</span> <span class="nav-text">链接</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2020/03/24/c/static-link-dynamic-link-1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="重学C语言：编译和链接那些事儿（一）—— 编译过程 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          重学C语言：编译和链接那些事儿（一）—— 编译过程<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9jL3N0YXRpYy1saW5rLWR5bmFtaWMtbGluay0xLm1k" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-24 13:29:02" itemprop="dateCreated datePublished" datetime="2020-03-24T13:29:02+08:00">2020-03-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>大学时用 Turbo C 2.0 学 C 语言，只记得是蓝底黄字的丑陋界面，不清楚编译完的程序有何用处，也不知道编译和链接这些基本概念。现在想来只学到了 C 的语法，几年下来也忘得精光。本篇以 Linux 下 GCC 为例，简单描述编译链接的过程。</p>
+</blockquote>
+<h2 id="GCC-隐藏的细节"><a href="#GCC-隐藏的细节" class="headerlink" title="GCC  隐藏的细节"></a>GCC  隐藏的细节</h2><p>我们首先使用 GCC 来编译并运行一个经典的hello world程序：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> **argv)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;hello world!\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>使用 GCC 来编译：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;14:59&#125;~/Learing/c/src:master ✗ ➭ gcc hello.c </span><br><span class="line">&#123;14:59&#125;~/Learing/c/src:master ✗ ➭ ls  </span><br><span class="line"> a.out   hello.c</span><br><span class="line">&#123;14:59&#125;~/Learing/c/src:master ✗ ➭ </span><br></pre></td></tr></table></figure>
+
+<p>可以看到在不指定 <code>-o</code>选项的时候，默认生成了一个 <code>a.out</code>文件，这就是最后的可执行程序，我们来执行它：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;14:59&#125;~/Learing/c/src:master ✗ ➭ ./a.out </span><br><span class="line">hello world!</span><br></pre></td></tr></table></figure>
+
+<p>程序向标准输出打印了 <code>hello world!</code>，我们的程序执行成功。但是 GCC 期间做了哪些工作？<code>a.out</code> 是一步生成的么？</p>
+<p>事实上，这个默认过程至少经历了四个阶段，分别是<code>预处理</code>、<code>编译</code>、<code>汇编</code>和<code>链接</code>，如下图所示：</p>
+<p><img data-src="http://qiniu.liupzmin.com/compile.png" alt="GCC 编译分解过程"></p>
+<h3 id="预编译"><a href="#预编译" class="headerlink" title="预编译"></a>预编译</h3><p>第一阶段的工作就是预处理，由预处理器完成，处理和源代码相关的头文件，生成一个 <code>.i</code> 后缀的中间文件。C 预处理器（C Pre-Processor）也常简写为 CPP，是一个与 C 编译器独立的小程序，预编译器并不理解 C 语言语法，它仅是在程序源文件被编译之前，实现文本替换的功能。可以使用 GCC 的 <code>-E</code> 选项来控制只进行预编译：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -E hello.c -o hello.i</span><br></pre></td></tr></table></figure>
+
+<p>预编译阶段主要是处理源文件中以 <code>#</code>开头的预编译指令。比如 <code>#include</code> 、<code>#define</code> 等，主要的规则如下：</p>
+<ul>
+<li>将所有的 <code>#define</code> 删除，并展开所有的宏定义。</li>
+<li>处理所有的条件预编译指令，比如 <code>#if</code>、<code>#ifdef</code>、<code>#elif</code>、<code>#else</code>、<code>#endif</code>。</li>
+<li>处理 <code>#include</code> 预编译指令，将被包含的文件插入到该预编译指令的位置。注意，这个过程是递归进行的，也就是说被包含的文件可能还包含其它文件。</li>
+<li>删除所有的注释 <code>//</code> 和 <code>/* */</code>。</li>
+</ul>
+<h3 id="编译"><a href="#编译" class="headerlink" title="编译"></a>编译</h3><p>接下来就是整个程序构建最核心的阶段—<code>编译</code>，通过对预处理阶段产生的结果文件进行一些列的词法分析、语法分析、语义分析以及某些编译器优化之后生成<code>汇编代码文件</code>。编译的过程可以使用如下命令单独进行：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -S hello.i -o hello.s</span><br></pre></td></tr></table></figure>
+
+<p>其实目前的 GCC 已经将预编译和编译两个阶段合而为一了，使用一个叫 <code>ccl</code> 的程序来完成这两个步骤，我的机器上这个程序在 <code>/usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/cc1</code> ，我们可以直接调用它来完成预编译和编译：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&#123;16:12&#125;~/Learing/c/src:master ✗ ➭ /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/cc1 hello.c</span><br><span class="line"> main</span><br><span class="line">Analyzing compilation unit</span><br><span class="line">Performing interprocedural optimizations</span><br><span class="line"> &lt;*free_lang_data&gt; &lt;visibility&gt; &lt;build_ssa_passes&gt; &lt;opt_local_passes&gt; &lt;remove_symbols&gt; &lt;targetclone&gt; &lt;free-fnsummary&gt;Streaming LTO</span><br><span class="line"> &lt;whole-program&gt; &lt;fnsummary&gt; &lt;inline&gt; &lt;free-fnsummary&gt; &lt;single-use&gt; &lt;comdats&gt;Assembling functions:</span><br><span class="line"> &lt;materialize-all-clones&gt; &lt;simdclone&gt; main</span><br><span class="line">Time variable                                   usr           sys          wall               GGC</span><br><span class="line"> phase setup                        :   0.00 (  0%)   0.00 (  0%)   0.01 ( 33%)    1220 kB ( 70%)</span><br><span class="line"> phase parsing                      :   0.02 (100%)   0.00 (  0%)   0.01 ( 33%)     459 kB ( 26%)</span><br><span class="line"> phase opt and generate             :   0.00 (  0%)   0.00 (  0%)   0.01 ( 33%)      58 kB (  3%)</span><br><span class="line"> preprocessing                      :   0.01 ( 50%)   0.00 (  0%)   0.00 (  0%)     136 kB (  8%)</span><br><span class="line"> lexical analysis                   :   0.01 ( 50%)   0.00 (  0%)   0.01 ( 33%)       0 kB (  0%)</span><br><span class="line"> initialize rtl                     :   0.00 (  0%)   0.00 (  0%)   0.01 ( 33%)      12 kB (  1%)</span><br><span class="line"> TOTAL                              :   0.02          0.00          0.03           1747 kB</span><br></pre></td></tr></table></figure>
+
+<p>或者，可以直接通过 <code>gcc</code> 和源文件来编译成汇编代码：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -S hello.c -o hello.s</span><br></pre></td></tr></table></figure>
+
+<p>通过这些方式都可以得到 <code>hello.s</code> 的汇编文件。事实上 <code>GCC</code> 是个编译工具集，会根据不同的情况调用不同的工具处理每阶段的工作，比如编译时调用 <code>ccl</code>，汇编时调用 <code>as</code>，链接时调用 <code>ld</code>。</p>
+<h3 id="汇编"><a href="#汇编" class="headerlink" title="汇编"></a>汇编</h3><p>正如前文所言，当编译完成得到汇编文件之后，接下来的工作就交给汇编器来执行了，汇编器是将汇编代码转变成机器指令的工具，每一条汇编语句几乎都对应一条机器指令。所以汇编器的活儿相对来说比较简单，只是把汇编指令跟机器指令对照翻译一下，当然翻译完文件就由可读的汇编代码变为只有机器才可以看懂的二进制文件了。对于上面得汇编文件我们可以使用 <code>as</code> 来完成汇编：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">as hello.s -o hello.o</span><br></pre></td></tr></table></figure>
+
+<p>或者使用 GCC 的 <code>-c</code> 选项，它的意思是编译或者汇编源文件，但不进行链接：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -c hello.s -o hello.o</span><br></pre></td></tr></table></figure>
+
+<p>或者直接从 C 文件到<code>目标文件</code>（Object File 的概念非常重要，但此处不展开，留待以后单独讨论）：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -c hello.c -o hello.o</span><br></pre></td></tr></table></figure>
+
+<h3 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h3><p>到这里，我们距离生成最后的可执行文件只有一步之遥，让我们来调用 <code>ld</code> 来生成最后的可执行文件：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/ld -static /usr/lib/crt1.o /usr/lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/crtbeginT.o -L /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0 -L /usr/lib -L /lib hello.o --start-group -lgcc -lgcc_eh -lc --end-group /usr/lib/gcc/x86_64-pc-linux-gnu/9.3.0/crtend.o /usr/lib/crtn.o -o hello</span><br></pre></td></tr></table></figure>
+
+<p>执行 <code>hello</code> 程序：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;17:00&#125;~/Learing/c/src:master ✗ ➭ ./hello </span><br><span class="line">hello world!</span><br></pre></td></tr></table></figure>
+
+<p>程序成功执行并输出了 <code>hello world!</code>，但是我们可以看到上面的 <code>ld</code> 命令链接了一大堆的文件才最后生成 <code>hello</code> 可执行文件。</p>
+<p>初学者很容易产生的疑问就是：汇编完成的之后的文件不就是二进制文件么？为什么还要进行链接这个步骤呢？链接到底干了些啥？为什么不直接生成最后的可执行文件呢？要说清楚这些问题并不是一件很容易的事，可以说是一件异常困难的事，这里面涉及到静态链接、动态链接、静态库、动态库、运行时库、标准库、链接器等一系列的问题，以至于<span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zNjUyMzg4Lw==">《程序员的自我修养》<i class="fa fa-external-link-alt"></i></span>用了整整一部书来讲链接这件事情，所以囫囵吞枣看个大概的想法，也是何其难哉！</p>
+<p>但这正是我想写这一系列文章的初衷，我希望我能将这些概念总结出来，略去一些细节，只保留轮廓，便于记忆，同时也给初学者以借鉴。</p>
+<p>本篇文章先简单描述编译的过程，下一篇文章我们谈静态链接。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/C/" rel="tag"># C</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/03/19/c/operator-precedence/" rel="prev" title="重学C语言：运算符与优先级">
+                  <i class="fa fa-chevron-left"></i> 重学C语言：运算符与优先级
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/07/16/golang/three-index-slice/" rel="next" title="Go 语言中的 Three-index slices">
+                  Go 语言中的 Three-index slices <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"444a69a806d45b9284d391d194c19077"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

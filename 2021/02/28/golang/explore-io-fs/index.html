@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="原文出处：Exploring &quot;io&#x2F;fs&quot; to Improve Test Performance and Testability io&#x2F;fs概述及其存在的必要性​要理解为什么 Go在1.16 版本引入io&#x2F;fs，就必须先要理解 embedding（内嵌）的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="译:探索 Go1.16 io&#x2F;fs 包以提高测试性能和可测试性">
+<meta property="og:url" content="http://liupzmin.com/2021/02/28/golang/explore-io-fs/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="原文出处：Exploring &quot;io&#x2F;fs&quot; to Improve Test Performance and Testability io&#x2F;fs概述及其存在的必要性​要理解为什么 Go在1.16 版本引入io&#x2F;fs，就必须先要理解 embedding（内嵌）的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-02-28T02:08:30.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="Go1.16">
+<meta property="article:tag" content="io&#x2F;fs">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://liupzmin.com/2021/02/28/golang/explore-io-fs/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2021/02/28/golang/explore-io-fs/","path":"2021/02/28/golang/explore-io-fs/","title":"译:探索 Go1.16 io/fs 包以提高测试性能和可测试性"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>译:探索 Go1.16 io/fs 包以提高测试性能和可测试性 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#io-fs%E6%A6%82%E8%BF%B0%E5%8F%8A%E5%85%B6%E5%AD%98%E5%9C%A8%E7%9A%84%E5%BF%85%E8%A6%81%E6%80%A7"><span class="nav-number">1.</span> <span class="nav-text">io&#x2F;fs概述及其存在的必要性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E5%9F%BA%E4%BA%8E%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%BB%A3%E7%A0%81"><span class="nav-number">2.</span> <span class="nav-text">测试基于文件系统的代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JIT-Test-File-Creation"><span class="nav-number">3.</span> <span class="nav-text">JIT Test File Creation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Pre-Existing-File-Fixtures"><span class="nav-number">4.</span> <span class="nav-text">Pre-Existing File Fixtures</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-FS"><span class="nav-number">5.</span> <span class="nav-text">使用  FS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0-FS"><span class="nav-number">6.</span> <span class="nav-text">实现 FS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0-File-%E6%8E%A5%E5%8F%A3"><span class="nav-number">7.</span> <span class="nav-text">实现 File 接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-FS-%E8%BF%9B%E8%A1%8C%E6%B5%8B%E8%AF%95"><span class="nav-number">8.</span> <span class="nav-text">使用 FS 进行测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2021/02/28/golang/explore-io-fs/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="译:探索 Go1.16 io/fs 包以提高测试性能和可测试性 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          译:探索 Go1.16 io/fs 包以提高测试性能和可测试性<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9nb2xhbmcvZXhwbG9yZS1pby1mcy5tZA==" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-02-28 10:08:30" itemprop="dateCreated datePublished" datetime="2021-02-28T10:08:30+08:00">2021-02-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/golang/" itemprop="url" rel="index"><span itemprop="name">golang</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>原文出处：<span class="exturl" data-url="aHR0cHM6Ly93d3cuZ29waGVyZ3VpZGVzLmNvbS9hcnRpY2xlcy9nb2xhbmctMS4xNi1pby1mcy1pbXByb3ZlLXRlc3QtcGVyZm9ybWFuY2U=">Exploring &quot;io&#x2F;fs&quot; to Improve Test Performance and Testability<i class="fa fa-external-link-alt"></i></span></p>
+<h2 id="io-fs概述及其存在的必要性"><a href="#io-fs概述及其存在的必要性" class="headerlink" title="io/fs概述及其存在的必要性"></a><code>io/fs</code>概述及其存在的必要性</h2><p>​要理解为什么 <code>Go</code>在<code>1.16</code> 版本引入<code>io/fs</code>，就必须先要理解 <strong>embedding（内嵌）</strong>的基本原理。当开发一个工具的时候，嵌入那些日后需要被访问（寻址）的内容涉及到很多方面，但本文仅仅讨论其中之一。</p>
+<p>​对于每个要嵌入静态文件的工具来说，其工作本质都大同小异。当它们运行的时候，每个静态文件都会被转换为字节，放入一个<code>.go</code>文件之中，最后被编译成二进制文件。一旦进行编译，工具本身就必须负责将<strong>针对文件系统的调用转换为对一个虚拟文件系统的调用</strong>。</p>
+<p>​当运行嵌入了<code>assets</code>静态文件的程序后，代码访问这些文件的方式依然是针对文件系统的调用，我们必须把这种调用转换为一种虚拟调用（因为实际访问的文件内容已被转换为字节，并编译进程序本身）。此时，我们面临一个问题：如何在代码中确定一个调用是针对虚拟的<code>assets</code>还是真实的文件系统？</p>
+<p>​想象一下这样一个工具：它会遍历一个目录，并返回所能找到的所有以<code>.go</code>结尾的文件名称。如果此工具不能和文件系统交互，那么它将毫无用处。现在，假设有一个 web 应用，它内嵌了一些静态文件，比如<code>images, templates, and style sheets</code>等等。那这个 Web 应用程序在访问这些相关<code>assets</code>时应使用虚拟文件系统，而不是真实文件系统。</p>
+<p>​要分辨出这两种不同的调用，就需要引入一个供开发人员使用的API，该API可以指导该工具何时访问虚拟化，何时访问文件系统。这类API都各有特色，像早期的嵌入工具  <span class="exturl" data-url="aHR0cHM6Ly9wa2cuZ28uZGV2L2dpdGh1Yi5jb20vZ29idWZmYWxvL3BhY2tyL3Yy">Packr<i class="fa fa-external-link-alt"></i></span>，它使用的就是自定义的 API。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Box</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="title">Folder</span><span class="params">(path <span class="type">string</span>)</span></span> *Box</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="title">New</span><span class="params">(name <span class="type">string</span>, path <span class="type">string</span>)</span></span> *Box</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="title">NewBox</span><span class="params">(path <span class="type">string</span>)</span></span> *Box</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> AddBytes(path <span class="type">string</span>, t []<span class="type">byte</span>) <span class="type">error</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> AddString(path <span class="type">string</span>, t <span class="type">string</span>) <span class="type">error</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> Bytes(name <span class="type">string</span>) []<span class="type">byte</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> Find(name <span class="type">string</span>) ([]<span class="type">byte</span>, <span class="type">error</span>)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> FindString(name <span class="type">string</span>) (<span class="type">string</span>, <span class="type">error</span>)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> Has(name <span class="type">string</span>) <span class="type">bool</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> HasDir(name <span class="type">string</span>) <span class="type">bool</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> List() []<span class="type">string</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> MustBytes(name <span class="type">string</span>) ([]<span class="type">byte</span>, <span class="type">error</span>)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> MustString(name <span class="type">string</span>) (<span class="type">string</span>, <span class="type">error</span>)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> Open(name <span class="type">string</span>) (http.File, <span class="type">error</span>)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> Resolve(key <span class="type">string</span>) (file.File, <span class="type">error</span>)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> SetResolver(file <span class="type">string</span>, res resolver.Resolver)</span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> String(name <span class="type">string</span>) <span class="type">string</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> Walk(wf WalkFunc) <span class="type">error</span></span><br><span class="line">	<span class="function"><span class="keyword">func</span> <span class="params">(b *Box)</span></span> WalkPrefix(prefix <span class="type">string</span>, wf WalkFunc) <span class="type">error</span></span><br></pre></td></tr></table></figure>
+
+<p>​使用自定义 API 的好处就是工具开发者可以完全掌控用户体验。这包括使开发人员更轻松地管理需要在幕后维护的复杂关系。缺点也很明显，那就是使用者需要去学习这种新的 API。其代码也就严重依赖于这种自定义的 API，这使得它们难以随时间升级。</p>
+<p>​另一种方式就是提供一种模拟标准库的 API ， <span class="exturl" data-url="aHR0cHM6Ly9wa2cuZ28uZGV2L2dpdGh1Yi5jb20vbWFya2JhdGVzL3BrZ2VyQHYwLjE3LjEvcGtnaW5nI0ZpbGU=">Pkger<i class="fa fa-external-link-alt"></i></span> 就是此例之一：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> File <span class="keyword">interface</span> &#123;</span><br><span class="line">	Close() <span class="type">error</span></span><br><span class="line">	Name() <span class="type">string</span></span><br><span class="line">	Open(name <span class="type">string</span>) (http.File, <span class="type">error</span>)</span><br><span class="line">	Read(p []<span class="type">byte</span>) (<span class="type">int</span>, <span class="type">error</span>)</span><br><span class="line">	Readdir(count <span class="type">int</span>) ([]os.FileInfo, <span class="type">error</span>)</span><br><span class="line">	Seek(offset <span class="type">int64</span>, whence <span class="type">int</span>) (<span class="type">int64</span>, <span class="type">error</span>)</span><br><span class="line">	Stat() (os.FileInfo, <span class="type">error</span>)</span><br><span class="line">	Write(b []<span class="type">byte</span>) (<span class="type">int</span>, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>​这种方式使用已知的、大家都熟悉的 API，会更容易吸引用户，而且也避免了再去学习新的 API 。</p>
+<p><code>​Go 1.16</code>标准库引入的<code>io/fs</code>包就采用了此种方式，其优点就是使用了用户熟知的 API 接口，因此也就降低了学习成本，使得用户更加容易接受。</p>
+<p>​但有其利必有其弊，虽然使用现有 API 迎合了用户使用习惯、增加了程序的兼容性，但同时也导致了大而复杂的接口。这亦是<code>io/fs</code>所面临的问题，不幸的是，要正确模拟对文件系统的调用，需要很大的接口占用空间，我们很快就会看到。</p>
+<h2 id="测试基于文件系统的代码"><a href="#测试基于文件系统的代码" class="headerlink" title="测试基于文件系统的代码"></a>测试基于文件系统的代码</h2><p><code>io/fs</code>包不仅仅只是支撑<code>1.16</code> 版本<strong>嵌入</strong>功能这么简单，它带来的最大便利之一就是丰富了单元测试，它可以让我们编写更加易于测试的文件系统交互方面的代码。</p>
+<p>除了增加代码的可测试性之外，<code>io/fs</code>还可以帮助我们编写更加易读的测试用例，并且在我们测试文件系统交互代码时拥有不寻常的性能表现。</p>
+<p>为了更深入地了解<code>io/fs</code>包，我们来实现一段代码，它的功能是遍历一个给定的根目录，并从中搜索以<code>.go</code>结尾的文件。在循环遍历过程中，程序需要跳过一些符合我们预先设定前缀的目录，比如<code>.git</code> , <code>node_modules</code> , <code>testdata</code>等等。我们没必要去搜寻<code>.git</code> , <code>node_modules</code>文件夹，因为我们清楚它们肯定不会包含<code>.go</code>文件。一旦我们找到了符合要求的文件，我们就把文件的路径加入到一个列表中然后继续搜索。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GoFiles</span><span class="params">(root <span class="type">string</span>)</span></span> ([]<span class="type">string</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">var</span> data []<span class="type">string</span></span><br><span class="line"></span><br><span class="line">	err := filepath.Walk(root, <span class="function"><span class="keyword">func</span><span class="params">(path <span class="type">string</span>, info os.FileInfo, err <span class="type">error</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line">		base := filepath.Base(path)</span><br><span class="line">		<span class="keyword">for</span> _, sp := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// if the name of the folder has a prefix listed in SkipPaths</span></span><br><span class="line">			<span class="comment">// then we should skip the directory.</span></span><br><span class="line">			<span class="comment">// e.g. node_modules, testdata, _foo, .git</span></span><br><span class="line">			<span class="keyword">if</span> strings.HasPrefix(base, sp) &#123;</span><br><span class="line">				<span class="keyword">return</span> filepath.SkipDir</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// skip non-go files</span></span><br><span class="line">		<span class="keyword">if</span> filepath.Ext(path) != <span class="string">&quot;.go&quot;</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		data = <span class="built_in">append</span>(data, path)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> data, err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个函数的执行结果将产生一个类似于下面这样的<code>slice</code>：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[</span><br><span class="line">	<span class="string">&quot;benchmarks_test.go&quot;</span>,</span><br><span class="line">	<span class="string">&quot;cmd/fsdemo/main.go&quot;</span>,</span><br><span class="line">	<span class="string">&quot;cmd/fsdemo/main_test.go&quot;</span>,</span><br><span class="line">	<span class="string">&quot;fsdemo.go&quot;</span>,</span><br><span class="line">	<span class="string">&quot;fsdemo_test.go&quot;</span>,</span><br><span class="line">	<span class="string">&quot;mock_file.go&quot;</span>,</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>我现在提出的问题是：<strong>我们该如何测试这段代码？</strong>因为这段代码直接和文件系统交互，我们该如何保证在文件系统上呈现一个准确无误的测试场景呢？</p>
+<p>鉴于测试方法会有很多种，在深入<code>io/fs</code>之前，我们先看一下最常见的两种方法，从而对比一下<code>io/fs</code>能带给我们怎样的便利。</p>
+<h2 id="JIT-Test-File-Creation"><a href="#JIT-Test-File-Creation" class="headerlink" title="JIT Test File Creation"></a>JIT Test File Creation</h2><p>第一个测试文件系统代码的方法就是在运行时刻创建必须的文件夹结构。</p>
+<blockquote>
+<p>本文将以<code>benchmark</code>的方式呈现单元测试，如此我们就可以对比各种测试方法的性能。这也是为何<code>setup</code>（创建测试用的文件结构）的代码会被包含在基准代码当中，我们基准测试的目标就是<code>setup</code>的过程。在此情况下，各种测试方法都不会改变<code>setup</code>的底层函数。</p>
+</blockquote>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGoFilesJIT</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line"></span><br><span class="line">		dir, err := ioutil.TempDir(<span class="string">&quot;&quot;</span>, <span class="string">&quot;fsdemo&quot;</span>)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		names := []<span class="type">string</span>&#123;<span class="string">&quot;foo.go&quot;</span>, <span class="string">&quot;web/routes.go&quot;</span>&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> _, s := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// ex: ./.git/git.go</span></span><br><span class="line">			<span class="comment">// ex: ./node_modules/node_modules.go</span></span><br><span class="line">			names = <span class="built_in">append</span>(names, filepath.Join(s, s+<span class="string">&quot;.go&quot;</span>))</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> _, f := <span class="keyword">range</span> names &#123;</span><br><span class="line">			<span class="keyword">if</span> err := os.MkdirAll(filepath.Join(dir, filepath.Dir(f)), <span class="number">0755</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">				b.Fatal(err)</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">if</span> err := ioutil.WriteFile(filepath.Join(dir, f), <span class="literal">nil</span>, <span class="number">0666</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">				b.Fatal(err)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		list, err := GoFiles(dir)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lexp := <span class="number">2</span></span><br><span class="line">		lact := <span class="built_in">len</span>(list)</span><br><span class="line">		<span class="keyword">if</span> lact != lexp &#123;</span><br><span class="line">			b.Fatalf(<span class="string">&quot;expected list to have %d files, but got %d&quot;</span>, lexp, lact)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		sort.Strings(list)</span><br><span class="line"></span><br><span class="line">		exp := []<span class="type">string</span>&#123;<span class="string">&quot;foo.go&quot;</span>, <span class="string">&quot;web/routes.go&quot;</span>&#125;</span><br><span class="line">		<span class="keyword">for</span> i, a := <span class="keyword">range</span> list &#123;</span><br><span class="line">			e := exp[i]</span><br><span class="line">			<span class="keyword">if</span> !strings.HasSuffix(a, e) &#123;</span><br><span class="line">				b.Fatalf(<span class="string">&quot;expected %q to match expected %q&quot;</span>, list, exp)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>​在<code>BenchmarkGoFilesJIT</code>测试用例中，我们使用<code>io/ioutil</code>包来为测试创建满足需求场景的临时文件夹和文件。此刻，意味着要创建包含<code>.go</code>文件的<code>node_modules</code>和<code>.git</code>目录，以便于确认这些<code>.go</code>文件不会出现在处理结果中。如果<code>GoFiles</code>函数正常工作的话，我们在结果集中将看到两个条目，<code>foo.go</code> 以及 <code>web/routes.go</code>。</p>
+<p>​这种<code>JIT</code>方式有两大缺点：其一，随着时间的推移，编写和维护<code>setup</code>部分的代码将会变得非常麻烦，为测试用例做大量的<code>setup</code>本身也会引入更多的 bug。其二，也是最大的弊端，<code>JIT</code>测试会创建大量的文件和文件夹，这势必会在文件系统上产生大量的<code>i/o</code>竞争和<code>i/o</code>操作，从而让我们的任务性能非常低效。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: fsdemo</span><br><span class="line">cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz</span><br><span class="line">BenchmarkGoFilesJIT-16							1470			819064 ns/op</span><br></pre></td></tr></table></figure>
+
+<h2 id="Pre-Existing-File-Fixtures"><a href="#Pre-Existing-File-Fixtures" class="headerlink" title="Pre-Existing File Fixtures"></a>Pre-Existing File Fixtures</h2><p>另一种测试<code>GoFiles</code>的方法是创建一个名为<code>testdata</code>的目录，并且在里面创建好测试场景所需的全部文件。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">testdata</span><br><span class="line">└── scenario1</span><br><span class="line">		├── _ignore</span><br><span class="line">		│   └── ignore.go</span><br><span class="line">		├── foo.go</span><br><span class="line">		├── node_modules</span><br><span class="line">		│   └── node_modules.go</span><br><span class="line">		├── testdata</span><br><span class="line">		│   └── testdata.go</span><br><span class="line">		└── web</span><br><span class="line">				└── routes.go</span><br><span class="line"></span><br><span class="line">5 directories, 5 files</span><br></pre></td></tr></table></figure>
+
+<p>使用这种方法，我们就可以清理掉很多我们的测试代码，让<code>GoFiles</code>函数指向事先准备好的已包含相应测试场景的文件夹。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGoFilesExistingFiles</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line"></span><br><span class="line">		list, err := GoFiles(<span class="string">&quot;./testdata/scenario1&quot;</span>)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lexp := <span class="number">2</span></span><br><span class="line">		lact := <span class="built_in">len</span>(list)</span><br><span class="line">		<span class="keyword">if</span> lact != lexp &#123;</span><br><span class="line">			b.Fatalf(<span class="string">&quot;expected list to have %d files, but got %d&quot;</span>, lexp, lact)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		sort.Strings(list)</span><br><span class="line"></span><br><span class="line">		exp := []<span class="type">string</span>&#123;<span class="string">&quot;foo.go&quot;</span>, <span class="string">&quot;web/routes.go&quot;</span>&#125;</span><br><span class="line">		<span class="keyword">for</span> i, a := <span class="keyword">range</span> list &#123;</span><br><span class="line">			e := exp[i]</span><br><span class="line">			<span class="keyword">if</span> !strings.HasSuffix(a, e) &#123;</span><br><span class="line">				b.Fatalf(<span class="string">&quot;expected %q to match expected %q&quot;</span>, list, exp)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这种方法大大减少了测试的消耗，从而提高了测试的可靠性和可读性。与JIT方法相比，此方法呈现的测试速度也快得多。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: fsdemo</span><br><span class="line">cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz</span><br><span class="line">BenchmarkGoFilesExistingFiles-16                        9795            120648 ns/op</span><br><span class="line">BenchmarkGoFilesJIT-16                                  1470            819064 ns/op</span><br></pre></td></tr></table></figure>
+
+<p>这种方法的缺点是为GoFiles函数创建可靠测试所需的文件&#x2F;文件夹的数量和组合（意指数量和组合可能都很巨大）。到目前为止，我们仅仅测试了“成功”的情况，我们还没有为错误场景或其它潜在的情况编写测试。</p>
+<p>使用这种方式，一个很常见的问题就是，开发者会逐渐的为多个测试重复使用这些场景（指testdata中的测试场景）。随时间推移，开发者并非为新的测试创建新的结构，而是去更改现有的场景以满足新的测试。这将测试全部耦合在了一起，使测试代码变得异常脆弱。</p>
+<p>使用<code>io/fs</code>重写<code>GoFiles</code>函数，我们将会解决所有的问题！</p>
+<h2 id="使用-FS"><a href="#使用-FS" class="headerlink" title="使用  FS"></a>使用  FS</h2><p>​通过上面的了解，我们知道<code>io/fs</code>包支持针对<code>virtual file system</code>的实现（译者注：意指<code>io/fs</code>包提供了很多针对<code>fs.FS</code>的功能）。为了利用<code>io/fs</code>提供的功能，我们可以通过重写<code>GoFiles</code>函数让它接受一个<code>fs.FS</code>作为参数。在正式的代码中，我们可以调用<a target="_blank" rel="noopener" href="https://pkg.go.dev/os/#DirFS"><code>os.DirFS</code></a>来获得一个由底层文件系统支持的<code>fs.FS</code>接口的实现。</p>
+<p>​为了遍历一个<code>fs.FS</code>的实现，我们需要使用<code>fs.WalkDir </code>函数，<code>fs.WalkDir </code>函数的功能近乎等同于<code>filepath.Walk</code>函数。尽管这些差异很值得推敲一番，但这超出了本文的范围，因此我们将在以后的文章中另行阐述。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GoFilesFS</span><span class="params">(root <span class="type">string</span>, sys fs.FS)</span></span> ([]<span class="type">string</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">var</span> data []<span class="type">string</span></span><br><span class="line"></span><br><span class="line">	err := fs.WalkDir(sys, <span class="string">&quot;.&quot;</span>, <span class="function"><span class="keyword">func</span><span class="params">(path <span class="type">string</span>, de fs.DirEntry, err <span class="type">error</span>)</span></span> <span class="type">error</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> err</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		base := filepath.Base(path)</span><br><span class="line">		<span class="keyword">for</span> _, sp := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// if the name of the folder has a prefix listed in SkipPaths</span></span><br><span class="line">			<span class="comment">// then we should skip the directory.</span></span><br><span class="line">			<span class="comment">// e.g. node_modules, testdata, _foo, .git</span></span><br><span class="line">			<span class="keyword">if</span> strings.HasPrefix(base, sp) &#123;</span><br><span class="line">				<span class="keyword">return</span> filepath.SkipDir</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// skip non-go files</span></span><br><span class="line">		<span class="keyword">if</span> filepath.Ext(path) != <span class="string">&quot;.go&quot;</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		data = <span class="built_in">append</span>(data, path)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> data, err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>得益于<code>io/fs</code>包兼容性API带来的便利，<code>GoFilesFS</code>函数避免了昂贵的重写，仅需要很小的修改就可完工。</p>
+<h2 id="实现-FS"><a href="#实现-FS" class="headerlink" title="实现 FS"></a>实现 FS</h2><p>现在，该函数已更新为使用<code>fs.FS</code>，让我们看看如何为它编写测试。在此之前，我们先来实现<code>fs.FS</code>。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> FS <span class="keyword">interface</span> &#123;</span><br><span class="line">	<span class="comment">// Open opens the named file.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// When Open returns an error, it should be of type *PathError</span></span><br><span class="line">	<span class="comment">// with the Op field set to &quot;open&quot;, the Path field set to name,</span></span><br><span class="line">	<span class="comment">// and the Err field describing the problem.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// Open should reject attempts to open names that do not satisfy</span></span><br><span class="line">	<span class="comment">// ValidPath(name), returning a *PathError with Err set to</span></span><br><span class="line">	<span class="comment">// ErrInvalid or ErrNotExist.</span></span><br><span class="line">	Open(name <span class="type">string</span>) (File, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>Open</code>函数接收一个文件的路径，然后返回一个<code>fs.File</code>和一个<code>error</code>。如文档所述，需要满足某些关于错误的需求。</p>
+<p>对于我们的测试来说，我们将会使用一个模拟文件类型的切片，并稍后将其实现为<code>fs.FS</code>，该切片还将实现所有本次测试所需的功能。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MockFS []*MockFile</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mfs MockFS)</span></span> Open(name <span class="type">string</span>) (fs.File, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">for</span> _, f := <span class="keyword">range</span> mfs &#123;</span><br><span class="line">		<span class="keyword">if</span> f.Name() == name &#123;</span><br><span class="line">			<span class="keyword">return</span> f, <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(mfs) &gt; <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> mfs[<span class="number">0</span>].FS.Open(name)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span>, &amp;fs.PathError&#123;</span><br><span class="line">		Op:   <span class="string">&quot;read&quot;</span>,</span><br><span class="line">		Path: name,</span><br><span class="line">		Err:  os.ErrNotExist,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在<code>MockFS.Open</code>中，我们在已知文件列表中循环匹配请求的名称，如果匹配成功则返回该文件；如果没有找到，则尝试在第一个文件中递归打开。最后，如果没有找到，则按文档要求返回适当的<code>error</code>。</p>
+<p>我们的<code>MockFS</code>目前还未实现完整，我们还需要实现<code>fs.ReadDirFS</code>接口来模拟文件。尽管<code>fs.ReadDirFS</code>文档未提及以下约束，但<code>fs.ReadDirFile</code>和<code>File.ReadDir</code>则需要它们。因此，它们也值得留意和实现。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ReadDir reads the contents of the directory and returns</span></span><br><span class="line"><span class="comment">// a slice of up to n DirEntry values in directory order.</span></span><br><span class="line"><span class="comment">// Subsequent calls on the same file will yield further DirEntry values.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// If n &gt; 0, ReadDir returns at most n DirEntry structures.</span></span><br><span class="line"><span class="comment">// In this case, if ReadDir returns an empty slice, it will return</span></span><br><span class="line"><span class="comment">// a non-nil error explaining why.</span></span><br><span class="line"><span class="comment">// At the end of a directory, the error is io.EOF.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// If n &lt;= 0, ReadDir returns all the DirEntry values from the directory</span></span><br><span class="line"><span class="comment">// in a single slice. In this case, if ReadDir succeeds (reads all the way</span></span><br><span class="line"><span class="comment">// to the end of the directory), it returns the slice and a nil error.</span></span><br><span class="line"><span class="comment">// If it encounters an error before the end of the directory,</span></span><br><span class="line"><span class="comment">// ReadDir returns the DirEntry list read until that point and a non-nil error.</span></span><br></pre></td></tr></table></figure>
+
+<p>尽管这些规则听起来令人困惑，但实际上，这种逻辑非常简单。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mfs MockFS)</span></span> ReadDir(n <span class="type">int</span>) ([]fs.DirEntry, <span class="type">error</span>) &#123;</span><br><span class="line">	list := <span class="built_in">make</span>([]fs.DirEntry, <span class="number">0</span>, <span class="built_in">len</span>(mfs))</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> _, v := <span class="keyword">range</span> mfs &#123;</span><br><span class="line">		list = <span class="built_in">append</span>(list, v)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	sort.Slice(list, <span class="function"><span class="keyword">func</span><span class="params">(a, b <span class="type">int</span>)</span></span> <span class="type">bool</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> list[a].Name() &gt; list[b].Name()</span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> n &lt; <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> list, <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> n &gt; <span class="built_in">len</span>(list) &#123;</span><br><span class="line">		<span class="keyword">return</span> list, io.EOF</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> list[:n], io.EOF</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="实现-File-接口"><a href="#实现-File-接口" class="headerlink" title="实现 File 接口"></a>实现 File 接口</h2><p>我们已经完成了<code>fs.FS</code>的实现，但仍需要实现一组接口来满足<code>fs</code>包的需要。幸运的是，我们可以将所有接口实现到一个类型当中，从而使我们的测试更加简便。</p>
+<blockquote>
+<p>继续之前，我要申明一点：我故意没有完全实现接口的文件读取部分，因为这将增加不必要的复杂度，而这些复杂度不是本文所需要的。所以我们将在后续的文章中探讨相关主题。</p>
+</blockquote>
+<p>为了测试我们的代码，我们将要实现四个接口： <code>fs.File</code> , <code>fs.FileInfo</code> , <code>fs.ReadDirFile</code> , and <code>fs.DirEntry</code> 。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> File <span class="keyword">interface</span> &#123;</span><br><span class="line">	Stat() (FileInfo, <span class="type">error</span>)</span><br><span class="line">	Read([]<span class="type">byte</span>) (<span class="type">int</span>, <span class="type">error</span>)</span><br><span class="line">	Close() <span class="type">error</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> FileInfo <span class="keyword">interface</span> &#123;</span><br><span class="line">	Name() <span class="type">string</span></span><br><span class="line">	Size() <span class="type">int64</span></span><br><span class="line">	Mode() FileMode</span><br><span class="line">	ModTime() time.Time</span><br><span class="line">	IsDir() <span class="type">bool</span></span><br><span class="line">	Sys() <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> ReadDirFile <span class="keyword">interface</span> &#123;</span><br><span class="line">	File</span><br><span class="line">	ReadDir(n <span class="type">int</span>) ([]DirEntry, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> DirEntry <span class="keyword">interface</span> &#123;</span><br><span class="line">	Name() <span class="type">string</span></span><br><span class="line">	IsDir() <span class="type">bool</span></span><br><span class="line">	Type() FileMode</span><br><span class="line">	Info() (FileInfo, <span class="type">error</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>乍看之下，这些接口的体量之大似乎压人心魄。但是不用多虑，因为它们很多重叠的功能，所以我们可以把他们凝聚到一个类型当中。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> MockFile <span class="keyword">struct</span> &#123;</span><br><span class="line">	FS      MockFS</span><br><span class="line">	isDir   <span class="type">bool</span></span><br><span class="line">	modTime time.Time</span><br><span class="line">	mode    fs.FileMode</span><br><span class="line">	name    <span class="type">string</span></span><br><span class="line">	size    <span class="type">int64</span></span><br><span class="line">	sys     <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>MockFile</code>类型包含一个<code>fs.FS</code>的实现<code>MockFS</code>，它将持有我们测试用到的所有文件。<code>MockFile</code> 类型中的其余字段供我们设置为其相应功能的返回值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> Name() <span class="type">string</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.name</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> IsDir() <span class="type">bool</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.isDir</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span></span> Info() (fs.FileInfo, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">return</span> mf.Stat()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span></span> Stat() (fs.FileInfo, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">return</span> mf, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> Size() <span class="type">int64</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> m.size</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> Mode() os.FileMode &#123;</span><br><span class="line">	<span class="keyword">return</span> m.mode</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> ModTime() time.Time &#123;</span><br><span class="line">	<span class="keyword">return</span> m.modTime</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> Sys() <span class="keyword">interface</span>&#123;&#125; &#123;</span><br><span class="line">	<span class="keyword">return</span> m.sys</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> Type() fs.FileMode &#123;</span><br><span class="line">	<span class="keyword">return</span> m.Mode().Type()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span></span> Read(p []<span class="type">byte</span>) (<span class="type">int</span>, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;not implemented&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mf *MockFile)</span></span> Close() <span class="type">error</span> &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(m *MockFile)</span></span> ReadDir(n <span class="type">int</span>) ([]fs.DirEntry, <span class="type">error</span>) &#123;</span><br><span class="line">	<span class="keyword">if</span> !m.IsDir() &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, os.ErrNotExist</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> m.FS == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> m.FS.ReadDir(n)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>像<code>Stat() (fs.FileInfo, error)</code>方法可以返回<code>MockFile </code>本身，因为它已经实现了<code>fs.FileInfo</code>接口，此为我们如何用一个<code>MockFile</code>类型实现众多所需的接口的一个例证！</p>
+<h2 id="使用-FS-进行测试"><a href="#使用-FS-进行测试" class="headerlink" title="使用 FS 进行测试"></a>使用 FS 进行测试</h2><p>鉴于我们已经拥有了<code>MockFS</code> 和 <code>MockFile</code>，那么是时候为<code>GoFilesFS</code>函数编写测试了。依例，我们首先要为测试设置文件夹和文件结构。通过两个辅助函数<code>NewFile</code>和<code>NewDir</code>、以及使用切片直接构建一个<code>fs.FS</code>（指 <code>MockFS</code>）的便捷性，我们可以在内存中快速的构建出复杂的文件夹和文件结构。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewFile</span><span class="params">(name <span class="type">string</span>)</span></span> *MockFile &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;MockFile&#123;</span><br><span class="line">		name: name,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewDir</span><span class="params">(name <span class="type">string</span>, files ...*MockFile)</span></span> *MockFile &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;MockFile&#123;</span><br><span class="line">		FS:    files,</span><br><span class="line">		isDir: <span class="literal">true</span>,</span><br><span class="line">		name:  name,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGoFilesFS</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		files := MockFS&#123;</span><br><span class="line">			<span class="comment">// ./foo.go</span></span><br><span class="line">			NewFile(<span class="string">&quot;foo.go&quot;</span>),</span><br><span class="line">			<span class="comment">// ./web/routes.go</span></span><br><span class="line">			NewDir(<span class="string">&quot;web&quot;</span>, NewFile(<span class="string">&quot;routes.go&quot;</span>)),</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> _, s := <span class="keyword">range</span> SkipPaths &#123;</span><br><span class="line">			<span class="comment">// ex: ./.git/git.go</span></span><br><span class="line">			<span class="comment">// ex: ./node_modules/node_modules.go</span></span><br><span class="line">			files = <span class="built_in">append</span>(files, NewDir(s, NewFile(s+<span class="string">&quot;.go&quot;</span>)))</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		mfs := MockFS&#123;</span><br><span class="line">			<span class="comment">// ./</span></span><br><span class="line">			NewDir(<span class="string">&quot;.&quot;</span>, files...),</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		list, err := GoFilesFS(<span class="string">&quot;/&quot;</span>, mfs)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			b.Fatal(err)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lexp := <span class="number">2</span></span><br><span class="line">		lact := <span class="built_in">len</span>(list)</span><br><span class="line">		<span class="keyword">if</span> lact != lexp &#123;</span><br><span class="line">			b.Fatalf(<span class="string">&quot;expected list to have %d files, but got %d&quot;</span>, lexp, lact)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		sort.Strings(list)</span><br><span class="line"></span><br><span class="line">		exp := []<span class="type">string</span>&#123;<span class="string">&quot;foo.go&quot;</span>, <span class="string">&quot;web/routes.go&quot;</span>&#125;</span><br><span class="line">		<span class="keyword">for</span> i, a := <span class="keyword">range</span> list &#123;</span><br><span class="line">			e := exp[i]</span><br><span class="line">			<span class="keyword">if</span> e != a &#123;</span><br><span class="line">				b.Fatalf(<span class="string">&quot;expected %q to match expected %q&quot;</span>, list, exp)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>本次<code> setup</code>的代码非常简单高效地完成了我们所需的工作，如果我们需要在测试中增加文件或文件夹，可以通过插入一行或两行来迅速完成。更重要的是，在尝试编写测试时，我们不会因复杂的<code>setup</code>代码而分心。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">BenchmarkGoFilesFS-16										432418				2605 ns/op</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>​使用<code>BenchmarkGoFilesJIT</code>方式，我们有很多直接操作<code>filesystem</code>的文件<code>setup</code>和<code>teardown </code>代码（译者注：指文件结构的创建和销毁），这会让测试代码本身引入很多潜在的<code>error</code>和<code>bug</code>。<code>setup</code>和<code>teardown </code>代码会让测试的重心偏移，其复杂性使得很难对测试方案进行更改。而且，这种方式的基准测试性能最差。</p>
+<p>​不同的是，<code>BenchmarkGoFilesExistingFiles</code>方式使用预先在<code>testdata</code>中准备好的文件结构场景。这使得测试过程不再需要<code>setup</code>代码，仅仅需要为测试代码指明场景在磁盘中的位置。这种方式还有其它便利之处，例如其使用的是可以用标准工具轻松编辑和操纵的真实文件。与<code>JIT</code>方式相比，因其使用了已存在的场景数据，这极大地增加了测试的性能。其成本是需要在<code>repo</code>中创建和提交很多的场景数据，而且这些场景数据很容易被其他的测试代码滥用，最终导致测试用例变得脆弱不堪。</p>
+<p>​这两种方式都有其它的一些缺陷，比如难以模拟大文件、文件的权限、错误等等，而<code>io/fs</code>，可以帮我们解决这些问题！</p>
+<p>​我们已经看到了如何通微小的代码改动来使用<code>io/fs</code>包，得益于此，我们的测试代码变得更易于编写。这种方式不需要<code>teardown</code>代码，设置场景数据就像为切片追加数据一样简单，测试中的修改也变得游刃有余。我们的<code>MockFile</code>类型可以让我们像<code>MockFS</code>类型一样模拟出文件的大小、文件的权限、错误甚至更多。最重要的是，我们看到，通过使用io &#x2F; fs并实现其接口，与JIT测试相比，我们可以将文件系统测试的速度提高300％以上。</p>
+<figure class="highlight tex"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">goos: darwin</span><br><span class="line">goarch: amd64</span><br><span class="line">pkg: fsdemo</span><br><span class="line">cpu: Intel(R) Xeon(R) W-2140B CPU @ 3.20GHz</span><br><span class="line">BenchmarkGoFilesFS-16                               432418                          2605 ns/op</span><br><span class="line">BenchmarkGoFilesExistingFiles-16                      9795                        120648 ns/op</span><br><span class="line">BenchmarkGoFilesJIT-16                                1470                        819064 ns/op</span><br></pre></td></tr></table></figure>
+
+<p>​虽然本文介绍了如何使用新的<code>io/fs</code>包来增强我们的测试，但这只是该包的冰山一角。比如，考虑一个文件转换管道，该管道根据文件的类型在文件上运行转换程序。再比如，将.md文件从Markdown转换为HTML，等等。使用<code>io/fs</code>包，您可以轻松创建带有接口的管道，并且测试该管道也相对简单。 Go 1.16有很多令人兴奋的地方，但是，对我来说，<code>io/fs</code>包是最让我兴奋的一个。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Go1-16/" rel="tag"># Go1.16</a>
+              <a href="/tags/io-fs/" rel="tag"># io/fs</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/02/27/essay/sudongpo-lin/" rel="prev" title="此间有什么歇不得处">
+                  <i class="fa fa-chevron-left"></i> 此间有什么歇不得处
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/06/27/theory/stack-insight-01-md/" rel="next" title="Stack 顿悟三部曲（1）：从CPU的视角说起">
+                  Stack 顿悟三部曲（1）：从CPU的视角说起 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"b263c8c238adf5ce27960923ccb65edb"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

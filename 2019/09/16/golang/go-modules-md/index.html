@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="前几天go1.13发布，modules默认开启，从此modules转正成为golang官方原生的包依赖管理方式；除了modules，go1.13中还增加了新的语法，如二进制、八进制、十六进制字面量表示法，defer性能的增强，新的errors等等，社区已有很多相关特性的论述文章；此文仅简单讨论一下go1.13中modules的一些改变，毕竟包的管理跟我们日常开发是息息相关的，行文仓促，若有不当之">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浅谈Go1.13中的modules">
+<meta property="og:url" content="http://liupzmin.com/2019/09/16/golang/go-modules-md/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="前几天go1.13发布，modules默认开启，从此modules转正成为golang官方原生的包依赖管理方式；除了modules，go1.13中还增加了新的语法，如二进制、八进制、十六进制字面量表示法，defer性能的增强，新的errors等等，社区已有很多相关特性的论述文章；此文仅简单讨论一下go1.13中modules的一些改变，毕竟包的管理跟我们日常开发是息息相关的，行文仓促，若有不当之">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-09-16T02:41:24.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="golang">
+<meta property="article:tag" content="modules">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://liupzmin.com/2019/09/16/golang/go-modules-md/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2019/09/16/golang/go-modules-md/","path":"2019/09/16/golang/go-modules-md/","title":"浅谈Go1.13中的modules"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>浅谈Go1.13中的modules | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Go-Moudles"><span class="nav-number">1.</span> <span class="nav-text">Go Moudles</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%A4%E4%B8%AA%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.1.</span> <span class="nav-text">两个模式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GO111MODULE"><span class="nav-number">2.</span> <span class="nav-text">GO111MODULE</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#modules-in-go1-13"><span class="nav-number">3.</span> <span class="nav-text">modules in go1.13</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#GO111MODULE-1"><span class="nav-number">3.1.</span> <span class="nav-text">GO111MODULE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GOPROXY"><span class="nav-number">3.2.</span> <span class="nav-text">GOPROXY</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GOPRIVATE"><span class="nav-number">3.3.</span> <span class="nav-text">GOPRIVATE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GONOSUMDB-%E5%92%8C-GONOPROXY"><span class="nav-number">3.4.</span> <span class="nav-text">GONOSUMDB 和 GONOPROXY</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#go-env-w"><span class="nav-number">3.5.</span> <span class="nav-text">go env -w</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2019/09/16/golang/go-modules-md/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="浅谈Go1.13中的modules | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          浅谈Go1.13中的modules<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9nb2xhbmcvZ28tbW9kdWxlcy1tZC5tZA==" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-16 10:41:24" itemprop="dateCreated datePublished" datetime="2019-09-16T10:41:24+08:00">2019-09-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/golang/" itemprop="url" rel="index"><span itemprop="name">golang</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>前几天go1.13发布，modules默认开启，从此modules转正成为golang官方原生的包依赖管理方式；除了modules，go1.13中还增加了新的语法，如二进制、八进制、十六进制字面量表示法，defer性能的增强，新的errors等等，社区已有很多相关特性的论述文章；此文仅简单讨论一下go1.13中modules的一些改变，毕竟包的管理跟我们日常开发是息息相关的，行文仓促，若有不当之处，希望读者斧正。</p>
+</blockquote>
+<p><strong>本文仅介绍modules在1.11&#x2F;1.12&#x2F;1.13等版本中的变化，并不介绍modules的使用，如需了解modules的详细使用方法，请参考官方文档或其他社区文章</strong></p>
+<h2 id="Go-Moudles"><a href="#Go-Moudles" class="headerlink" title="Go Moudles"></a>Go Moudles</h2><p><code>modules</code> 是 go1.11 推出的特性，官方称是 <code>GOPATH</code> 的替代品，是一个完整的支持包分发和版本控制的工具，使用modules，工作区不再局限于<code>GOPATH</code>之内，从而使构建更加可靠和可重复，但modules在go1.11版本中仅仅是一个实验性的功能，紧接着在go1.12中得到了增强，而刚刚发布的go1.13中得到了转正，<code>GOPATH</code>的作用进一步被弱化，Go Moudles开始大规模使用。</p>
+<h3 id="两个模式"><a href="#两个模式" class="headerlink" title="两个模式"></a>两个模式</h3><p>对于 modules 这种模式官网有一个称呼是<code> Module-aware</code>，我不知道如何去翻译这个组合词，与之相对的，就是在<code>Module-aware mode</code>之前我们使用的包管理方式称为<code>GOPATH mode</code>，他们的区别如下：</p>
+<ul>
+<li><p><strong>GOPATH mode：</strong> go command从<code>vendor</code>和<code>GOPATH</code>下寻找依赖,依赖会被下载至<code>GOPATH/src</code></p>
+</li>
+<li><p><strong>Module-aware mode:</strong> go command不再考虑<code>GOPATH</code>，仅仅使用<code>GOPATH/pkg/mod</code>存储下载的依赖，并且是多版本并存</p>
+</li>
+</ul>
+<p><strong>注意：Module-aware开启和关闭的情况下，go get 的使用方式不是完全相同的。在 modules 模式开启的情况下，可以通过在 package 后面添加 @version 来表明要升级（降级）到某个版本。如果没有指明 version 的情况下，则默认先下载打了 tag 的 release 版本，比如 v0.4.5 或者 v1.2.3；如果没有 release 版本，则下载最新的 pre release 版本，比如 v0.0.1-pre1。如果还没有则下载最新的 commit。这个地方给我们的一个启示是如果我们不按规范的方式来命名我们的 package 的 tag，则 modules 是无法管理的。version 的格式为 v(major).(minor).(patch) ，</strong></p>
+<p>在 modules 开启的模式下，go get 还支持 version 模糊查询，比如 &gt; v1.0.0 表示大于 v1.0.0 的可使用版本；&lt; v1.12.0 表示小于 v1.12.0  版本下最近可用的版本。version 的比较规则按照 version 的各个字段来展开。</p>
+<p>除了指定版本，我们还可以使用如下命名使用最近的可行的版本：</p>
+<ul>
+<li><p>go get -u 使用最新的 minor 或者 patch 版本</p>
+</li>
+<li><p>go get -u&#x3D;patch 使用最新的 patch 版本</p>
+</li>
+</ul>
+<h2 id="GO111MODULE"><a href="#GO111MODULE" class="headerlink" title="GO111MODULE"></a>GO111MODULE</h2><p>在 1.12 版本之前，使用 Go modules 之前需要环境变量 GO111MODULE：</p>
+<ul>
+<li><p>GO111MODULE&#x3D;off: 不使用 Module-aware mode。</p>
+</li>
+<li><p>GO111MODULE&#x3D;on: 使用 Module-aware mode，不会去 GOPATH 下面查找依赖包。</p>
+</li>
+<li><p>GO111MODULE&#x3D;auto或unset: Golang 自己检测是不是使用Module-aware mode。</p>
+</li>
+</ul>
+<p>go1.11时GO111MODULE&#x3D;on有一个很不好的体验，就是go command依赖go.mod文件，也就是如果在module文件夹外使用go get等命令会报如下错误：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@k8s-node1 ~]# go get github.com/google/go-cmp</span><br><span class="line">go: cannot find main module; see &#x27;go help modules&#x27;</span><br><span class="line">[root@k8s-node1 ~]# touch go.mod</span><br><span class="line">[root@k8s-node1 ~]# go get github.com/google/go-cmp</span><br><span class="line">go: cannot determine module path for source directory /root (outside GOPATH, no import comments)</span><br></pre></td></tr></table></figure>
+
+<p>这个情况在go1.12中得到了解决，可以在<code>module directory</code>之外使用<code>go</code> command。</p>
+<p>但我个人比较喜欢不去设置<code>GO111MODULE</code>，根据官方描述在不设置<code>GO111MODULE</code>的情况下或者设为auto的时候，如果在当前目录或者父目录中有go.mod文件，那么就使用<code>Module-aware mode</code>， 而go1.12中，如果包位于<code>GOPATH/src</code>下，且<code>GO111MODULE=auto</code>, 即使有go.mod的存在，go仍然使用<code>GOPATH mode</code>:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@VM_0_6_centos test]# go get github.com/jlaffaye/ftp        </span><br><span class="line">go get: warning: modules disabled by GO111MODULE=auto in GOPATH/src;</span><br><span class="line">        ignoring go.mod;</span><br><span class="line">        see &#x27;go help modules&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>这个现象在go1.13中又发生了改变.</p>
+<h2 id="modules-in-go1-13"><a href="#modules-in-go1-13" class="headerlink" title="modules in go1.13"></a>modules in go1.13</h2><h3 id="GO111MODULE-1"><a href="#GO111MODULE-1" class="headerlink" title="GO111MODULE"></a>GO111MODULE</h3><blockquote>
+<p>The GO111MODULE environment variable continues to default to auto, but the auto setting now activates the module-aware mode of the go command whenever the current working directory contains, or is below a directory containing, a go.mod file — even if the current directory is within GOPATH&#x2F;src.</p>
+</blockquote>
+<p>Go 1.13 includes support for Go modules. Module-aware mode is active by default whenever a go.mod file is found in, or in a parent of, the current directory.</p>
+<p>可见，modules 在 Go 1.13 的版本下是默认开启的，GOPATH的地位进一步被弱化。</p>
+<h3 id="GOPROXY"><a href="#GOPROXY" class="headerlink" title="GOPROXY"></a>GOPROXY</h3><p><code>GOPROXY</code>环境变量是伴随着modules而生的，在go1.13中得到了增强，可以设置为逗号分隔的url列表来指定多个代理，其默认值为<code>https://proxy.golang.org,direct</code>，也就是说google为我们维护了一个代理服务器，但是因为墙的存在，这个默认设置对中国的gopher并无卵用，应第一时间修改。</p>
+<p><code>go</code>命令在需要下载库包的时候将逐个试用设置中的各个代理，直到发现一个可用的为止。<code>direct</code>表示直连，所有<code>direct</code>之后的proxy都不会被使用，一个设置例子：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GOPROXY=https://proxy.golang.org,https://myproxy.mysite:8888,direct</span><br></pre></td></tr></table></figure>
+
+<p><code>GOPROXY</code>环境变量可以帮助我们下载墙外的第三方库包，比较知名的中国区代理<span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2dvcHJveHkvZ29wcm94eS5jbg==">goproxy.cn<i class="fa fa-external-link-alt"></i></span>。当然，通过设置https_proxy环境变量设也可以达到此目的。但是一个公司通过在内部架设一个自己的goproxy服务器来缓存第三方库包，库包下载速度会更快,可以感觉到module有一点<code>maven</code>的意思了，但是易用性上还有很长的路要走。</p>
+<h3 id="GOPRIVATE"><a href="#GOPRIVATE" class="headerlink" title="GOPRIVATE"></a>GOPRIVATE</h3><p>使用<code>GOPROXY</code>可以获取公共的包，这些包在获取的时候会去https://sum.golang.org进行校验，这对中国的gopher来说又是一个比较坑的地方，Go为了安全性推出了Go checksum database（sumdb），环境变量为<code>GOSUMDB</code>，go命令将在必要的时候连接此服务来检查下载的第三方依赖包的哈希是否和sumdb的记录相匹配。很遗憾，在中国也被墙了，可以选择设置为一个第三方的校验库，也可更直接点将<code>GOSUMDB</code>设为<code>off</code>关闭哈希校验，当然就不是很安全了。</p>
+<p>除了<code>public</code>的包，在现实开发中我们更多的是使用很多<code>private</code>的包，因此就不适合走代理，所以go1.13推出了一个新的环境变量<code>GOPRIVATE</code>，它的值是一个以逗号分隔的列表，支持正则（正则语法遵守 Golang 的 包 path.Match）。在<code>GOPRIVATE</code>中设置的包不走proxy和checksum database，例如：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GOPRIVATE=*.corp.example.com,rsc.io/private</span><br></pre></td></tr></table></figure>
+
+<h3 id="GONOSUMDB-和-GONOPROXY"><a href="#GONOSUMDB-和-GONOPROXY" class="headerlink" title="GONOSUMDB 和 GONOPROXY"></a>GONOSUMDB 和 GONOPROXY</h3><p>这两个环境变量根据字面意思就能明白是设置不进行校验和不走代理的包，设置方法也是以逗号分隔</p>
+<h3 id="go-env-w"><a href="#go-env-w" class="headerlink" title="go env -w"></a>go env -w</h3><p>可能是go也觉得环境变量有点多了，干脆为go env增加了一个选项<code>-w</code>，来设置全局环境变量，在Linux系统上我们可以这样用：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">go env -w GOPROXY=https://goproxy.cn,direct</span><br><span class="line">go env -w GOPRIVATE=*.gitlab.com,*.gitee.com</span><br><span class="line">go env -w GOSUMDB=off</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>就<code>1.13</code>中包管理的改变来看，有些乏善可陈，go的包管理很难让大多数开发者满意，当我看到越来越多的环境变量时，心里忍不住唾弃，使用这么多环境变量是一个多么蠢的方法，希望未来Go能给大家带来更好的包管理方式吧，就像Java的maven那样。</p>
+<p><strong>参考文献：</strong></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9nb2xhbmcub3JnL2RvYy9nbzEuMTM=">Go 1.13 Release Notes<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9nb2xhbmcub3JnL2RvYy9nbzEuMTI=">Go 1.12 Release Notes<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9nb2xhbmcub3JnL2RvYy9nbzEuMTE=">Go 1.11 Release Notes<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9tcC53ZWl4aW4ucXEuY29tL3Mvdi1OZFlFSkJnS2JpS3Nkb1FhUnNRZw==">Go Modules 不完全教程<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/golang/" rel="tag"># golang</a>
+              <a href="/tags/modules/" rel="tag"># modules</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/08/06/golang/url-encode-linefeed/" rel="prev" title="The %0A in URL Encode">
+                  <i class="fa fa-chevron-left"></i> The %0A in URL Encode
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/09/24/docker/manage-docker-as-a-non-root-user/" rel="next" title="使用普通用户管理docker">
+                  使用普通用户管理docker <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"d987e01dcde81f72da864dd52c021e2a"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

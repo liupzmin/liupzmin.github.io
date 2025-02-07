@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="通过 从CPU的视角说起 和 穿越虚拟内存的迷雾 两篇文章我们知道，所谓进程堆栈不过是应用程序向内核申请了一块连续内存后，设定相应的寄存器，从而将这块内存当做堆栈来使用，典型的用法就是用于函数调用。 我们在上一篇讨论了进线程的堆栈，现在继续探索 go 中的协程栈。如果吊一下书袋的话，口称 go 协程是不严谨的，go 的协程不同于其他语言的协程，go 的协程是一种有栈协程，每一个协程都有自己的协程堆">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Stack 顿悟三部曲（3）：溯源 goroutine 堆栈">
+<meta property="og:url" content="http://liupzmin.com/2022/04/26/theory/stack-insight-03/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="通过 从CPU的视角说起 和 穿越虚拟内存的迷雾 两篇文章我们知道，所谓进程堆栈不过是应用程序向内核申请了一块连续内存后，设定相应的寄存器，从而将这块内存当做堆栈来使用，典型的用法就是用于函数调用。 我们在上一篇讨论了进线程的堆栈，现在继续探索 go 中的协程栈。如果吊一下书袋的话，口称 go 协程是不严谨的，go 的协程不同于其他语言的协程，go 的协程是一种有栈协程，每一个协程都有自己的协程堆">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://s3.ap-northeast-1.amazonaws.com/qiniu.liupzmin.com/stack-region.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/mmap-region.png">
+<meta property="og:image" content="https://qiniu.liupzmin.com/virtual-memory-of-a-linux-process.png">
+<meta property="article:published_time" content="2022-04-26T02:30:17.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.643Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="os">
+<meta property="article:tag" content="groutine">
+<meta property="article:tag" content="stack">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://s3.ap-northeast-1.amazonaws.com/qiniu.liupzmin.com/stack-region.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2022/04/26/theory/stack-insight-03/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2022/04/26/theory/stack-insight-03/","path":"2022/04/26/theory/stack-insight-03/","title":"Stack 顿悟三部曲（3）：溯源 goroutine 堆栈"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Stack 顿悟三部曲（3）：溯源 goroutine 堆栈 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1%C2%B7-%E8%BF%9B%E7%BA%BF%E7%A8%8B%E5%A0%86%E6%A0%88"><span class="nav-number">1.</span> <span class="nav-text">1· 进线程堆栈</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-goroutine-%E7%9A%84%E5%A0%86%E6%A0%88"><span class="nav-number">2.</span> <span class="nav-text">2. goroutine 的堆栈</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-mmap-%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98%E7%9A%84%E4%BD%8D%E7%BD%AE"><span class="nav-number">3.</span> <span class="nav-text">3. mmap 申请内存的位置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-g0-%E5%A0%86%E6%A0%88"><span class="nav-number">4.</span> <span class="nav-text">4. g0 堆栈</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-goroutine-%E7%9A%84%E5%A0%86%E6%A0%88%E5%88%87%E6%8D%A2"><span class="nav-number">5.</span> <span class="nav-text">5. goroutine 的堆栈切换</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">6. 总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2022/04/26/theory/stack-insight-03/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Stack 顿悟三部曲（3）：溯源 goroutine 堆栈 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Stack 顿悟三部曲（3）：溯源 goroutine 堆栈<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy90aGVvcnkvc3RhY2staW5zaWdodC0wMy5tZA==" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-04-26 10:30:17" itemprop="dateCreated datePublished" datetime="2022-04-26T10:30:17+08:00">2022-04-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CPU/" itemprop="url" rel="index"><span itemprop="name">CPU</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/CPU/computer-theory/" itemprop="url" rel="index"><span itemprop="name">computer theory</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>通过 <a href="https://liupzmin.com/2021/06/27/theory/stack-insight-01-md/">从CPU的视角说起</a> 和 <a href="https://liupzmin.com/2021/07/20/theory/stack-insight-02/">穿越虚拟内存的迷雾</a> 两篇文章我们知道，所谓进程堆栈不过是应用程序向内核申请了一块连续内存后，设定相应的寄存器，从而将这块内存当做堆栈来使用，典型的用法就是用于函数调用。</p>
+<p>我们在<a href="https://liupzmin.com/2021/07/20/theory/stack-insight-02/">上一篇</a>讨论了进线程的堆栈，现在继续探索 go 中的协程栈。如果吊一下书袋的话，口称 go 协程是不严谨的，go 的协程不同于其他语言的协程，go 的协程是一种有栈协程，每一个协程都有自己的协程堆栈，因此 go 官网发明了一个新词 <code>goroutine</code>，以区别于普通的 <code>coroutine</code>。我们接下来就聊聊 goroutine 的堆栈。在此之前，先来回顾一下上一篇中对进线程堆栈位置的总结。</p>
+<blockquote>
+<p>本文基于 Linux 平台 x64 架构，使用 go 1.18 源码，禁用 cgo</p>
+</blockquote>
+<h2 id="1·-进线程堆栈"><a href="#1·-进线程堆栈" class="headerlink" title="1· 进线程堆栈"></a>1· 进线程堆栈</h2><p><img data-src="https://s3.ap-northeast-1.amazonaws.com/qiniu.liupzmin.com/stack-region.png" alt="图 3-1 位于不同区域的线程 stack"></p>
+<p>图 3.1 为 64 位虚拟地址空间布局图，粉色标识说明了线程堆栈可能存在的位置，总结下来，不外乎以下三种情况：</p>
+<ol>
+<li>主线程堆栈位于用户空间顶部，但 clone 时，子进程的主线程实际使用的堆栈未必如此。</li>
+<li>有可能分配在 mmap 区域。</li>
+<li>有可能通过 C 库 malloc 分配在 heap 区域。</li>
+</ol>
+<h2 id="2-goroutine-的堆栈"><a href="#2-goroutine-的堆栈" class="headerlink" title="2. goroutine 的堆栈"></a>2. goroutine 的堆栈</h2><p>或许你已经知道 goroutine 的堆栈是从 heap 上分配的，但如果你足够好奇，你就会为 heap 在虚拟地址空间中的位置而发狂。</p>
+<p>go 重写了运行时，如果不使用 cgo 的话，编译完成的 go 程序是静态链接的，不依赖任何C库，这使它拥有不错的可移植性，在较新内核上编译好的程序，拉到旧版本内核的操作系统上依然能够运行。在这一点上，rust 并没有多少优势，反而新生语言 <span class="exturl" data-url="aHR0cHM6Ly9oYXJlbGFuZy5vcmcv">hare<i class="fa fa-external-link-alt"></i></span> 表现足够强劲。</p>
+<p>不依赖 C 库，意味着 go 对 heap 的管理有自己的方式。 那么， go 管理的 heap 是否与之前内存空间布局图中的 heap 位置相同就要打一个大大的问号了。要搞清楚这个问题，我们需要到 runtime 的源码中一探究竟，且要挖到 go 与内核的接口处，找出其申请内存的方式方可。</p>
+<p>本文并不打算分析 go 的内存分配器，也不打算介绍堆栈的分配算法，仅仅为了解决 goroutine 堆栈在虚拟地址空间中位置的疑惑。想了解内存管理和堆栈分配算法的读者可以参考<span class="exturl" data-url="aHR0cHM6Ly93d3cubHVvemhpeXVuLmNvbS9hcmNoaXZlcy80MzQ=">详解Go中内存分配源码实现<i class="fa fa-external-link-alt"></i></span>与<span class="exturl" data-url="aHR0cHM6Ly93d3cubHVvemhpeXVuLmNvbS9hcmNoaXZlcy81MTM=">一文教你搞懂 Go 中栈操作<i class="fa fa-external-link-alt"></i></span>。</p>
+<p>先从普通 goroutine 的创建开始吧！</p>
+<p>在 go 中，每通过<code>go func()&#123;&#125;</code>的方式开启一个 goroutine 时，编译器都会将其转换成对 <code>runtime.newproc</code>的调用：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Create a new g running fn.</span></span><br><span class="line"><span class="comment">// Put it on the queue of g&#x27;s waiting to run.</span></span><br><span class="line"><span class="comment">// The compiler turns a go statement into a call to this.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">newproc</span><span class="params">(fn *funcval)</span></span> &#123;</span><br><span class="line">	gp := getg()</span><br><span class="line">	pc := getcallerpc()</span><br><span class="line">    <span class="comment">// 切换到线程堆栈创建 g</span></span><br><span class="line">	systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		newg := newproc1(fn, gp, pc)</span><br><span class="line"></span><br><span class="line">		_p_ := getg().m.p.ptr()</span><br><span class="line">		runqput(_p_, newg, <span class="literal">true</span>)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> mainStarted &#123;</span><br><span class="line">			wakep()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>newproc</code> 仅仅是对 <code>newproc1</code> 的包装，创建新 g 的动作不能在用户堆栈上进行，所以这里切换到底层线程的堆栈来执行。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Create a new g in state _Grunnable, starting at fn. callerpc is the</span></span><br><span class="line"><span class="comment">// address of the go statement that created this. The caller is responsible</span></span><br><span class="line"><span class="comment">// for adding the new g to the scheduler.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">newproc1</span><span class="params">(fn *funcval, callergp *g, callerpc <span class="type">uintptr</span>)</span></span> *g &#123;</span><br><span class="line">	_g_ := getg()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> fn == <span class="literal">nil</span> &#123;</span><br><span class="line">		_g_.m.throwing = <span class="number">-1</span> <span class="comment">// do not dump full stacks</span></span><br><span class="line">		throw(<span class="string">&quot;go of nil func value&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	acquirem() <span class="comment">// disable preemption because it can be holding p in a local var</span></span><br><span class="line"></span><br><span class="line">	_p_ := _g_.m.p.ptr()</span><br><span class="line">    <span class="comment">// 从 P 的空闲链表中获取一个新的 G</span></span><br><span class="line">	newg := gfget(_p_)</span><br><span class="line">    <span class="comment">// 获取不到则调用 malg 进行创建</span></span><br><span class="line">	<span class="keyword">if</span> newg == <span class="literal">nil</span> &#123;</span><br><span class="line">		newg = malg(_StackMin)</span><br><span class="line">		casgstatus(newg, _Gidle, _Gdead)</span><br><span class="line">		allgadd(newg) <span class="comment">// publishes with a g-&gt;status of Gdead so GC scanner doesn&#x27;t look at uninitialized stack.</span></span><br><span class="line">	&#125;</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>newproc1</code> 方法很长，里面主要是获取 <code>G</code> ，然后对获取到的 <code>G</code> 做一些初始化的工作。当创建 <code>G</code> 时，会先从缓存的空闲链表中获取，如果没有空闲的 <code>G</code> ，再进行创建。所以，我们这里只看 <code>malg</code> 函数的调用。</p>
+<p>在调用 <code>malg</code> 函数的时候会传入一个最小堆栈大小值：**_StackMin**（linux 平台下为 2048）。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Allocate a new g, with a stack big enough for stacksize bytes.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">malg</span><span class="params">(stacksize <span class="type">int32</span>)</span></span> *g &#123;</span><br><span class="line">	newg := <span class="built_in">new</span>(g)</span><br><span class="line">	<span class="keyword">if</span> stacksize &gt;= <span class="number">0</span> &#123;</span><br><span class="line">		stacksize = round2(_StackSystem + stacksize)</span><br><span class="line">		systemstack(<span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">			newg.stack = stackalloc(<span class="type">uint32</span>(stacksize))</span><br><span class="line">		&#125;)</span><br><span class="line">		newg.stackguard0 = newg.stack.lo + _StackGuard</span><br><span class="line">		newg.stackguard1 = ^<span class="type">uintptr</span>(<span class="number">0</span>)</span><br><span class="line">		<span class="comment">// Clear the bottom word of the stack. We record g</span></span><br><span class="line">		<span class="comment">// there on gsignal stack during VDSO on ARM and ARM64.</span></span><br><span class="line">		*(*<span class="type">uintptr</span>)(unsafe.Pointer(newg.stack.lo)) = <span class="number">0</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> newg</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>malg</code> 会创建新的 <code>G</code> 并为其设置好堆栈，以及堆栈的边界，以供日后扩容使用。这里重点看 <code>stackalloc</code> 函数，堆栈的内存的分配就是由它来完成的，函数的返回值赋给新 <code>G</code> 的 <code>stack</code> 字段。</p>
+<p><code>G</code> 的 <code>stack</code> 字段是一个 <code>stack</code> 结构体类型，里面标记了堆栈的高地址和低地址：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Stack describes a Go execution stack.</span></span><br><span class="line"><span class="comment">// The bounds of the stack are exactly [lo, hi),</span></span><br><span class="line"><span class="comment">// with no implicit data structures on either side.</span></span><br><span class="line"><span class="keyword">type</span> stack <span class="keyword">struct</span> &#123;</span><br><span class="line">	lo <span class="type">uintptr</span></span><br><span class="line">	hi <span class="type">uintptr</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们接着看这个 <code>stack</code> 是怎么创建出来的。</p>
+<p><code>stackalloc</code> 的函数比较长，里面涉及到大堆栈和小堆栈的分配逻辑，这里就不贴大段的代码了。这个函数不管是从 cache 还是 pool 中获取内存，最终都会在内存不够时调用 <code>mheap</code> 的<code>allocManual</code>函数去分配新的内存：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mheap_.allocManual(_StackCacheSize&gt;&gt;_PageShift, spanAllocStack)</span><br></pre></td></tr></table></figure>
+
+<p>到这里就遇见 go 管理的 <code>heap</code> 了，关于 <code>heap</code> 的位置我们稍后再讨论，现在继续挖 <code>allocManual</code> 直到我们找到系统调用为止。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(h *mheap)</span></span> allocManual(npages <span class="type">uintptr</span>, typ spanAllocType) *mspan &#123;</span><br><span class="line">	<span class="keyword">if</span> !typ.manual() &#123;</span><br><span class="line">		throw(<span class="string">&quot;manual span allocation called with non-manually-managed type&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> h.allocSpan(npages, typ, <span class="number">0</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>allocManual</code> 只是对 <code>allocSpan</code> 的简单封装，这里简单提一下 go 对内存管理的最小单位是 <code>mspan</code>，它包含若干连续的页。</p>
+<p><code>allocSpan</code> 的逻辑较多，主要是从 heap 中分配 <code>npages</code> 个页来填充 span。一般随着程序的运行，内存的不断申请，<code>heap</code> 中会有很多空闲的页用来供给后续的内存申请。现在我们需要查看 cache 不足的情况，当 heap 中的 page 不够的时候，就需要推动 heap 增长了，<code>allocSpan</code> 通过调用 <code>mheap.grow</code> 来达成这一点。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Try to add at least npage pages of memory to the heap,</span></span><br><span class="line"><span class="comment">// returning how much the heap grew by and whether it worked.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(h *mheap)</span></span> grow(npage <span class="type">uintptr</span>) (<span class="type">uintptr</span>, <span class="type">bool</span>) &#123;</span><br><span class="line">	assertLockHeld(&amp;h.lock)</span><br><span class="line">	ask := alignUp(npage, pallocChunkPages) * pageSize</span><br><span class="line">	totalGrowth := <span class="type">uintptr</span>(<span class="number">0</span>)</span><br><span class="line">	<span class="comment">// This may overflow because ask could be very large</span></span><br><span class="line">	<span class="comment">// and is otherwise unrelated to h.curArena.base.</span></span><br><span class="line">	<span class="comment">// curArena 无需初始化，但问题是怎么判断 Arena 边界呢</span></span><br><span class="line">	end := h.curArena.base + ask</span><br><span class="line">	nBase := alignUp(end, physPageSize)</span><br><span class="line">	<span class="keyword">if</span> nBase &gt; h.curArena.end || <span class="comment">/* overflow */</span> end &lt; h.curArena.base &#123;</span><br><span class="line">		<span class="comment">// 尝试分配新的 Arena，但有可能跨越 hint 区域，所以全额申请</span></span><br><span class="line">		<span class="comment">// Not enough room in the current arena. Allocate more</span></span><br><span class="line">		<span class="comment">// arena space. This may not be contiguous with the</span></span><br><span class="line">		<span class="comment">// current arena, so we have to request the full ask.</span></span><br><span class="line">		av, asize := h.sysAlloc(ask)</span><br><span class="line">		<span class="comment">// 此时已经将需要的内存 reserve 了</span></span><br><span class="line">		<span class="keyword">if</span> av == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="built_in">print</span>(<span class="string">&quot;runtime: out of memory: cannot allocate &quot;</span>, ask, <span class="string">&quot;-byte block (&quot;</span>, memstats.heap_sys, <span class="string">&quot; in use)\n&quot;</span>)</span><br><span class="line">			<span class="keyword">return</span> <span class="number">0</span>, <span class="literal">false</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> <span class="type">uintptr</span>(av) == h.curArena.end &#123;</span><br><span class="line">			<span class="comment">// 说明是连续的，拓展此 curArena 的边界</span></span><br><span class="line">			<span class="comment">// The new space is contiguous with the old</span></span><br><span class="line">			<span class="comment">// space, so just extend the current space.</span></span><br><span class="line">			h.curArena.end = <span class="type">uintptr</span>(av) + asize</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// 感觉像是这一次不够分配的，但也别浪费，把剩余的内存标记为已使用，加入到一个地方以供分配</span></span><br><span class="line">			<span class="comment">// The new space is discontiguous. Track what</span></span><br><span class="line">			<span class="comment">// remains of the current space and switch to</span></span><br><span class="line">			<span class="comment">// the new space. This should be rare.</span></span><br><span class="line">			<span class="keyword">if</span> size := h.curArena.end - h.curArena.base; size != <span class="number">0</span> &#123;</span><br><span class="line">				<span class="comment">// Transition this space from Reserved to Prepared and mark it</span></span><br><span class="line">				<span class="comment">// as released since we&#x27;ll be able to start using it after updating</span></span><br><span class="line">				<span class="comment">// the page allocator and releasing the lock at any time.</span></span><br><span class="line">				sysMap(unsafe.Pointer(h.curArena.base), size, &amp;memstats.heap_sys)</span><br><span class="line">				<span class="comment">// Update stats.</span></span><br><span class="line">				atomic.Xadd64(&amp;memstats.heap_released, <span class="type">int64</span>(size))</span><br><span class="line">				stats := memstats.heapStats.acquire()</span><br><span class="line">				atomic.Xaddint64(&amp;stats.releagrowsed, <span class="type">int64</span>(size))</span><br><span class="line">				memstats.heapStats.release()</span><br><span class="line">				<span class="comment">// Update the page allocator&#x27;s structures to make this</span></span><br><span class="line">				<span class="comment">// space ready for allocation.</span></span><br><span class="line">				h.pages.grow(h.curArena.base, size)</span><br><span class="line">				totalGrowth += size</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">// Switch to the new space.</span></span><br><span class="line">			<span class="comment">// 把 curArena 切换到新的地址</span></span><br><span class="line">			h.curArena.base = <span class="type">uintptr</span>(av)</span><br><span class="line">			h.curArena.end = <span class="type">uintptr</span>(av) + asize</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// Recalculate nBase.</span></span><br><span class="line">		<span class="comment">// We know this won&#x27;t overflow, because sysAlloc returned</span></span><br><span class="line">		<span class="comment">// a valid region starting at h.curArena.base which is at</span></span><br><span class="line">		<span class="comment">// least ask bytes in size.</span></span><br><span class="line">		nBase = alignUp(h.curArena.base+ask, physPageSize)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 更新 base</span></span><br><span class="line">	<span class="comment">// Grow into the current arena.</span></span><br><span class="line">	v := h.curArena.base</span><br><span class="line">	h.curArena.base = nBase</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 把分配的那块内存标记为 Prepared</span></span><br><span class="line">	<span class="comment">// Transition the space we&#x27;re going to use from Reserved to Prepared.</span></span><br><span class="line">	sysMap(unsafe.Pointer(v), nBase-v, &amp;memstats.heap_sys)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// ...... 省略部分代码</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">// Update the page allocator&#x27;s structures to make this</span></span><br><span class="line">	<span class="comment">// space ready for allocation.</span></span><br><span class="line">	h.pages.grow(v, nBase-v)</span><br><span class="line">	totalGrowth += nBase - v</span><br><span class="line">	<span class="keyword">return</span> totalGrowth, <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当<code>curArena</code>的空闲内存（内核返回的内存空间往往会比请求的多一些）不足以满足分配时，调用<code>mheap.sysAlloc</code>来申请更多的空间。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(h *mheap)</span></span> sysAlloc(n <span class="type">uintptr</span>) (v unsafe.Pointer, size <span class="type">uintptr</span>) &#123;</span><br><span class="line">	assertLockHeld(&amp;h.lock)</span><br><span class="line"></span><br><span class="line">	n = alignUp(n, heapArenaBytes)</span><br><span class="line"></span><br><span class="line">	<span class="comment">// First, try the arena pre-reservation.</span></span><br><span class="line">	v = h.arena.alloc(n, heapArenaBytes, &amp;memstats.heap_sys)</span><br><span class="line">	<span class="keyword">if</span> v != <span class="literal">nil</span> &#123;</span><br><span class="line">		size = n</span><br><span class="line">		<span class="keyword">goto</span> mapped</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Try to grow the heap at a hint address.</span></span><br><span class="line">	<span class="keyword">for</span> h.arenaHints != <span class="literal">nil</span> &#123;</span><br><span class="line">		hint := h.arenaHints</span><br><span class="line">		p := hint.addr</span><br><span class="line">		<span class="keyword">if</span> hint.down &#123;</span><br><span class="line">			p -= n</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> p+n &lt; p &#123;</span><br><span class="line">			<span class="comment">// We can&#x27;t use this, so don&#x27;t ask.</span></span><br><span class="line">			v = <span class="literal">nil</span></span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> arenaIndex(p+n<span class="number">-1</span>) &gt;= <span class="number">1</span>&lt;&lt;arenaBits &#123;</span><br><span class="line">			<span class="comment">// Outside addressable heap. Can&#x27;t use.</span></span><br><span class="line">			v = <span class="literal">nil</span></span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			v = sysReserve(unsafe.Pointer(p), n)</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// 如果不相等，则说明 mmap 在建议的地址上没能分配成功</span></span><br><span class="line">		<span class="keyword">if</span> p == <span class="type">uintptr</span>(v) &#123;</span><br><span class="line">			<span class="comment">// Success. Update the hint.</span></span><br><span class="line">			<span class="keyword">if</span> !hint.down &#123;</span><br><span class="line">				p += n</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">// 成功后，hint 的地址也跟着更新</span></span><br><span class="line">			hint.addr = p</span><br><span class="line">			size = n</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// 此时，丢弃这次分配的内存，尝试下一个 arenaHints, 也就是下一个 1T 区间</span></span><br><span class="line">		<span class="comment">// Failed. Discard this hint and try the next.</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// <span class="doctag">TODO:</span> This would be cleaner if sysReserve could be</span></span><br><span class="line">		<span class="comment">// told to only return the requested address. In</span></span><br><span class="line">		<span class="comment">// particular, this is already how Windows behaves, so</span></span><br><span class="line">		<span class="comment">// it would simplify things there.</span></span><br><span class="line">		<span class="keyword">if</span> v != <span class="literal">nil</span> &#123;</span><br><span class="line">			sysFree(v, n, <span class="literal">nil</span>)</span><br><span class="line">		&#125;</span><br><span class="line">		h.arenaHints = hint.next</span><br><span class="line">		h.arenaHintAlloc.free(unsafe.Pointer(hint))</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> size == <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> raceenabled &#123;</span><br><span class="line">			<span class="comment">// The race detector assumes the heap lives in</span></span><br><span class="line">			<span class="comment">// [0x00c000000000, 0x00e000000000), but we</span></span><br><span class="line">			<span class="comment">// just ran out of hints in this region. Give</span></span><br><span class="line">			<span class="comment">// a nice failure.</span></span><br><span class="line">			throw(<span class="string">&quot;too many address space collisions for -race mode&quot;</span>)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// All of the hints failed, so we&#x27;ll take any</span></span><br><span class="line">		<span class="comment">// (sufficiently aligned) address the kernel will give</span></span><br><span class="line">		<span class="comment">// us.</span></span><br><span class="line">		<span class="comment">// 所有的 hint 都失败了，然后让内核自动分配一个定量内存</span></span><br><span class="line">		v, size = sysReserveAligned(<span class="literal">nil</span>, n, heapArenaBytes)</span><br><span class="line">		<span class="keyword">if</span> v == <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, <span class="number">0</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// Create new hints for extending this region.</span></span><br><span class="line">		hint := (*arenaHint)(h.arenaHintAlloc.alloc())</span><br><span class="line">		hint.addr, hint.down = <span class="type">uintptr</span>(v), <span class="literal">true</span></span><br><span class="line">		hint.next, mheap_.arenaHints = mheap_.arenaHints, hint</span><br><span class="line">		hint = (*arenaHint)(h.arenaHintAlloc.alloc())</span><br><span class="line">		hint.addr = <span class="type">uintptr</span>(v) + size</span><br><span class="line">		hint.next, mheap_.arenaHints = mheap_.arenaHints, hint</span><br><span class="line">	&#125;</span><br><span class="line">    <span class="comment">// ......省略大段代码</span></span><br><span class="line">    <span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里真正申请内存的操作是 <code>sysReserve</code>，让我们来一睹究竟：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">sysReserve</span><span class="params">(v unsafe.Pointer, n <span class="type">uintptr</span>)</span></span> unsafe.Pointer &#123;</span><br><span class="line">	p, err := mmap(v, n, _PROT_NONE, _MAP_ANON|_MAP_PRIVATE, <span class="number">-1</span>, <span class="number">0</span>)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> p</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>熟悉的 <code>mmap</code> 映入眼帘！我们已经抵达了内核的大门，查看其定义发现，它包裹了一个<code>sysMmap</code>函数，该函数就是发起<code>mmap</code>系统调用的所在，它是由汇编语言写成，Linux 下函数体位于 sys_linux_amd64.s 中：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// sysMmap calls the mmap system call. It is implemented in assembly.</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">sysMmap</span><span class="params">(addr unsafe.Pointer, n <span class="type">uintptr</span>, prot, flags, fd <span class="type">int32</span>, off <span class="type">uint32</span>)</span></span> (p unsafe.Pointer, err <span class="type">int</span>)</span><br></pre></td></tr></table></figure>
+
+<p><code>mmap</code>调用中的 flag <code>_PROT_NONE, _MAP_ANON|_MAP_PRIVATE</code>表示申请的内存块是无文件背景的匿名映射，这里在调用时传入了一个提示地址，用于告知内核尽量从要求的地址开始分配。</p>
+<p>内核当然不能保证这一点，但 go 也足够倔强，如果不能保证连续增长，就另找一段空间开始：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 如果不相等，则说明 mmap 在建议的地址上没能分配成功</span></span><br><span class="line"><span class="keyword">if</span> p == <span class="type">uintptr</span>(v) &#123;</span><br><span class="line">	<span class="comment">// Success. Update the hint.</span></span><br><span class="line">	<span class="keyword">if</span> !hint.down &#123;</span><br><span class="line">		p += n</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 成功后，hint 的地址也跟着更新</span></span><br><span class="line">	hint.addr = p</span><br><span class="line">	size = n</span><br><span class="line">	<span class="keyword">break</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 此时，丢弃这次分配的内存，尝试下一个 arenaHints, 也就是下一个 1T 区间</span></span><br><span class="line"><span class="comment">// Failed. Discard this hint and try the next.</span></span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="comment">// <span class="doctag">TODO:</span> This would be cleaner if sysReserve could be</span></span><br><span class="line"><span class="comment">// told to only return the requested address. In</span></span><br><span class="line"><span class="comment">// particular, this is already how Windows behaves, so</span></span><br><span class="line"><span class="comment">// it would simplify things there.</span></span><br><span class="line"><span class="keyword">if</span> v != <span class="literal">nil</span> &#123;</span><br><span class="line">	sysFree(v, n, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br><span class="line">h.arenaHints = hint.next</span><br><span class="line">h.arenaHintAlloc.free(unsafe.Pointer(hint))</span><br></pre></td></tr></table></figure>
+
+<p>从 <code>sysAlloc</code> 返回之后，就意味着已经从内核申请到了一块空间。回到 <code>mheap.grow</code>的代码，会看到调用了 <code>sysMap</code> 再次向内核申请内存，<code>sysMap</code> 代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">sysMap</span><span class="params">(v unsafe.Pointer, n <span class="type">uintptr</span>, sysStat *sysMemStat)</span></span> &#123;</span><br><span class="line">	sysStat.add(<span class="type">int64</span>(n))</span><br><span class="line"></span><br><span class="line">	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, <span class="number">-1</span>, <span class="number">0</span>)</span><br><span class="line">	<span class="keyword">if</span> err == _ENOMEM &#123;</span><br><span class="line">		throw(<span class="string">&quot;runtime: out of memory&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> p != v || err != <span class="number">0</span> &#123;</span><br><span class="line">		<span class="built_in">print</span>(<span class="string">&quot;runtime: mmap(&quot;</span>, v, <span class="string">&quot;, &quot;</span>, n, <span class="string">&quot;) returned &quot;</span>, p, <span class="string">&quot;, &quot;</span>, err, <span class="string">&quot;\n&quot;</span>)</span><br><span class="line">		throw(<span class="string">&quot;runtime: cannot map pages in arena address space&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可见，也是一个<code>mmap</code>系统调用，但传入的 flag 不同，多了一个 <code>_MAP_FIXED</code> 。</p>
+<p>查看 <code>mmap</code> 的手册便会明白，在不提供<code>_MAP_FIXED</code> 的情况下，内核会尽量从给出的地址分配空间，但避免冲突是第一位的，所以结果并不总能如意。而<code>_MAP_FIXED</code>保证了这一点，即使在请求的地址处已有其它映射的情况下也会覆盖之前的映射。</p>
+<p><code>mmap</code> 文档中也对 <code>_MAP_FIXED</code> 使用提出了警示，而 go 在这里使用是完全没有问题的，因为事先已经向内核申请了该块内存了，在里面隔上一刀根本不需要睁眼。</p>
+<p>我们拿到了一块连续的内存，是时候从 <code>allocSpan</code> 返回了，如此 <code>stackalloc</code> 就为新 G 申请到了一块连续内存用作堆栈。</p>
+<p>从 goroutine 的新建一直到内核的大门，我们发现了用于申请内存的方式是 <code>mmap</code>，但<code>mmap</code>从进程虚拟地址空间的哪个位置分配内存呢？<code>runtime</code> 源码中给与的<code>提示地址</code>又是从何而来呢？</p>
+<h2 id="3-mmap-申请内存的位置"><a href="#3-mmap-申请内存的位置" class="headerlink" title="3. mmap 申请内存的位置"></a>3. mmap 申请内存的位置</h2><p>mmap 既是一个系统调用，也是进程虚拟地址空间中的一个区域，让我再次援引《深入 Linux 内核架构》中的一幅图：</p>
+<p><img data-src="https://qiniu.liupzmin.com/mmap-region.png" alt="图3-2 mmap 区域自顶向下扩展"></p>
+<p>书中介绍了 2.6 版本的内核内存布局，其中 mmap 区域是和 heap 相对增长的，内核会留出足够的空间给主线程 stack，这样便可最大化的利用内存空间，好在 stack 通常不会很大。</p>
+<p>但是 mmap 并非只能在概念上划出的区域进行分配，它甚至可以在用户空间内任意地方分配内存，这当然也包括传统的 heap 区域！还记得 <code>_MAP_FIXED</code> 吧？我打赌它绝对能让你的程序 crash 掉！</p>
+<p>heap 是用来为进程动态分配内存的，传统的定义是：<strong>堆是一段长度可变的连续虚拟内存，始于进程的未初始化数据段的末尾，随着内存的分配和释放而增减</strong>：</p>
+<p><img data-src="https://qiniu.liupzmin.com/virtual-memory-of-a-linux-process.png" alt="图 3-3 Linux 进程的虚拟内存布局"></p>
+<p>改变 heap 大小的系统调用是 <code>brk</code> 和 <code>sbrk</code> ，而 go 主要使用 mmap 来维护堆，这就说明 go 堆和传统的堆位置是不同的。位置虽然不同，但使命毫无二致，让我们来看一个 go 程序的内存布局：</p>
+<pre>00400000-004bd000 r-xp 00000000 103:02 8916313      playground/helloworld/hello/hello
+004bd000-00574000 r--p 000bd000 103:02 8916313      playground/helloworld/hello/hello
+00574000-0058f000 rw-p 00174000 103:02 8916313      playground/helloworld/hello/hello
+0058f000-005c4000 rw-p 00000000 00:00 0 
+<span style="color:red">c000000000-c000200000 rw-p 00000000 00:00 0 </span>
+c000200000-c017e00000 rw-p 00000000 00:00 0 
+c017e00000-c018000000 rw-p 00000000 00:00 0 
+c018000000-c018400000 rw-p 00000000 00:00 0 
+c018400000-c01c000000 ---p 00000000 00:00 0 
+7fef44906000-7fef449ba000 rw-p 00000000 00:00 0 
+7fef449d2000-7fef47c19000 rw-p 00000000 00:00 0 
+7fef47c19000-7fef57d99000 ---p 00000000 00:00 0 
+7fef57d99000-7fef57d9a000 rw-p 00000000 00:00 0 
+7fef57d9a000-7fef69c49000 ---p 00000000 00:00 0 
+7fef69c49000-7fef69c4a000 rw-p 00000000 00:00 0 
+7fef69c4a000-7fef6c01f000 ---p 00000000 00:00 0 
+7fef6c01f000-7fef6c020000 rw-p 00000000 00:00 0 
+7fef6c020000-7fef6c499000 ---p 00000000 00:00 0 
+7fef6c499000-7fef6c49a000 rw-p 00000000 00:00 0 
+7fef6c49a000-7fef6c519000 ---p 00000000 00:00 0 
+7fef6c519000-7fef6c579000 rw-p 00000000 00:00 0 
+7ffc335d5000-7ffc335f7000 rw-p 00000000 00:00 0                          [stack]
+7ffc335f8000-7ffc335fc000 r--p 00000000 00:00 0                          [vvar]
+7ffc335fc000-7ffc335fe000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]</pre>
+
+<p align="center">表3-1 Go 进程的内存布局映射</p>
+
+<p>除了代码段不足 2M 的区域之外，似乎 <code>c000000000</code> 最值得怀疑，而且这份映射当中没有看到 heap 身影，这直接印证了上述猜想。关于 <code>c000000000</code> 我们要去源码中寻找答案，且看内存分配器的初始化：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">mallocinit</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// ...... 省略部分代码</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 只看 64 位系统的初始化部分</span></span><br><span class="line">	<span class="comment">// Create initial arena growth hints.</span></span><br><span class="line">	<span class="keyword">if</span> goarch.PtrSize == <span class="number">8</span> &#123;</span><br><span class="line">		<span class="comment">// On a 64-bit machine, we pick the following hints</span></span><br><span class="line">		<span class="comment">// because:</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// 1. Starting from the middle of the address space</span></span><br><span class="line">		<span class="comment">// makes it easier to grow out a contiguous range</span></span><br><span class="line">		<span class="comment">// without running in to some other mapping.</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// 2. This makes Go heap addresses more easily</span></span><br><span class="line">		<span class="comment">// recognizable when debugging.</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// 3. Stack scanning in gccgo is still conservative,</span></span><br><span class="line">		<span class="comment">// so it&#x27;s important that addresses be distinguishable</span></span><br><span class="line">		<span class="comment">// from other data.</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// Starting at 0x00c0 means that the valid memory addresses</span></span><br><span class="line">		<span class="comment">// will begin 0x00c0, 0x00c1, ...</span></span><br><span class="line">		<span class="comment">// In little-endian, that&#x27;s c0 00, c1 00, ... None of those are valid</span></span><br><span class="line">		<span class="comment">// UTF-8 sequences, and they are otherwise as far away from</span></span><br><span class="line">		<span class="comment">// ff (likely a common byte) as possible. If that fails, we try other 0xXXc0</span></span><br><span class="line">		<span class="comment">// addresses. An earlier attempt to use 0x11f8 caused out of memory errors</span></span><br><span class="line">		<span class="comment">// on OS X during thread allocations.  0x00c0 causes conflicts with</span></span><br><span class="line">		<span class="comment">// AddressSanitizer which reserves all memory up to 0x0100.</span></span><br><span class="line">		<span class="comment">// These choices reduce the odds of a conservative garbage collector</span></span><br><span class="line">		<span class="comment">// not collecting memory because some non-pointer block of memory</span></span><br><span class="line">		<span class="comment">// had a bit pattern that matched a memory address.</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// However, on arm64, we ignore all this advice above and slam the</span></span><br><span class="line">		<span class="comment">// allocation at 0x40 &lt;&lt; 32 because when using 4k pages with 3-level</span></span><br><span class="line">		<span class="comment">// translation buffers, the user address space is limited to 39 bits</span></span><br><span class="line">		<span class="comment">// On ios/arm64, the address space is even smaller.</span></span><br><span class="line">		<span class="comment">//</span></span><br><span class="line">		<span class="comment">// On AIX, mmaps starts at 0x0A00000000000000 for 64-bit.</span></span><br><span class="line">		<span class="comment">// processes.</span></span><br><span class="line">		<span class="keyword">for</span> i := <span class="number">0x7f</span>; i &gt;= <span class="number">0</span>; i-- &#123;</span><br><span class="line">			<span class="keyword">var</span> p <span class="type">uintptr</span></span><br><span class="line">			<span class="keyword">switch</span> &#123;</span><br><span class="line">			<span class="keyword">case</span> raceenabled:</span><br><span class="line">				<span class="comment">// The TSAN runtime requires the heap</span></span><br><span class="line">				<span class="comment">// to be in the range [0x00c000000000,</span></span><br><span class="line">				<span class="comment">// 0x00e000000000).</span></span><br><span class="line">				p = <span class="type">uintptr</span>(i)&lt;&lt;<span class="number">32</span> | uintptrMask&amp;(<span class="number">0x00c0</span>&lt;&lt;<span class="number">32</span>)</span><br><span class="line">				<span class="keyword">if</span> p &gt;= uintptrMask&amp;<span class="number">0x00e000000000</span> &#123;</span><br><span class="line">					<span class="keyword">continue</span></span><br><span class="line">				&#125;</span><br><span class="line">			<span class="keyword">case</span> GOARCH == <span class="string">&quot;arm64&quot;</span> &amp;&amp; GOOS == <span class="string">&quot;ios&quot;</span>:</span><br><span class="line">				p = <span class="type">uintptr</span>(i)&lt;&lt;<span class="number">40</span> | uintptrMask&amp;(<span class="number">0x0013</span>&lt;&lt;<span class="number">28</span>)</span><br><span class="line">			<span class="keyword">case</span> GOARCH == <span class="string">&quot;arm64&quot;</span>:</span><br><span class="line">				p = <span class="type">uintptr</span>(i)&lt;&lt;<span class="number">40</span> | uintptrMask&amp;(<span class="number">0x0040</span>&lt;&lt;<span class="number">32</span>)</span><br><span class="line">			<span class="keyword">case</span> GOOS == <span class="string">&quot;aix&quot;</span>:</span><br><span class="line">				<span class="keyword">if</span> i == <span class="number">0</span> &#123;</span><br><span class="line">					<span class="comment">// We don&#x27;t use addresses directly after 0x0A00000000000000</span></span><br><span class="line">					<span class="comment">// to avoid collisions with others mmaps done by non-go programs.</span></span><br><span class="line">					<span class="keyword">continue</span></span><br><span class="line">				&#125;</span><br><span class="line">				p = <span class="type">uintptr</span>(i)&lt;&lt;<span class="number">40</span> | uintptrMask&amp;(<span class="number">0xa0</span>&lt;&lt;<span class="number">52</span>)</span><br><span class="line">			<span class="keyword">default</span>:</span><br><span class="line">				p = <span class="type">uintptr</span>(i)&lt;&lt;<span class="number">40</span> | uintptrMask&amp;(<span class="number">0x00c0</span>&lt;&lt;<span class="number">32</span>)</span><br><span class="line">			&#125;</span><br><span class="line">			hint := (*arenaHint)(mheap_.arenaHintAlloc.alloc())</span><br><span class="line">			hint.addr = p</span><br><span class="line">			hint.next, mheap_.arenaHints = mheap_.arenaHints, hint</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注释部分第一条便说：<strong>从地址空间的中间开始向上增长，很容易获得连续的区域，且不会和其它映射部位发生碰撞。</strong></p>
+<p>因此 go 选择了从 <code>0x00c0</code>开始，并且用一个 for 循环生成了 128 个提示地址，组成链表初始化到 <code>mheap_.arenaHints</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">0x7fc000000000</span><br><span class="line">......</span><br><span class="line">0x10c000000000</span><br><span class="line">0x0fc000000000</span><br><span class="line">0x0ec000000000</span><br><span class="line">0x0dc000000000</span><br><span class="line">0x0cc000000000</span><br><span class="line">0x0bc000000000</span><br><span class="line">0x0ac000000000</span><br><span class="line">0x09c000000000</span><br><span class="line">0x08c000000000</span><br><span class="line">0x07c000000000</span><br><span class="line">0x06c000000000</span><br><span class="line">0x05c000000000</span><br><span class="line">0x04c000000000</span><br><span class="line">0x03c000000000</span><br><span class="line">0x02c000000000</span><br><span class="line">0x01c000000000</span><br><span class="line">0x00c000000000</span><br></pre></td></tr></table></figure>
+
+<p>这 128 个起始地址除了最后一个之外，其余皆可向上增长 1TiB 的空间，最后一个距离用户空间顶部仅剩 256 GiB。</p>
+<p><code>0x00c000000000</code> 距离用户空间的开始有 765 GiB，这也是为什么<strong>不会和其它映射部位发生碰撞</strong>的原因！</p>
+<p><code>mallocinit</code> 初始化了<code>mheap_.arenaHints</code>，还记得 mheap 为增加 heap 而申请内存时的方法吗？</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Try to grow the heap at a hint address.</span></span><br><span class="line"><span class="keyword">for</span> h.arenaHints != <span class="literal">nil</span> &#123;</span><br><span class="line">	hint := h.arenaHints</span><br><span class="line">	p := hint.addr</span><br><span class="line">	<span class="keyword">if</span> hint.down &#123;</span><br><span class="line">		p -= n</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> p+n &lt; p &#123;</span><br><span class="line">		<span class="comment">// We can&#x27;t use this, so don&#x27;t ask.</span></span><br><span class="line">		v = <span class="literal">nil</span></span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> arenaIndex(p+n<span class="number">-1</span>) &gt;= <span class="number">1</span>&lt;&lt;arenaBits &#123;</span><br><span class="line">		<span class="comment">// Outside addressable heap. Can&#x27;t use.</span></span><br><span class="line">		v = <span class="literal">nil</span></span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		v = sysReserve(unsafe.Pointer(p), n)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 如果不相等，则说明 mmap 在建议的地址上没能分配成功</span></span><br><span class="line">	<span class="keyword">if</span> p == <span class="type">uintptr</span>(v) &#123;</span><br><span class="line">		<span class="comment">// Success. Update the hint.</span></span><br><span class="line">		<span class="keyword">if</span> !hint.down &#123;</span><br><span class="line">			p += n</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// 成功后，hint 的地址也跟着更新</span></span><br><span class="line">		hint.addr = p</span><br><span class="line">		size = n</span><br><span class="line">		<span class="keyword">break</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 此时，丢弃这次分配的内存，尝试下一个 arenaHints, 也就是下一个 1T 区间</span></span><br><span class="line">	<span class="comment">// Failed. Discard this hint and try the next.</span></span><br><span class="line">	<span class="comment">//</span></span><br><span class="line">	<span class="comment">// <span class="doctag">TODO:</span> This would be cleaner if sysReserve could be</span></span><br><span class="line">	<span class="comment">// told to only return the requested address. In</span></span><br><span class="line">	<span class="comment">// particular, this is already how Windows behaves, so</span></span><br><span class="line">	<span class="comment">// it would simplify things there.</span></span><br><span class="line">	<span class="keyword">if</span> v != <span class="literal">nil</span> &#123;</span><br><span class="line">		sysFree(v, n, <span class="literal">nil</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	h.arenaHints = hint.next</span><br><span class="line">	h.arenaHintAlloc.free(unsafe.Pointer(hint))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>mmap</code> 的调用都是围绕着 <code>arenaHints</code> 来进行的，并且每次申请成功后都会更新 hint 的 addr，这样就实现了连续增长，直到失败。如果失败了，就从下一个 1TiB 的区间再次开始！</p>
+<h2 id="4-g0-堆栈"><a href="#4-g0-堆栈" class="headerlink" title="4. g0 堆栈"></a>4. g0 堆栈</h2><p>看过了普通 goroutine 堆栈的分配之后，再来简要说一下 <code>g0</code> 的堆栈。<code>g0</code> 是个比较特殊的 goroutine 它只是协助 runtime 来执行，但不承载任何执行函数，与普通的用户 goroutine 有所区别。在一定程度上，可以把它类比成操作系统上每个线程的内核栈，每当 runtime 获得控制权的时候就会将堆栈切换到 <code>g0</code> 代表的堆栈上。</p>
+<p>go 的 <code>GPM</code> 模型此处不作介绍，建议阅读<span class="exturl" data-url="aHR0cHM6Ly93d3cuYXJkYW5sYWJzLmNvbS9ibG9nLzIwMTgvMDgvc2NoZWR1bGluZy1pbi1nby1wYXJ0Mi5odG1s">Scheduling In Go : Part II - Go Scheduler<i class="fa fa-external-link-alt"></i></span> 来了解并发模型。我们只说其中的 <code>M</code>，每个<code>M</code> 都有一个 <code>g0</code> 堆栈，用于执行 runtime 代码，其中较为特殊的 <code>M0</code> （即 go 进程的主线程，每个 go 程序仅有一个 M0）的 <code>g0</code> 堆栈是通过汇编语言进行初始化的。</p>
+<p>我们先来看看 go 程序的入口地址：</p>
+<pre>richard@Richard-Manjaro:~ » readelf -h carefree 
+ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI Version:                       0
+  Type:                              EXEC (Executable file)
+  Machine:                           Advanced Micro Devices X86-64
+  Version:                           0x1
+  <span style="color:red">Entry point address:               0x463f20</span>
+  Start of program headers:          64 (bytes into file)
+  Start of section headers:          456 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         7
+  Size of section headers:           64 (bytes)
+  Number of section headers:         23
+  Section header string table index: 3</pre>
+
+<p>读取 ELF文件头可知，入口地址为<strong>0x463f20</strong>，因为禁用了 cgo，没有动态链接库，所以 Entry point 指示的地址既是程序的入口地址。继续看一下该地址指示的代码：</p>
+<pre>richard@Richard-Manjaro:~ » lldb ./carefree 
+(lldb) target create "./carefree"
+Current executable set to '/home/richard/carefree' (x86_64).
+(lldb) image lookup --address 0x463f20
+      Address: carefree[0x0000000000463f20] (carefree.PT_LOAD[0]..text + 405280)
+      Summary: carefree`<span style="color:red">_rt0_amd64_linux</span>
+(lldb) </pre>
+
+<p><code>_rt0_amd64_linux</code> 即为程序的入口，当运行程序时，shell 会 fork 一个子进程出来，之后执行 <code>execve()</code> 系统调用来装载 go 的可执行文件，当内核装载完毕之后，会将 CPU 的程序计数器设置为此入口点，之后 go 程序开始执行。</p>
+<p><code>_rt0_amd64_linux</code> 是对 <code>asm_amd64.s</code> 中 <code>runtime·rt0_go</code> 的调用，看一下<code>runtime·rt0_go</code> 的内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">TEXT runtime·rt0_go(SB),NOSPLIT|TOPFRAME,$0</span><br><span class="line">	// copy arguments forward on an even stack</span><br><span class="line">	MOVQ	DI, AX		// argc</span><br><span class="line">	MOVQ	SI, BX		// argv</span><br><span class="line">	SUBQ	$(5*8), SP		// 3args 2auto</span><br><span class="line">	ANDQ	$~15, SP</span><br><span class="line">	MOVQ	AX, 24(SP)</span><br><span class="line">	MOVQ	BX, 32(SP)</span><br><span class="line"></span><br><span class="line">	// create istack out of the given (operating system) stack.</span><br><span class="line">	// _cgo_init may update stackguard.</span><br><span class="line">	// 初始化 g0</span><br><span class="line">	MOVQ	$runtime·g0(SB), DI</span><br><span class="line">	LEAQ	(-64*1024+104)(SP), BX</span><br><span class="line">	MOVQ	BX, g_stackguard0(DI)</span><br><span class="line">	MOVQ	BX, g_stackguard1(DI)</span><br><span class="line">	MOVQ	BX, (g_stack+stack_lo)(DI)</span><br><span class="line">	MOVQ	SP, (g_stack+stack_hi)(DI)</span><br></pre></td></tr></table></figure>
+
+<p>这段代码设置 <code>g0</code> 堆栈的方式是使用线程堆栈的栈顶指针减少 <code>64KB + 104B</code> 作为 <code>g0</code> 堆栈的低端，当前线程堆栈的栈顶为 <code>g0</code> 堆栈的高端。执行完成后，<code>g0</code> 的堆栈便被初始化为 64KB 了。令人惊讶的是，这居然是在系统线程的 8M 堆栈（Linux 的默认线程堆栈为 8 M）中分配的。</p>
+<p>再来看一下其它新建 <code>M</code> 的 <code>g0</code>，go 通过 <code>runtime.newm</code> 来新建操作系统线程，顺藤摸瓜会发现其最终执行的系统调用为 <code>clone</code>:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">newosproc</span><span class="params">(mp *m)</span></span> &#123;</span><br><span class="line">	stk := unsafe.Pointer(mp.g0.stack.hi)</span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * note: strace gets confused if we use CLONE_PTRACE here.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> <span class="literal">false</span> &#123;</span><br><span class="line">		<span class="built_in">print</span>(<span class="string">&quot;newosproc stk=&quot;</span>, stk, <span class="string">&quot; m=&quot;</span>, mp, <span class="string">&quot; g=&quot;</span>, mp.g0, <span class="string">&quot; clone=&quot;</span>, abi.FuncPCABI0(clone), <span class="string">&quot; id=&quot;</span>, mp.id, <span class="string">&quot; ostk=&quot;</span>, &amp;mp, <span class="string">&quot;\n&quot;</span>)mp.g0.stack.hi</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Disable signals during clone, so that the new thread starts</span></span><br><span class="line">	<span class="comment">// with signals disabled. It will enable them in minit.</span></span><br><span class="line">	<span class="keyword">var</span> oset sigset</span><br><span class="line">	sigprocmask(_SIG_SETMASK, &amp;sigset_all, &amp;oset)</span><br><span class="line">	ret := clone(cloneFlags, stk, unsafe.Pointer(mp), unsafe.Pointer(mp.g0), unsafe.Pointer(abi.FuncPCABI0(mstart)))</span><br><span class="line">	sigprocmask(_SIG_SETMASK, &amp;oset, <span class="literal">nil</span>)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> ret &lt; <span class="number">0</span> &#123;</span><br><span class="line">		<span class="built_in">print</span>(<span class="string">&quot;runtime: failed to create new OS thread (have &quot;</span>, mcount(), <span class="string">&quot; already; errno=&quot;</span>, -ret, <span class="string">&quot;)\n&quot;</span>)</span><br><span class="line">		<span class="keyword">if</span> ret == -_EAGAIN &#123;</span><br><span class="line">			<span class="built_in">println</span>(<span class="string">&quot;runtime: may need to increase max user processes (ulimit -u)&quot;</span>)</span><br><span class="line">		&#125;</span><br><span class="line">		throw(<span class="string">&quot;newosproc&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>clone</code> 中堆栈起始地址传入的是 <code>mp.g0.stack.hi</code>，即该 <code>M</code> 的 <code>g0</code> 的堆栈高端地址，看一下 <code>g0</code> 的初始化，相应的代码在 <code>runtime.allocm</code>  中：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> iscgo || mStackIsSystemAllocated() &#123;</span><br><span class="line">	mp.g0 = malg(<span class="number">-1</span>)</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">	mp.g0 = malg(<span class="number">8192</span> * sys.StackGuardMultiplier)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可见后续 <code>g0</code> 分配就是通过 <code>malg</code> 来进行的，该函数我们之前已经介绍过了，此处只要明白分配的堆栈大小为 8K 即可。由此可知，除了 <code>m0</code> 的 <code>g0</code> 在传统的主线程堆栈区域外，后续 <code>M</code> 的堆栈都是分配自 go 堆中，其可能的区域自不待言，我们已在上一节论述过了。</p>
+<h2 id="5-goroutine-的堆栈切换"><a href="#5-goroutine-的堆栈切换" class="headerlink" title="5. goroutine 的堆栈切换"></a>5. goroutine 的堆栈切换</h2><p>当 goroutine 被 runtime 调度到 CPU 上时，不仅要将程序计数器设置为该 goroutine 的执行函数地址，而且要切换到该 goroutine 的堆栈上执行后续操作，我们这一节就来看看 goroutine 的堆栈是如何切换的。堆栈的切换和调度密切相关，但此处只讨论和堆栈有关的内容，不再深入调度相关的细节。</p>
+<p><code>m0</code> 在初始化好一系列条件之后，会调用 <code>runtime·mstart</code> 从而真正的让 <code>M0</code> 跑起来，后续新建 <code>M</code> 时向 <code>clone</code> 传入的运行函数也是 <code>runtime·mstart</code>，而 <code>runtime·mstart</code> 最终会进入调度函数 <code>runtime.schedule</code>， 而 <code>schedule</code> 的工作就是千方百计的寻找空闲的 G 将它送到 CPU 上运行。当最终找到这个 G 的时候，会调用一段用汇编代码写成的函数 <code>runtime·gogo(buf *gobuf)</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">// func gogo(buf *gobuf)</span><br><span class="line">// restore state from Gobuf; longjmp</span><br><span class="line">TEXT runtime·gogo(SB), NOSPLIT, $0-8</span><br><span class="line">	MOVQ	buf+0(FP), BX		// gobuf</span><br><span class="line">	MOVQ	gobuf_g(BX), DX</span><br><span class="line">	MOVQ	0(DX), CX		// make sure g != nil</span><br><span class="line">	JMP	gogo&lt;&gt;(SB)</span><br><span class="line"></span><br><span class="line">TEXT gogo&lt;&gt;(SB), NOSPLIT, $0</span><br><span class="line">	get_tls(CX)</span><br><span class="line">	MOVQ	DX, g(CX)</span><br><span class="line">	MOVQ	DX, R14		// set the g register</span><br><span class="line">	MOVQ	gobuf_sp(BX), SP	// restore SP</span><br><span class="line">	MOVQ	gobuf_ret(BX), AX</span><br><span class="line">	MOVQ	gobuf_ctxt(BX), DX</span><br><span class="line">	MOVQ	gobuf_bp(BX), BP</span><br><span class="line">	MOVQ	$0, gobuf_sp(BX)	// clear to help garbage collector</span><br><span class="line">	MOVQ	$0, gobuf_ret(BX)</span><br><span class="line">	MOVQ	$0, gobuf_ctxt(BX)</span><br><span class="line">	MOVQ	$0, gobuf_bp(BX)</span><br><span class="line">	MOVQ	gobuf_pc(BX), BX</span><br><span class="line">	JMP	BX</span><br></pre></td></tr></table></figure>
+
+<p><code>runtime·gogo </code> 会调用 <code>gogo</code>，传入的参数是 <code>g</code> 结构体中和调度相关的一个字段 <code>gobuf</code>:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> gobuf <span class="keyword">struct</span> &#123;</span><br><span class="line">	sp   <span class="type">uintptr</span></span><br><span class="line">	pc   <span class="type">uintptr</span></span><br><span class="line">	g    guintptr</span><br><span class="line">	ctxt unsafe.Pointer</span><br><span class="line">	ret  <span class="type">uintptr</span></span><br><span class="line">	lr   <span class="type">uintptr</span></span><br><span class="line">	bp   <span class="type">uintptr</span> <span class="comment">// for framepointer-enabled architectures</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中有程序计数器和堆栈栈顶指针等重要的值，这些值都是该 goroutine 被调度出 CPU 的时候保存进来的，是 goroutine 的执行现场。<code>gogo</code> 会将现场恢复，这包括程序计数器和栈顶，之后这个 goroutine 就又从上次中断的地方跑起来了。</p>
+<h2 id="6-总结"><a href="#6-总结" class="headerlink" title="6. 总结"></a>6. 总结</h2><p>本文以<strong>探求 goroutine 堆栈在进程虚拟地址空间中的位置</strong>为诉求，对源代码进行有目的的展开，并最终找到内存分配的内核接口 <code>mmap</code>。</p>
+<p><code>mmap</code> 的使用太过灵活，以至于非要刻板的对应到虚拟内存布局中的位置显得有些棘手，因为 <strong>go 堆</strong> 接管的是整个虚拟内存的用户空间，但我们仍然可以从其内存分配的设计思想中窥得一二。</p>
+<p>go 堆的起始位置在用户空间的中段，确切的说是距离起始端 768 GiB 的地方开始，而从用户空间 128 TiB 的角度来看，这远远算不上中间，仅仅是相对于传统 heap 来说的。我想这也是 go 对于历史的一种尊重，好在 64 位模式下虚拟地址空间的跨度足够大，可以做出很灵活的设计。</p>
+<p>go 堆把后续的空间划分成了 128 份，几乎每份都有 1TiB 的大小，然后默默地从地址 <code>0x00c000000000</code> 处向上增长，因为<code>00 c0</code> 既不是有效的 UTF8 编码，又有足够的辨识度。</p>
+<p><em><strong>参考文献</strong></em></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNjkxMjc2Ny8=">深入理解计算机系统<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8zNjUyMzg4Lw==">程序员的自我修养<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNTgwOTMzMC8=">Linux&#x2F;UNIX系统编程手册<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC80ODQzNTY3Lw==">深入 Linux 内核架构<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9ib29rLmRvdWJhbi5jb20vc3ViamVjdC8yNTgyODc3My8=">Linux 系统编程<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9tYW43Lm9yZy9saW51eC9tYW4tcGFnZXMvbWFuMi9tbWFwLjIuaHRtbA==">mmap<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly96Ym95YS5naXRodWIuaW8vcG9zdC9nb19zY2hlZHVsZXIv">深入golang runtime的调度<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9xY3Jhby5jb20vaXNoYXJlL2dvLXNjaGVkdWxlci8=">go-scheduler<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9nb2xhbmcuZGVzaWduL3VuZGVyLXRoZS1ob29kLw==">Go 语言原本<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cubHVvemhpeXVuLmNvbS9hcmNoaXZlcy81MTM=">一文教你搞懂 Go 中栈操作<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cubHVvemhpeXVuLmNvbS9hcmNoaXZlcy80MzQ=">详解Go中内存分配源码实现<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuYXJkYW5sYWJzLmNvbS9ibG9nLzIwMTgvMDgvc2NoZWR1bGluZy1pbi1nby1wYXJ0Mi5odG1s">Scheduling In Go : Part II - Go Scheduler<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/os/" rel="tag"># os</a>
+              <a href="/tags/groutine/" rel="tag"># groutine</a>
+              <a href="/tags/stack/" rel="tag"># stack</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/03/28/golang/effective-go/" rel="prev" title="另一个 effective go 中文版">
+                  <i class="fa fa-chevron-left"></i> 另一个 effective go 中文版
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/05/27/theory/schedule/" rel="next" title="在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度">
+                  在 CPU 上起舞，聊一聊 Linux 调度和 Go 的 Runtime 调度 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"03f3ffd31b49504f35d17a23c8462274"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="yandex-verification" content="3ac9ae36ddebb425">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha256-Vzbj7sDDS/woiFS3uNKo8eIuni59rjyNGtXfstRzStA=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"liupzmin.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.15.1","exturl":true,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":true,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="左耳朵耗子说过一段话，我深以为然。  技术的发展过程非常重要，要尽可能早的进入时下的新技术，而不应等待这些技术成熟之后再进入。我进入 Go 和 Docker 的技术不能算早，但也不算晚，从 2012 年学习 Go，到 2013 年学习 Docker 到今天，我清楚地看到了这两种技术的生态圈发展过程。让我收获最大的并不是这些技术本身，而是一个技术的变迁和行业的发展。从中，我看到了非常具体的各种思潮和">
+<meta property="og:type" content="article">
+<meta property="og:title" content="漫谈容器发展史">
+<meta property="og:url" content="http://liupzmin.com/2019/11/06/docker/container-chat/index.html">
+<meta property="og:site_name" content="兔子先生">
+<meta property="og:description" content="左耳朵耗子说过一段话，我深以为然。  技术的发展过程非常重要，要尽可能早的进入时下的新技术，而不应等待这些技术成熟之后再进入。我进入 Go 和 Docker 的技术不能算早，但也不算晚，从 2012 年学习 Go，到 2013 年学习 Docker 到今天，我清楚地看到了这两种技术的生态圈发展过程。让我收获最大的并不是这些技术本身，而是一个技术的变迁和行业的发展。从中，我看到了非常具体的各种思潮和">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qiniu.liupzmin.com/2018-container.png">
+<meta property="article:published_time" content="2019-11-06T02:10:51.000Z">
+<meta property="article:modified_time" content="2025-02-07T01:32:12.639Z">
+<meta property="article:author" content="巴流">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="container">
+<meta property="article:tag" content="kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qiniu.liupzmin.com/2018-container.png">
+
+
+<link rel="canonical" href="http://liupzmin.com/2019/11/06/docker/container-chat/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://liupzmin.com/2019/11/06/docker/container-chat/","path":"2019/11/06/docker/container-chat/","title":"漫谈容器发展史"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>漫谈容器发展史 | 兔子先生</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="兔子先生" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">兔子先生</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">探寻计算机的历史与哲学密码</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">60</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">63</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">32</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%B9%E5%8F%98%E4%B8%96%E7%95%8C%E7%9A%84%E2%80%9C%E7%AE%B1%E5%AD%90%E2%80%9D"><span class="nav-number">1.</span> <span class="nav-text">改变世界的“箱子”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E9%81%93%E7%81%B5%E5%85%89"><span class="nav-number">2.</span> <span class="nav-text">第一道灵光</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%99%BE%E5%AE%B6%E4%BA%89%E9%B8%A3"><span class="nav-number">3.</span> <span class="nav-text">百家争鸣</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%A6%E4%B8%80%E5%8F%AA%E2%80%9D%E7%AE%B1%E5%AD%90%E2%80%9C"><span class="nav-number">4.</span> <span class="nav-text">另一只”箱子“</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E6%8E%92%E5%A4%A7%E6%88%98"><span class="nav-number">5.</span> <span class="nav-text">编排大战</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Docker-%E4%BC%9A%E6%98%AF%E6%94%B9%E5%8F%98%E4%B8%96%E7%95%8C%E7%9A%84%E9%82%A3%E5%8F%AA%E2%80%9C%E7%AE%B1%E5%AD%90%E2%80%9D%E5%90%97%EF%BC%9F"><span class="nav-number">6.</span> <span class="nav-text">Docker 会是改变世界的那只“箱子”吗？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="巴流"
+      src="/images/gzh.jpg">
+  <p class="site-author-name" itemprop="name">巴流</p>
+  <div class="site-description" itemprop="description">左手人文 | 右手科技</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">63</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;liupzmin"><i class="github fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <span class="exturl" data-url="bWFpbHRvOmxpdXB6bWluQGdtYWlsLmNvbQ==" title="E-Mail → mailto:liupzmin@gmail.com"><i class="envelope fa-fw"></i></span>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml" rel="noopener me"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://liupzmin.com/2019/11/06/docker/container-chat/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/gzh.jpg">
+      <meta itemprop="name" content="巴流">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="兔子先生">
+      <meta itemprop="description" content="左手人文 | 右手科技">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="漫谈容器发展史 | 兔子先生">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          漫谈容器发展史<span class="exturl post-edit-link" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWluL2xpdXB6bWluLmdpdGh1Yi5pby9lZGl0L2hleG9fcmVzb3VyY2Uvc291cmNlL19wb3N0cy9kb2NrZXIvY29udGFpbmVyLWNoYXQubWQ=" title="编辑"><i class="fa fa-pen-nib"></i></span>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-11-06 10:10:51" itemprop="dateCreated datePublished" datetime="2019-11-06T10:10:51+08:00">2019-11-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-02-07 09:32:12" itemprop="dateModified" datetime="2025-02-07T09:32:12+08:00">2025-02-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/container/" itemprop="url" rel="index"><span itemprop="name">container</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p><strong><code>左耳朵耗子</code>说过一段话，我深以为然。</strong></p>
+<blockquote>
+<p>技术的发展过程非常重要，要尽可能早的进入时下的新技术，而不应等待这些技术成熟之后再进入。我进入 Go 和 Docker 的技术不能算早，但也不算晚，从 2012 年学习 Go，到 2013 年学习 Docker 到今天，我清楚地看到了这两种技术的生态圈发展过程。让我收获最大的并不是这些技术本身，而是一个技术的变迁和行业的发展。从中，我看到了非常具体的各种思潮和思路，这些东西比起 Go 和 Docker 来说更有价值。因为，这不但让我重新思考我已掌握的技术以及如何更好地解决已有的问题，而且还让我看到了未来。</p>
+</blockquote>
+<h2 id="改变世界的“箱子”"><a href="#改变世界的“箱子”" class="headerlink" title="改变世界的“箱子”"></a>改变世界的“箱子”</h2><p>1956 年 4 月 26 号，<code>麦克莱恩</code>的第一艘集装箱货船<code>理性X号</code>从纽约港起航，他无从预想，这个简陋的发明，在未来几十年内会彻底改变人类的命运，将人类的航运业带入了一个巨大的新时代。</p>
+<p>集装箱的发明，极大地推动了全球化的协作浪潮，使得制造业的产业链条发生了翻天覆地的变化。从集装箱规模化应用的那一刻，地球变成了一座巨大的工厂，开始轰鸣了起来。</p>
+<p>因为集装箱，商品以及原材料可以以极低的运输成本送往世界各地，从而使得全球的资源都卷入到了分工链条当中，经济学家讲：<code>分工产生效能</code>，因为生产效能的极大提升，人类创造了不可胜数的财富。而集装箱的影响依然在持续，依然在不断的改变着我们每一个人的生活。</p>
+<p>到了 80 年代，突然大门一开，进来一个胖子，就是我们中国人。我们啥都没有，我们没有资金没有技术，但是我们有勤劳的双手，我们有庞大的人口存量，所以我们用这个优势进入到了全球化的分工当中。</p>
+<p>结果呢，中国用 35 年的时间完成了西方 300 多年的工业革命进程，而这已经是中国<code>第四次进行工业化革命的尝试</code>了，你能说集装箱没有功劳么。</p>
+<p>可是，像这样具有伟大意义的发明，在其问世的前十年可谓历尽坎坷，并没有让<code>麦克莱恩</code>占据领航者的地位。甚至最早的集装箱都不是<code>麦克莱恩</code>发明的，但他却是集装箱真正意义上的践行者。因此，人类最终将<code>集装箱之父</code>的荣誉授予他。</p>
+<p>《经济学家》这样评价：<strong>如果没有集装箱，就不会有全球化!</strong></p>
+<p>如果你打开 <code>Google 翻译</code>翻译一下“集装箱”这个词，你会得到如下的答案：</p>
+<p><strong>Container</strong></p>
+<p>在英文中一词多义可能表示<code>多义</code>之间具有<code>意义的延伸</code>。</p>
+<p><strong>容器</strong> 不正是如此么？</p>
+<h2 id="第一道灵光"><a href="#第一道灵光" class="headerlink" title="第一道灵光"></a>第一道灵光</h2><p>让我们将历史拨回到 1979 年，贝尔实验室的一群大男孩亦或是老男孩正在开发 <code>unix v7（Version 7 Unix）</code> 操作系统。项目进行到了最后的开发和测试阶段，即便是对于这些天才般的程序员来说，系统级别的软件构建和测试仍然是一个繁复且无比棘手的难题。你可以想象：当一次测试开始，源代码编译和安装完成之后，整个测试环境就被<code>“污染”</code>了。要想进行下一次测试，就需要重新搭建，并且再编译安装测试。那有没有办法来避免重复的环境搭建，快速的销毁和重建所需的基础设施环境呢？</p>
+<p>我们今天有虚拟化和云计算，这个问题听起来好像不难解决。但是，在那个计算机软件刚刚萌芽的蛮荒时代，这样的想法近乎是异想天开。一块 <code>64K</code> 的内存条要卖 <code>419 美元</code>的年代，<code>“快速销毁和重建基础设施”</code>的想法还是有点“科幻”了。</p>
+<p>但天才毕竟是天才，这些黑客程序员们就想，能不能在现有的操作系统环境下<code>“隔离”</code>出一个新环境用于软件的构建和测试呢？</p>
+<p>于是，一个叫做 <code>chroot（Change Root）</code> 的系统调用就此诞生了！</p>
+<p><code>chroot</code> 会重定向进程及其子进程的<code>根目录</code>到操作系统上的一个新位置，使得该进程的文件<code>“视图”</code>与外面的<code>“世界”</code>完全隔离，它不能够对这个指定根目录之外的文件进行访问动作，不能读取，也不能更改它的内容。</p>
+<p>这是容器史上第一道乍现的灵光，在 <code>unix v7</code> 上面被孕育出来。</p>
+<p>但令人叹息的是，unix v7 是贝尔实验室发布的最后一个可自由分发的版本，之后 AT&amp;T 开始收回 Unix 的版权，倾情弹奏 Unix 商业化的序曲。也正因为此， <code>Richard Matthew Stallman</code> 在 1983 年发起 <code>GUN（GNU&#39;s Not UNIX）</code> 计划和<code>自由软件运动</code>，几十年后垂垂老矣的 Unix 最终被商业的 Linux 击溃。</p>
+<p>然而，chroot 毕竟打开了进程隔离的大门，虽然孕育它的 Unix 在后续的发展中逐渐式微，但容器化的思想却如同奔流不息的河流一般，跨越了重重艰难险阻，不断地在历史的精彩处漫延。</p>
+<h2 id="百家争鸣"><a href="#百家争鸣" class="headerlink" title="百家争鸣"></a>百家争鸣</h2><p>2000 年，Unix伯克利大学分发版 <code>FreeBSD</code> 操作系统发布了 <code>jail</code> 命令。<code>jail</code> 是从 chroot 得到的启发，并从中进一步发展而来，它将隔离扩展到了整个用户环境，使得进程在一个<code>沙盒</code>内运行。在进程看来，跟实际的操作系统几乎是一样的，对于进程来说就像被关进了<code>监狱</code>，这也是 <code>jail</code> 名称的由来，<code>jail</code> 中的进程甚至可以拥有自己的 IP 地址，可以对环境进行各种定制。我们可以说， <code>chroot 开创了进程隔离的思想</code>，但 <code>FreeBSD Jails 才真正实现了进程的沙箱化</code>。</p>
+<p>2004年，Solaris Containers 发布，它也是秉承了 <code>jail</code> 的思想，为进程提供一个隔离的<code>沙盒</code>，进程在其中独立运行。它也被称为<code>“吃了类固醇的 chroot ”（chroot on steroids）</code>。</p>
+<p>不过，无论是 <code>FreeBSD Jails</code> ，还是紧接着出现的 <code>Solaris Containers</code> ，都没有能在更广泛的软件开发和交付场景中扮演到更重要的角色。在这段属于 <code>Jails</code> 们的时代，进程沙箱技术因为“云”的概念尚未普及，始终被局限在了小众而有限的世界里。就如同集装箱刚刚出现的那十年，所有和集装箱配套的设施都还没有，整个社会都还没有为集装箱做好准备。你看，他们两者不仅意义上相近，就连命运也如出一辙。</p>
+<p><strong>可见，任何一种新技术，即便问世很早，可要整个社会系统去适应它，却需要一个无比漫长的过程。</strong></p>
+<p>让我们回到容器技术上来，事实上，在 <code>Jails</code> 大行其道的这几年间，同样在迅速发展的 Linux 阵营上也陆续出现多个类似的沙箱技术比如 <code>Linux VServer</code> 和 <code>Open VZ</code> （未进入内核主干）。但如同那些 <code>jail</code> 的前辈一样，受当时计算机环境的制约，被局限在一个小众的圈子里。</p>
+<p>早在 2002 年，<code>Plan 9 from Bell Labs</code>（Go语言的运行时就是使用的该操作系统的汇编器语法）操作系统对 <code>Namespace</code> 的广泛运用为 Linux 带来了灵感， Linux 在其内核 2.4.19 版本上加入了 Namesapce 功能（可以实现对应资源的隔离）。最初只有<code>mount namespace</code>，后续的<code>pid</code>、<code>net</code>、<code>ipc</code>、<code>UTS</code>、<code>user</code>等一直到内核3.8版本才实现完成。内核<code>4.6</code>中又添加了<code>Cgroup namespace</code>。</p>
+<p>要知道 <code>Namespace</code> 是现代容器技术最底层的技术支撑。它虽然解决了虚拟化和资源环境隔离的问题，但是我们还希望对隔离的进程在资源使用上加以限制，namespace并没有提供解决方案。</p>
+<p>2007年，一种名叫 <code>Process Container</code> 技术的发布。它是由 Google 的工程师 <code>Paul Menage</code> 和 <code>Rohit Seth</code> 发起并实现的，旨在对一组进程进行资源上的隔离、限制。在合并入 Linux 内核的时候，由于 Linux 中存在 <code>Container</code> 的概念，故被重命名为 <code>Cgroups</code> 。</p>
+<p><code>Cgroups</code> 有两个版本，<code>v1</code> 版本由 <code>Paul Menage</code> 和<code> Rohit Seth</code> 维护。<code>v2</code> 版本首次出现在 2016 年 3 月发布的内核 <code>4.5</code> 中，<code>Tejun Heo</code> 重新设计并重写了Cgroups，主要解决 v1 在用户体验上的问题。</p>
+<p>2008 年，通过将 <code>Cgroups</code> 的资源管理能力和 <code>Linux Namespace</code> 的视图隔离能力组合在一起， <code>LXC（Linux Container）</code> 这样的完整的容器技术出现在了 Linux 内核当中。它是第一个完善的容器管理方案，你可以通过 LXC 来创建和启动容器了。 <code>LXC</code> 跟之前出现的沙盒技术非常类似，但其赶上了 Linux 大规模商用的浪潮，境遇要比那些前辈们要好一些。伴随着公有云市场的崛起，很快催生了一个全新的、名为 <code>PaaS</code> 的产业。</p>
+<p>2011 年，由 Vmware 主导的 Cloud Foundry 开发了一个新项目：<code>Warden</code>，它最开始是一个 <code>LXC</code> 的封装，后来重构成了直接对 <code>Cgroups</code> 以及 <code>Linux Namespace</code> 操作的架构。</p>
+<p>Cloud Foundry 项目的诞生，第一次对 <code>PaaS</code> 的概念完成了清晰而完整的定义。这其中，“<code>PaaS 项目通过对应用的直接管理、编排和调度让开发者专注于业务逻辑而非基础设施</code>”，以及<code>“PaaS 项目通过容器技术来封装和启动应用”</code>等理念，也第一次出现在云计算产业当中并得到认可。</p>
+<p>按照这个剧本，容器技术以及云计算的发展，理应向着 PaaS 的和以应用为中心的方向继续演进下去。</p>
+<p>如果不是有一家叫做 <code>Docker</code> 的公司出现的话。</p>
+<h2 id="另一只”箱子“"><a href="#另一只”箱子“" class="headerlink" title="另一只”箱子“"></a>另一只”箱子“</h2><p>时间来到了 2013 年，<code>Docker</code> 的第一个版本发布，它是基于 LXC 的，但它创建和使用应用容器的逻辑跟 <code>Warden</code> 等没有本质不同。只不过是把 LXC 复杂的创建和使用方式简化成了自己的一套命令体系。但是 Docker 作为 PaaS 行业的搅局者，其真正的杀手锏是<code>容器镜像</code>。Docker 通过镜像技术，提出了<code>build</code>、<code>ship</code>、<code>run</code>的概念，创造了<code>一次构建、处处运行</code>的新思想，将容器技术向IT产业链条的上游和下游进行了延伸。</p>
+<p>关于如何封装应用，这本身不是开发者所关心的事情，所以 <code>PaaS</code> 项目有着无数的发挥空间。但到这如何定义应用这个问题，就是跟每一位技术人员息息相关了。在那个时候，<code>Cloud Foundry</code> 给出的方法是 <code>Buildpack</code> ，它是一个应用可运行文件（比如 <code>WAR</code> 包）的封装，然后在里面内置了 <code>Cloud Foundry</code> 可以识别的启动和停止脚本，以及配置信息。</p>
+<p>然而，Docker 项目通过容器镜像，直接将一个应用运行所需的完整环境，即：整个操作系统的文件系统也打包了进去。这种思路，可算是解决了困扰 PaaS 用户已久的一致性问题，制作一个<code>“一次构建、处处运行”</code>的 Docker 镜像的意义，一下子就比制作一个连开发和测试环境都无法统一的 <code>Buildpack</code> 高明了太多。</p>
+<p>更为重要的是，Docker 项目还在容器镜像的制作上引入了“层”的概念，这种基于“层”（也就是<code>“commit”</code> ) 进行 <code>build</code>，<code>push</code>，<code>update</code> 的思路，显然是借鉴了 <code>Git</code> 的思想。所以这个做法的好处也跟 <code>Github</code> 如出一辙：制作 Docker 镜像不再是一个枯燥而乏味的事情，因为通过 <code>DockerHub</code> 这样的镜像托管仓库，你和你的软件立刻就可以参与到全世界软件分发的流程当中了。</p>
+<p>至此，你就应该明白，Docker 项目实际上解决的确实是一个更高维度的问题：<code>软件究竟应该通过什么样的方式进行交付？</code></p>
+<p>更重要的是，一旦当软件的交付方式定义的如此清晰并且完备的时候，利用这个定义在去做一个托管软件的平台比如 PaaS，就变得非常简单而明了了。这也是为什么 Docker 项目会多次表示自己只是“站在巨人肩膀上”的根本原因：没有最近十年 Linux 容器等技术的提出与完善，要通过一个开源项目来定义并且统一软件的交付历程，恐怕如痴人说梦。</p>
+<p>然而，这并没有使 Docker 站在领导者的位置上。<code>CoreOS</code> 是一个专注于容器的操作系统，一度与 Docker 打的很火热，但是 CoreOS 渐渐的发现 Docker 野心很大，甚至动了 CoreOS 的市场。至于 Docker 有什么野心，我后面会讲。 CoreOS 不肯坐以待毙，于是在 2014 年推出了新的容器引擎 <code>rocket</code> 。后来谷歌开始支持 CoreOS ，容器就此分化成了 Docker 阵营和 Google 阵营。也就在同一年，Docker 0.9 发布，用 <code>libcontainer</code> 库代替了原来的 LXC 。</p>
+<p>到了 2015 年，容器圈太乱了，大家觉得长此以往不利于发展，于是就组织起来，在 Linux 基金会的支持下成立了 <code>OCI（Open Constitution Initiative）</code> 。<code>OCI</code> 致力于围绕<code>容器镜像格式</code>和<code>容器运行时</code>建立开发的行业标准，让容器可以在各种兼容性的操作系统和平台上移植，没有人为的技术屏障。大家并不希望这个工业标准由 Docker 一家说了算。</p>
+<p>2016 年 Docker 发布了 1.11 版本，做了一些架构调整，里面新出现了符合 OCI 标准的 <code>runC</code> 。runC 其实就是对 libcontainer 的调用，是一种符合开放式容器格式标准的一种实现，后来 Docker 就把 runC 贡献出来了。</p>
+<p>下图是 2018 年容器市场份额统计：</p>
+<p><img data-src="http://qiniu.liupzmin.com/2018-container.png" alt="Container Market Shares"></p>
+<p>可见 2018 年的容器市场 Docker 占了 83% ，这个数据乍看之下相当可观，可是你要知道在 2017 年这个份额还是99%。位居第二的就是占比12%的 rocket ，第三是 mesos ，占比4%，第四是我们介绍过的 LXC 占比仅有1%。</p>
+<p>现在，我们可以得出一个结论，**<code>Docker 并不等于容器</code>**。如果你想用容器，其实你有很多选择，Docker 仅仅是你的首选而已。如今<code>下一代容器架构</code>的呼声言犹在耳（ <code>Podman + Skopeo + Buildah</code> ），我们不禁要问了：既然 Docker 这么优秀，为什么会落到如此众叛亲离的地步呢？</p>
+<h2 id="编排大战"><a href="#编排大战" class="headerlink" title="编排大战"></a>编排大战</h2><p> 如今我们知道，现代容器的底层技术为 <code>Namespace</code> 和 <code>Cgroups</code> ，Docker 因为带来了革命性的容器镜像思想而异军突起，在容器领域大张挞伐，并在短时间内挤占市场。虽然表面上风光无限，却终究难掩容器技术门槛偏低的事实，也就是说任何公司和组织都可以利用 <code>Namespace</code> 和 <code>Cgroups</code> 进入容器市场（比如 CoreOS 的 <code>rocket</code> ）， Docker 更是深谙此道，因此它必须寻求突破。</p>
+<p> 试想一下， Docker 容器发端之后，感觉一下子拥有了可以施展黑科技的魔法棒，但为什么只能搞搞开发、测试这种小打小闹的活儿呢？根本没有生产力大爆发啊？好像也没有改变整个行业的协作方式啊？你看，这是不是和集装箱刚刚问世的前十年非常像呢？那个时候整个社会协作体系还没有为集装箱做好准备，配套的道路、桥梁、码头、吊车等设备和基础设施全都没有就绪。</p>
+<p>回到 Docker 上，我们不禁要问：我们的码头和吊车，乃至相应的货轮、桥梁准备好了么？全产业界已经接受了以容器镜像为主要形态的软件发布模式了吗？应用的执行都基于容器了吗？分布式以及微服务架构已经非常普及了吗？</p>
+<p>显然还没有。</p>
+<p>这里我们不得不提一个观点：<code>容器本身并没有价值</code>。就像集装箱一样，本身就是个大铁盒子，它没有太多价值，单单靠它提高不了社会协作的效能。它只有流动起来，才会产生价值，把货物从一个车间运到另一个车间，这种连接才是其价值所在。容器也一样，本身没有太多商业价值，你弄得再完美，你也只能在一个服务器上折腾，翻不出多大的浪花，那怎么样才能产生价值呢？</p>
+<p>那就是真正价值所在——<code>容器编排</code>！</p>
+<p>在既有硬件资源的基础上，启动容器不需要关注具体运行的节点，各个容器之间仍能保持通信，信息在容器之间依然可以流动。这样就拥有了商业价值，容器技术便可以付诸商用，整个软件的开发交付流程就会变得高效和颠覆。所以我们需要的是一个分布式的调度器，其主要功能就是容器编排。</p>
+<p>Docker 也深知这一点，当它不顾一切于 2015 年带着 <code>Swarm</code> 挤进编排领域的时候，发现面前立着一座大山： <code>Kubernetes</code>！</p>
+<p><code>Kubernetes</code> 源于 Google 内部的 <code>Borg</code> 项目，经 Google 使用 Go 语言重写后，被命名为 Kubernetes，并于 2014 年 6 月开源。Kubernetes 希腊语意思是<code>“舵手”</code>，致力于管理数以万计的容器集群。你看舵手不正是隐喻了<code>方向</code>和<code>流动</code>么。因其开头字母和结尾字母之间共有 8 个字，所以简短的称其为<code>k8s</code>。</p>
+<p>2014 年 k8s 开源之后，同年底 Docker 就设计了 <code>machine+swarm+compose</code> 的组合方案。2015 年 7 月 k8s 发布了第一个商用版本 1.0 ，同一年 Docker 的 Swarm 发布，编排大战已经开始上演了。</p>
+<p>2016 年 2 月 Docker 发布了 1.12 版本，它不顾众怒，将 <code>Swarm</code> 强行内置到 Docker 的容器引擎里面，企图利用 Docker 项目在容器领域的领导地位推动 <code>Swarm</code> 的发展。这有点像什么？举个不恰当的例子，我订购了一个集装箱，你却附赠了一个不太好用的货轮。这一下一石惊起千层浪，业界都纷纷谴责 Docker 。同年的 7 月 <code>Apache mesos</code> 发布了 1.0 ，也是一个容器编排框架，至此，<code>Kubernetes</code>、<code>Docker Swarm</code> 和 <code>Apache Mesos</code> 已成三足鼎立之势。</p>
+<p>然而，2017 年 9 月，<code>Mesosphere</code> 宣布支持 Kubernetes，这也是迫于用户压力，在对抗和妥协面前，不得不选择后者。</p>
+<p>2017 年 10 月，在欧洲的 <code>DockerCon</code> 大会上，Docker 公司 CTO <code>Solomon Hykes</code> 宣布，Docker 的下个版本将支持 Kubernetes，台下观众响起热烈掌声，因为这是容器圈等待已久的消息。</p>
+<p>Kubernetes 在众多厂商和开源爱好者的共同努力下迅速崛起，时至今日已成长为容器管理领域的事实标准。Kubernetes 极大推动了云原生领域的发展，被称为影响云计算未来 10 年的技术。</p>
+<p>毫无疑问，Kubernetes 已经赢得了容器编排的大战。</p>
+<h2 id="Docker-会是改变世界的那只“箱子”吗？"><a href="#Docker-会是改变世界的那只“箱子”吗？" class="headerlink" title="Docker 会是改变世界的那只“箱子”吗？"></a>Docker 会是改变世界的那只“箱子”吗？</h2><p>2001 年 5 月 30 号，集装箱之父麦克莱恩去世。全世界所有的集装箱船，不管在哪个港口，不管在全球的哪个角落，都拉响了汽笛，向这位老人致敬，我想这是一个创新者得到的最高荣誉。</p>
+<p>那么， <code>Docker 会是改变世界的那只“箱子”吗？</code></p>
+<p>这要看你怎么理解 Docker ，如果我们把它理解为<code>容器技术</code>和 <code>build</code>、<code>ship</code>、<code>run</code> 这样<code>一次构建，处处运行</code>的理念，那么我相信它是改变世界的箱子。当我们软件发布模式已经切换到容器镜像形态的时候，当我们应用的运行都是基于容器的时候，当分布式的操作系统或者平台已经整装待发的时候，它有什么理由不改变世界呢？我们没法想象那时 IT 世界会是什么样子的，但有一点可以肯定，IT 世界的分工协作方式以及产业链条肯定是一个全新的面貌。</p>
+<p>反观 Docker 作为一家公司，它会是改变世界的箱子么？我觉得很大可能不会。</p>
+<p>上个世纪 80 年代，在集装箱刚刚发力的时候，麦克莱恩破产了。那他犯了什么错误吗？没有，他就是跑慢了，没有什么实质性的错误。Docker 很可能步他的后尘，但是那又怎么样呢？ Docker 已经完成了它的历史使命，在让 IT 的世界工厂运转起来的路上，它已经推了一把，这本身就已经足够了。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>早在 2014 年，RedHat 就与 Kubernetes 达成了战略合作关系，宣布全面投入 Kubernetes。在当时的一份官宣中， RedHat 以非常自信的姿态表达了对容器的“颠覆性”创新的认可，并大胆预言 Kubernetes 会在 2015 年后取得应用编排与管理领域的统治地位。</p>
+<p>当时业界对这个论断大多不以为然，甚至嗤之以鼻，但今天回过头来再看，预言已经成为事实。</p>
+<p><code>Rancher</code> 的创始人梁胜博士有过一句评论，非常在理：时至今日，在容器技术领域依然有许多创新，只不过这些创新大多发生在 Kubernetes 以及 CNCF 生态系统中了。</p>
+<p>是的，比如最近很火的 <code>Service Mesh</code> 的实现 <code>istio</code> ， 它就是基于 kubernetes 进行的创新啊。</p>
+<p>这有点像以前在单片机上玩汇编，汇编说白了就是单片机上运行的应用程序，但是后来有人写了个超级大的应用程序，那就是操作系统，然后大家就都在操作系统上玩了。而 Kubernetes 不正是云时代分布式的操作系统么？</p>
+<p>回到文章开头的主题上，我们应该及早的进入到一个新兴的技术领域，即使 Docker 会在不久的将来被下一代容器取代，我们也仍然有必要去学习它。因为你最终得到的并不是这项技术本身，而是整个技术领域的发展脉络与思潮演变，这才是无比珍贵的东西。因为一旦你对技术的发展有所感知，它就可能会影响到你未来的人生选择。</p>
+<p><strong>我们仍然身处在容器化变革的浪潮当中，你无法想象它将来会对你的命运产生什么样的影响。我们每一个人都像是这个湍流中行进的小船，方向决定了你驶向远方还是抵触暗礁。我们唯一能做的，就是拿一根竹篙，根据水流的情况和环境的变化随时的轻轻点那么一下，微微的改变一下我们的航迹。</strong></p>
+<blockquote>
+<p> 注：本文很多段落，大段引用了<code>张磊</code>老师的文章，我读过他的<code>《Docker 容器与容器云》</code>，订阅过他的极客时间专栏<code>《深入剖析Kubernetes》</code>，深深佩服其学识之渊博。在有些关于容器发展史的描述中，我基本上引用了原话，因为自知不能写的更好。</p>
+</blockquote>
+<p><strong>参考文章：</strong></p>
+<ol>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvTGludXhfbmFtZXNwYWNlcw==">Linux namespaces<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9lbi53aWtpcGVkaWEub3JnL3dpa2kvQ2dyb3Vwcw==">cgroups<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9jb29sc2hlbGwuY24vYXJ0aWNsZXMvMTcwNDkuaHRtbA==">DOCKER基础技术：LINUX CGROUP<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuaW5mb3EuY24vYXJ0aWNsZS93aWxsLWRvY2tlci1iZS10aGUtYm94LXRoYXQtY2hhbmdlLXRoZS13b3JsZA==">Docker 会是改变世界的那只“箱子”吗？<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuaW5mb3EuY24vYXJ0aWNsZS9SMXAzSDNfMjlmNFRZSW1FeHN5dw==">为什么说 2019，是属于容器技术的时代？<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9saW51eC5jbi9hcnRpY2xlLTY5NzUtMS5odG1s">Linux 容器技术史话：从 chroot 到未来<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9jb29sc2hlbGwuY24vYXJ0aWNsZXMvMTcwMTAuaHRtbA==">DOCKER基础技术：LINUX NAMESPACE（上）<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuY25ibG9ncy5jb20vc3BhcmtkZXYvcC85MzY1NDA1Lmh0bWw=">Linux Namespace : 简介<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly9iYnMuaHVhd2VpY2xvdWQuY29tL2Jsb2dzLzEyOTM3MQ==">下一代容器架构已出，Docker何去何处？<i class="fa fa-external-link-alt"></i></span></li>
+<li><span class="exturl" data-url="aHR0cHM6Ly93d3cuaW5mb3EuY24vYXJ0aWNsZS9kb2NrZXItc3RhbmRhcmQtY29udGFpbmVyLWV4ZWN1dGlvbi1lbmdpbmUtcnVuYw==">Docker 背后的标准化容器执行引擎——runC<i class="fa fa-external-link-alt"></i></span></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="followme">
+  <span>欢迎关注我的其它发布渠道</span>
+
+  <div class="social-list">
+
+      <div class="social-item">
+          <a target="_blank" class="social-link" href="/atom.xml">
+            <span class="icon">
+              <i class="fa fa-rss"></i>
+            </span>
+
+            <span class="label">RSS</span>
+          </a>
+      </div>
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/docker/" rel="tag"># docker</a>
+              <a href="/tags/container/" rel="tag"># container</a>
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/10/18/golang/golang-new-make/" rel="prev" title="Go语言中的new和make-从函数阻击战到nil遭遇战">
+                  <i class="fa fa-chevron-left"></i> Go语言中的new和make-从函数阻击战到nil遭遇战
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/11/26/linux/how-do-we-run-programs-on-unix-systems/" rel="next" title="在 Linux 上有哪些运行程序的方式？">
+                  在 Linux 上有哪些运行程序的方式？ <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments gitalk-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2014 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">NexT</span>
+</div>
+  <div class="powered-by">由 <span class="exturl" data-url="aHR0cHM6Ly9oZXhvLmlv">Hexo</span> & <span class="exturl" data-url="aHR0cHM6Ly90aGVtZS1uZXh0LmpzLm9yZw==">NexT.Gemini</span> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+  <span class="exturl github-corner" data-url="aHR0cHM6Ly9naXRodWIuY29tL2xpdXB6bWlu" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></span>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha256-yt2kYMy0w8AbtF89WXb2P1rfjcP/HTHLT7097U8Y5b8=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lozad.js/1.16.0/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script src="/js/third-party/fancybox.js"></script>
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.css" integrity="sha256-AJnUHL7dBv6PGaeyPQJcgQPDjt/Hn/PvYZde1iqfp8U=" crossorigin="anonymous">
+
+<script class="next-config" data-name="gitalk" type="application/json">{"enable":true,"github_id":"liupzmin","repo":"liupzmin.github.io","client_id":"77654195445087c01c56","client_secret":"eda09eecd05b86f0ef995d8067ec751abeb753d9","admin_user":"liupzmin","distraction_free_mode":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token","language":"zh-CN","ClientID":"ae0756501dfc5de89d35","ClientSecret":"26befb359f7a466031bb96b4b7e0715c41c63fb8","owner":"liupzmin","adminUser":"['liupzmin']","labels":"['Gitalk']","perPage":15,"pagerDirection":"last","createIssueManually":true,"distractionFreeMode":false,"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/gitalk/1.8.0/gitalk.min.js","integrity":"sha256-MVK9MGD/XJaGyIghSVrONSnoXoGh3IFxLw0zfvzpxR4="},"path_md5":"b200429ff3c4fc15497d9fb0c6403854"}</script>
+<script src="/js/third-party/comments/gitalk.js"></script>
+
+</body>
+</html>
